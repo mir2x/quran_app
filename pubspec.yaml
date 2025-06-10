@@ -1,0 +1,43 @@
+name: quran_app
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  just_audio: ^0.10.4
+  shared_preferences: ^2.5.3
+  google_fonts: ^6.2.1
+  flutter_riverpod: ^2.6.1
+  scrollable_positioned_list: ^0.3.8
+  dio: ^5.8.0+1
+  supabase_flutter: ^2.9.0
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/image/front_page/
+    - assets/audio_json/
+    - assets/audio/
+    - assets/page_003.png
+    - assets/page_004.png
+    - assets/ayah_boxes.json
+
+  fonts:
+    - family: SolaimanLipi
+      fonts:
+        - asset: fonts/solaimanlipi.ttf
+
