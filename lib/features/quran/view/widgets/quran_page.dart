@@ -1,25 +1,33 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
-import '../../viewmodels/ayah_highlight_viewmodel.dart';
+import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import 'ayah_highlighter.dart';
 
 
 class QuranPage extends ConsumerWidget {
-  const QuranPage({super.key, required this.pageIndex});
+  const QuranPage({super.key, required this.pageIndex, required this.editionDir});
   final int pageIndex;
+  final Directory editionDir;
 
   static const double _imgW = 720;
   static const double _imgH = 1057;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allBoxesAsync = ref.watch(allBoxesProvider);       // load once
-    final boxes         = ref.watch(boxesForPageProvider(pageIndex));
+    final allBoxesAsync = ref.watch(allBoxesProvider);
+    final logicalPage = pageIndex + 1;
+    final pageNumber  = logicalPage < kFirstPageNumber
+        ? -1
+        : logicalPage;
+    final boxes = pageNumber == -1
+        ? const <AyahBox>[]
+        : ref.watch(boxesForPageProvider(pageNumber));
     final notifier      = ref.read(selectedAyahProvider.notifier);
     final selected      = ref.watch(selectedAyahProvider);
+    final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.png');
 
     return allBoxesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -51,8 +59,8 @@ class QuranPage extends ConsumerWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  _imgPathFor(pageIndex),
+                Image.file(
+                  imgFile,
                   fit: BoxFit.fill,
                 ),
                 CustomPaint(
@@ -65,10 +73,5 @@ class QuranPage extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  String _imgPathFor(int idx) {
-    final num = kFirstPageNumber + idx;
-    return 'assets/page_${num.toString().padLeft(3, '0')}.png';
   }
 }

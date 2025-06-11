@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:quran_app/features/quran/view/quran_viewer_screen.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'features/home/view/home_screen.dart';
 
 
 void main() async {
@@ -35,7 +37,7 @@ class QuranApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const QuranViewerScreen(pageCount: 2),
+      home: const EditionSelectionScreen(),
     );
   }
 }

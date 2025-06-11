@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:quran_app/features/home/domain/entities/quran_edition.dart';
 
 import '../../../asset_loader/presentation/screens/asset_loader_dialog.dart';
 import '../../data/data_sources/quran_edition_data.dart';
+import '../../domain/entities/quran_edition.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
