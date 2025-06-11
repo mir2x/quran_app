@@ -1,8 +1,11 @@
+// lib/features/quran/view/quran_viewer_screen.dart
+
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme.dart';        // primaryColor, bottomBarHeight
 import 'widgets/quran_page.dart';
 import '../viewmodel/ayah_highlight_viewmodel.dart';
 
@@ -22,11 +25,14 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   /* page count */
   late final Future<int> _pageCountF;
 
-  /* remember last orientation to prevent unwanted jump */
-  Orientation? _prevOrientation;
+  /* track last orientation → only jump when it changes */
+  Orientation? _prevOri;
 
-  /* original scan aspect ratio */
-  static const double _aspectRatio = 720 / 1057;
+  /* asset aspect ratio */
+  static const double _aspect = 720 / 1057;
+
+  /* dummy reciters for the dropdown */
+  static const List<String> reciters = ['Al-Afasy', 'Al-Hudhaify', 'Abdul Basit'];
 
   @override
   void initState() {
@@ -37,10 +43,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   }
 
   Future<int> _detectPageCount() async =>
-      await widget.editionDir
-          .list()
-          .where((f) => f.path.endsWith('.png'))
-          .length;
+      await widget.editionDir.list().where((e) => e.path.endsWith('.png')).length;
 
   @override
   void dispose() {
@@ -49,16 +52,67 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     super.dispose();
   }
 
-  /* jump after orientation change ONLY */
-  void _maybeJumpTo(int page, Orientation ori, double itemH) {
-    if (_prevOrientation == ori) return;          // same orientation → no jump
-    _prevOrientation = ori;                       // remember new orientation
+  /* ───────────────── helpers ───────────────── */
+
+  void _jumpTo(int page, Orientation ori, double itemH) {
+    if (_prevOri == ori) return;                   // same orientation? skip
+    _prevOri = ori;
     if (ori == Orientation.portrait) {
       if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(page);
     } else {
       if (_scrollCtrl.hasClients) _scrollCtrl.jumpTo(page * itemH);
     }
   }
+
+  PreferredSizeWidget _buildAppBar() => AppBar(
+    leading: IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+    title: const Text('কুরআন মজীদ',
+        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 22)),
+    centerTitle: true,
+    actions: [
+      IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+      IconButton(icon: const Icon(Icons.nightlight_outlined), onPressed: () {}),
+      IconButton(icon: const Icon(Icons.g_translate), onPressed: () {}),
+    ],
+  );
+
+  Widget _buildBottomBar() => BottomAppBar(
+    height: bottomBarHeight,
+    child: Row(
+      children: [
+        /* 1️⃣  Left icon — fixed size */
+        IconButton(icon: const Icon(Icons.play_arrow), onPressed: () {}),
+
+        /* 2️⃣  Reciter selector — EXPANDED so it steals / releases width */
+        Expanded(
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: reciters.first,
+              isExpanded: true,                   // <-- important
+              items: reciters
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+
+        /* 3️⃣  Trailing icons wrapped in a Row with minimal space */
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: const Icon(Icons.touch_app_outlined), onPressed: () {}),
+            IconButton(icon: const Icon(Icons.screen_rotation_outlined), onPressed: () {}),
+            IconButton(icon: const Icon(Icons.bookmark_border), onPressed: () {}),
+            IconButton(icon: const Icon(Icons.arrow_upward_outlined), onPressed: () {}),
+          ],
+        ),
+      ],
+    ),
+  );
+
+
+  /* ───────────────── main build ───────────────── */
 
   @override
   Widget build(BuildContext context) {
@@ -68,51 +122,41 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       future: _pageCountF,
       builder: (_, snap) {
         if (!snap.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         final pageCount = snap.data!;
 
         return OrientationBuilder(
           builder: (_, ori) {
-            final width     = MediaQuery.of(context).size.width;
-            final itemH     = width / _aspectRatio;
+            final width  = MediaQuery.of(context).size.width;
+            final itemH  = width / _aspect;
 
-            /* jump only when orientation flips */
+            /* jump exactly once after each orientation change */
             WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => _maybeJumpTo(currentPage, ori, itemH),
+                  (_) => _jumpTo(currentPage, ori, itemH),
             );
 
-            /* ───────── PORTRAIT: PageView (unchanged) ───────── */
+            Widget body;
             if (ori == Orientation.portrait) {
-              return Scaffold(
-                body: PageView.builder(
-                  controller: _pageCtrl,
-                  reverse: true,
-                  itemCount: pageCount,
-                  onPageChanged: (idx) {
-                    ref.read(selectedAyahProvider.notifier).clear();
-                    ref.read(currentPageProvider.notifier).state = idx;
-                  },
-                  itemBuilder: (_, idx) => QuranPage(
-                    pageIndex: idx,
-                    editionDir: widget.editionDir,
-                  ),
+              body = PageView.builder(
+                controller: _pageCtrl,
+                reverse: true,
+                itemCount: pageCount,
+                onPageChanged: (idx) =>
+                ref.read(currentPageProvider.notifier).state = idx,
+                itemBuilder: (_, idx) => QuranPage(
+                  pageIndex: idx,
+                  editionDir: widget.editionDir,
                 ),
               );
-            }
-
-            /* ───────── LANDSCAPE: free vertical scroll ───────── */
-            return Scaffold(
-              body: NotificationListener<ScrollUpdateNotification>(
+            } else {
+              body = NotificationListener<ScrollUpdateNotification>(
                 onNotification: (n) {
-                  final page = (n.metrics.pixels / itemH)
+                  final p = (n.metrics.pixels / itemH)
                       .round()
                       .clamp(0, math.max(0, pageCount - 1));
-                  if (page != currentPage) {
-                    ref.read(currentPageProvider.notifier).state = page.toInt();
-                    ref.read(selectedAyahProvider.notifier).clear();
+                  if (p != currentPage) {
+                    ref.read(currentPageProvider.notifier).state = p.toInt();
                   }
                   return false;
                 },
@@ -124,7 +168,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       pageCount,
                           (idx) => SizedBox(
                         height: itemH,
-                        width: double.infinity,
                         child: QuranPage(
                           pageIndex: idx,
                           editionDir: widget.editionDir,
@@ -133,7 +176,13 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     ),
                   ),
                 ),
-              ),
+              );
+            }
+
+            return Scaffold(
+              appBar: _buildAppBar(),
+              bottomNavigationBar: _buildBottomBar(),
+              body: body,
             );
           },
         );
