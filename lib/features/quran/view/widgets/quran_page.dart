@@ -55,7 +55,7 @@ class QuranPage extends ConsumerWidget {
 
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapDown: onTapDown,
+            onTapDown: ref.watch(touchModeProvider) ? null : onTapDown,
             child: Stack(
               fit: StackFit.expand,
               children: [

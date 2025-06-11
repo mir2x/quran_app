@@ -39,3 +39,30 @@ StateNotifierProvider<SelectedAyahNotifier, int?>(
         (ref) => SelectedAyahNotifier());
 
 final currentPageProvider = StateProvider<int>((_) => 0);
+
+class TouchModeNotifier extends StateNotifier<bool> {
+  TouchModeNotifier() : super(false);
+  void toggle() => state = !state;
+}
+
+final touchModeProvider =
+StateNotifierProvider<TouchModeNotifier, bool>((_) => TouchModeNotifier());
+
+/// simple orientation toggle
+class OrientationToggle {
+  static bool _isPortraitOnly = true;
+
+  static Future<void> toggle() async {
+    _isPortraitOnly = !_isPortraitOnly;
+    if (_isPortraitOnly) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+    } else {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.landscapeLeft,
+      ]);
+    }
+  }
+}
