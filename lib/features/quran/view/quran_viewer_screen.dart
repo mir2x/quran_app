@@ -176,6 +176,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   length: 3,
                   child: Column(
                     children: [
+                      // TabBarView comes first
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            Center(child: Text('Surah list ⏤ TODO')),
+                            Center(child: Text('Para list ⏤ TODO')),
+                            _buildBookmarkTabView(),
+                          ],
+                        ),
+                      ),
+                      // TabBar comes after (at the bottom)
                       Container(
                         color: primaryColor,
                         child: const TabBar(
@@ -185,15 +196,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                             Tab(text: 'সূরা'),
                             Tab(text: 'পারা'),
                             Tab(text: 'বুকমার্ক'),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: TabBarView(
-                          children: [
-                            Center(child: Text('Surah list ⏤ TODO')),
-                            Center(child: Text('Para list ⏤ TODO')),
-                            _buildBookmarkTabView(),
                           ],
                         ),
                       ),
