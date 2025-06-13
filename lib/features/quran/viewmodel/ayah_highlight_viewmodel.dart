@@ -28,14 +28,29 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
 });
 
 
-class SelectedAyahNotifier extends StateNotifier<int?> {
+class SelectedAyahState {
+  final int ayahNumber;
+  final Rect anchorRect;
+
+  const SelectedAyahState(this.ayahNumber, this.anchorRect);
+}
+
+class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   SelectedAyahNotifier() : super(null);
-  void select(int? ayah) => state = state == ayah ? null : ayah;
-  void clear()           => state = null;
+
+  void select(int ayah, Rect anchorRect) {
+    if (state?.ayahNumber == ayah) {
+      state = null;
+    } else {
+      state = SelectedAyahState(ayah, anchorRect);
+    }
+  }
+
+  void clear() => state = null;
 }
 
 final selectedAyahProvider =
-StateNotifierProvider<SelectedAyahNotifier, int?>(
+StateNotifierProvider<SelectedAyahNotifier, SelectedAyahState?>(
         (ref) => SelectedAyahNotifier());
 
 final currentPageProvider = StateProvider<int>((_) => 0);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
+import '../quran_viewer_screen.dart';
 import 'ayah_highlighter.dart';
 
 
@@ -18,6 +19,7 @@ class QuranPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final allBoxesAsync = ref.watch(allBoxesProvider);
+    final selectedState = ref.watch(selectedAyahProvider);
     final logicalPage = pageIndex + 1;
     final pageNumber  = logicalPage < kFirstPageNumber
         ? -1
@@ -40,16 +42,19 @@ class QuranPage extends ConsumerWidget {
           void onTapDown(TapDownDetails d) {
             final logicX = d.localPosition.dx / scaleX;
             final logicY = d.localPosition.dy / scaleY;
-            final tapped = boxes.firstWhere(
-                  (b) => b.contains(logicX, logicY),
-              orElse: () => const AyahBox(
-                ayahNumber: -1, boxId: -1,
-                minX: 0, minY: 0, maxX: 0, maxY: 0,
-                pageNumber: 0, suraNumber: 0,
-              ),
-            );
-            if (tapped.ayahNumber != -1) {
-              notifier.select(tapped.ayahNumber);
+            final tapped = boxes.where((b) => b.contains(logicX, logicY)).toList();
+            if (tapped.isNotEmpty) {
+              final ayah = tapped.first.ayahNumber;
+              final firstBox = boxes
+                  .where((b) => b.ayahNumber == ayah)
+                  .reduce((a, b) => a.boxId < b.boxId ? a : b);
+              final rect = Rect.fromLTWH(
+                firstBox.minX * scaleX,
+                firstBox.minY * scaleY,
+                firstBox.width * scaleX,
+                firstBox.height * scaleY,
+              );
+              notifier.select(ayah, rect);
             }
           }
 
@@ -65,8 +70,10 @@ class QuranPage extends ConsumerWidget {
                 ),
                 CustomPaint(
                   painter: AyahHighlighter(
-                      boxes, selected, scaleX, scaleY),
+                      boxes, selected?.ayahNumber, scaleX, scaleY),
                 ),
+                if (selectedState != null)
+                  AyahMenu(anchorRect: selectedState.anchorRect),
               ],
             ),
           );

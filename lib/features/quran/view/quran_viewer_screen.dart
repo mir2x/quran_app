@@ -156,8 +156,10 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                 controller: _portraitCtrl!,
                 reverse: true,
                 itemCount: pageCount,
-                onPageChanged: (idx) =>
-                ref.read(currentPageProvider.notifier).state = idx,
+                onPageChanged: (idx) {
+                  ref.read(currentPageProvider.notifier).state = idx;
+                  ref.read(selectedAyahProvider.notifier).clear();
+                },
                 itemBuilder: (_, idx) => QuranPage(
                   pageIndex: idx,
                   editionDir: widget.editionDir,
@@ -171,6 +173,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       .round()
                       .clamp(0, math.max(0, pageCount - 1));
                   ref.read(currentPageProvider.notifier).state = p.toInt();
+                  ref.read(selectedAyahProvider.notifier).clear();
                   return false;
                 },
                 child: ListView.builder(
@@ -197,6 +200,45 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           },
         );
       },
+    );
+  }
+}
+
+class AyahMenu extends StatelessWidget {
+  const AyahMenu({super.key, required this.anchorRect});
+
+  final Rect anchorRect;
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    const menuWidth = 300.0;
+    const menuHeight = 56.0;
+    const verticalOffset = 10.0;
+
+    return Positioned(
+      left: (screenWidth - menuWidth) / 2,
+      top: math.max(anchorRect.top - menuHeight - verticalOffset, 0),
+      child: Material(
+        elevation: 3,
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        child: SizedBox(
+          height: menuHeight,
+          width: menuWidth,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(6, (index) {
+              return IconButton(
+                icon: Icon(Icons.star),
+                onPressed: () {
+                  // TODO: handle action
+                },
+              );
+            }),
+          ),
+        ),
+      ),
     );
   }
 }
