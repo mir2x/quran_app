@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants.dart';
 import '../model/ayah_box.dart';
+import '../model/bookmark.dart';
 
 final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
   final jsonStr = await rootBundle.loadString('assets/ayah_boxes.json');
@@ -63,7 +65,6 @@ class TouchModeNotifier extends StateNotifier<bool> {
 final touchModeProvider =
 StateNotifierProvider<TouchModeNotifier, bool>((_) => TouchModeNotifier());
 
-/// simple orientation toggle
 class OrientationToggle {
   static bool _isPortraitOnly = true;
 
@@ -83,10 +84,43 @@ class OrientationToggle {
 }
 
 class DrawerNotifier extends StateNotifier<bool> {
-  DrawerNotifier() : super(false);          // false = closed
+  DrawerNotifier() : super(false);
   void open()  => state = true;
   void close() => state = false;
 }
 
 final drawerOpenProvider =
 StateNotifierProvider<DrawerNotifier, bool>((_) => DrawerNotifier());
+
+class BookmarkNotifier extends AsyncNotifier<List<Bookmark>> {
+  @override
+  Future<List<Bookmark>> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('bookmarks') ?? [];
+    return raw.map((e) => Bookmark.fromJson(jsonDecode(e))).toList();
+  }
+
+  Future<void> add(Bookmark b) async {
+    final list = List<Bookmark>.from(state.value ?? []);
+    if (list.any((e) => e.identifier == b.identifier)) return;
+    list.add(b);
+    state = AsyncData(list);
+    await _persist(list);
+  }
+
+  Future<void> remove(String id) async {
+    final list = List<Bookmark>.from(state.value ?? []);
+    list.removeWhere((b) => b.identifier == id);
+    state = AsyncData(list);
+    await _persist(list);
+  }
+
+  Future<void> _persist(List<Bookmark> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        'bookmarks', data.map((b) => jsonEncode(b.toJson())).toList());
+  }
+}
+
+final bookmarkProvider =
+AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(BookmarkNotifier.new);

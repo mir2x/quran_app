@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme.dart'; // primaryColor, bottomBarHeight
+import '../model/bookmark.dart';
 import 'widgets/quran_page.dart';
 import '../viewmodel/ayah_highlight_viewmodel.dart';
 
@@ -129,7 +130,13 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.bookmark_border),
-              onPressed: () {},
+              onPressed: () {
+                final page = ref.read(currentPageProvider);
+                final identifier = 'page-$page';
+                ref.read(bookmarkProvider.notifier).add(
+                  Bookmark(type: 'page', identifier: identifier),
+                );
+              },
             ),
             IconButton(
               tooltip: drawerOpen ? 'Close drawer' : 'Open drawer',
@@ -213,28 +220,76 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   Widget _buildBookmarkTabView() {
     return DefaultTabController(
       length: 2,
-      child: Column(
-        children: [
-          Container(
-            color: primaryColor.withOpacity(.1),
-            child: const TabBar(
-              labelColor: primaryColor,
-              unselectedLabelColor: Colors.grey,
-              tabs: [
-                Tab(text: 'আয়াত'),
-                Tab(text: 'পৃষ্ঠা'),
-              ],
-            ),
-          ),
-          const Expanded(
-            child: TabBarView(
-              children: [
-                Center(child: Text('Ayah bookmarks ⏤ TODO')),
-                Center(child: Text('Page bookmarks ⏤ TODO')),
-              ],
-            ),
-          ),
-        ],
+      child: Consumer(
+        builder: (_, ref, __) {
+          final bookmarksAsync = ref.watch(bookmarkProvider);
+          return bookmarksAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error loading bookmarks')),
+            data: (bookmarks) {
+              final ayahBookmarks =
+              bookmarks.where((b) => b.type == 'ayah').toList();
+              final pageBookmarks =
+              bookmarks.where((b) => b.type == 'page').toList();
+
+              return Column(
+                children: [
+                  Container(
+                    color: primaryColor.withOpacity(.1),
+                    child: const TabBar(
+                      labelColor: primaryColor,
+                      unselectedLabelColor: Colors.grey,
+                      tabs: [
+                        Tab(text: 'আয়াত'),
+                        Tab(text: 'পৃষ্ঠা'),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        ListView.builder(
+                          itemCount: ayahBookmarks.length,
+                          itemBuilder: (_, i) {
+                            final b = ayahBookmarks[i];
+                            return ListTile(
+                              title: Text(b.identifier),
+                              subtitle: Text(
+                                  'Added: ${b.timestamp.toLocal().toString().split('.').first}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => ref
+                                    .read(bookmarkProvider.notifier)
+                                    .remove(b.identifier),
+                              ),
+                            );
+                          },
+                        ),
+                        ListView.builder(
+                          itemCount: pageBookmarks.length,
+                          itemBuilder: (_, i) {
+                            final b = pageBookmarks[i];
+                            return ListTile(
+                              title: Text('Page ${b.identifier.split('-')[1]}'),
+                              subtitle: Text(
+                                  'Added: ${b.timestamp.toLocal().toString().split('.').first}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => ref
+                                    .read(bookmarkProvider.notifier)
+                                    .remove(b.identifier),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -335,13 +390,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   }
 }
 
-class AyahMenu extends StatelessWidget {
+class AyahMenu extends ConsumerWidget {
   const AyahMenu({super.key, required this.anchorRect});
-
   final Rect anchorRect;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final screenWidth = MediaQuery.of(context).size.width;
     const menuWidth = 300.0;
     const menuHeight = 56.0;
@@ -359,14 +413,26 @@ class AyahMenu extends StatelessWidget {
           width: menuWidth,
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: List.generate(6, (index) {
-              return IconButton(
-                icon: Icon(Icons.star),
+            children: [
+              IconButton(
                 onPressed: () {
-                  // TODO: handle action
+                  final ayah = ref.read(selectedAyahProvider)?.ayahNumber;
+                  final page = ref.read(currentPageProvider);
+                  if (ayah != null) {
+                    final identifier = 'ayah-$page:$ayah';
+                    ref.read(bookmarkProvider.notifier).add(
+                      Bookmark(type: 'ayah', identifier: identifier),
+                    );
+                  }
                 },
-              );
-            }),
+                icon: const Icon(Icons.bookmark),
+              ),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+            ],
           ),
         ),
       ),
