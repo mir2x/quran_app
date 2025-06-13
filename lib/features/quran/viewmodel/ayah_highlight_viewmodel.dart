@@ -81,3 +81,12 @@ class OrientationToggle {
     }
   }
 }
+
+class DrawerNotifier extends StateNotifier<bool> {
+  DrawerNotifier() : super(false);          // false = closed
+  void open()  => state = true;
+  void close() => state = false;
+}
+
+final drawerOpenProvider =
+StateNotifierProvider<DrawerNotifier, bool>((_) => DrawerNotifier());
