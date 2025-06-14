@@ -49,7 +49,6 @@ final boxesForPageProvider2 = FutureProvider.family<List<AyahBox>, int>((ref, pa
   return all.where((b) => b.pageNumber == pageIndex).toList(growable: false);
 });
 
-
 class SelectedAyahState {
   final int ayahNumber;
   final Rect anchorRect;
@@ -71,7 +70,9 @@ class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   void clear() => state = null;
 
   void selectFromAudio(int ayah) {
-    state = SelectedAyahState(ayah, Rect.zero); // No menu
+    if (state?.ayahNumber != ayah) {
+      state = SelectedAyahState(ayah, Rect.zero);
+    }
   }
 }
 
@@ -95,8 +96,6 @@ final currentSuraProvider = Provider<int>((ref) {
     orElse: () => 1,
   );
 });
-
-
 
 class TouchModeNotifier extends StateNotifier<bool> {
   TouchModeNotifier() : super(false);
@@ -214,7 +213,8 @@ class QuranAudioNotifier extends StateNotifier<QuranAudioState?> {
   }
 
   void updateAyah(int ayah) {
-    if (state != null) {
+    // Only update the ayah number if it has changed
+    if (state != null && state!.ayah != ayah) {
       state = state!.copyWith(ayah: ayah);
     }
   }
@@ -241,7 +241,15 @@ final quranAudioProvider = StateNotifierProvider<QuranAudioNotifier, QuranAudioS
 );
 
 final audioPlayerServiceProvider = Provider<AudioControllerService>((ref) {
-  return AudioControllerService(ref);
+  final service = AudioControllerService(ref);
+  ref.onDispose(() {
+    service.dispose();
+  });
+  return service;
 });
 
 final navigateToPageCommandProvider = StateProvider<int?>((_) => null);
+
+void navigateToPage({required WidgetRef ref, required int pageNumber}) {
+  ref.read(navigateToPageCommandProvider.notifier).state = pageNumber;
+}

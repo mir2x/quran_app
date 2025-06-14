@@ -379,6 +379,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
             Widget viewer;
             if (ori == Orientation.portrait) {
+              final isAudioPlaying = ref.read(quranAudioProvider) != null;
               /* horizontal RTL page-snap */
               viewer = PageView.builder(
                 controller: _portraitCtrl!,
@@ -386,7 +387,9 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                 itemCount: pageCount,
                 onPageChanged: (idx) {
                   ref.read(currentPageProvider.notifier).state = idx;
-                  ref.read(selectedAyahProvider.notifier).clear();
+                  if (ref.watch(quranAudioProvider) == null) {
+                    ref.read(selectedAyahProvider.notifier).clear();
+                  }
                 },
                 itemBuilder: (_, idx) =>
                     QuranPage(pageIndex: idx, editionDir: widget.editionDir),
@@ -400,7 +403,9 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     math.max(0, pageCount - 1),
                   );
                   ref.read(currentPageProvider.notifier).state = p.toInt();
-                  ref.read(selectedAyahProvider.notifier).clear();
+                  // if (ref.read(quranAudioProvider) == null) {
+                  //   ref.read(selectedAyahProvider.notifier).clear();
+                  // }
                   return false;
                 },
                 child: ListView.builder(
