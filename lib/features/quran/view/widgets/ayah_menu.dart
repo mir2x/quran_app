@@ -43,8 +43,9 @@ class AyahMenu extends ConsumerWidget {
                 icon: const Icon(Icons.bookmark),
               ),
               IconButton(onPressed: () {
-                ref.read(navigateToPageCommandProvider.notifier).state = 5;
-              }, icon: const Icon(Icons.copy)),
+                final ayah = ref.read(selectedAyahProvider)!.ayahNumber;
+                ref.read(audioPlayerServiceProvider).playAyahs(ayah, ayah);
+              }, icon: const Icon(Icons.play_arrow)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
