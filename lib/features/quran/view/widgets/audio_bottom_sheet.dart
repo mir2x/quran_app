@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../../../core/services/downloader.dart';
+import '../../../../core/services/fileChecker.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
-import 'download_dialog.dart';
-import 'download_permission_dialog.dart';
+import '../../../../shared/downloader/download_dialog.dart';
+import '../../../../shared/downloader/download_permission_dialog.dart';
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
   final int currentSura;
@@ -82,7 +82,7 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 final reciterId = ref.read(selectedReciterProvider);
 
                 // Step 1: Check if downloaded
-                final downloaded = await isReciterDownloaded(reciterId);
+                final downloaded = await isDownloaded(reciterId);
 
                 if (!downloaded) {
                   final reciter = ref.read(reciterCatalogueProvider)

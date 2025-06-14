@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-import '../../../../core/services/downloader.dart';
-import '../../model/reciter_asset.dart';
+import '../../core/services/downloader.dart';
+import '../../features/quran/model/reciter_asset.dart';
 
 class DownloadDialog extends StatefulWidget {
   final ReciterAsset reciter;
@@ -22,12 +21,9 @@ class _DownloadDialogState extends State<DownloadDialog> {
   }
 
   Future<void> _startDownload() async {
-    await downloadAndExtractReciter(
-      widget.reciter,
-          (r, _) {
-        setState(() => received = r);
-      },
-    );
+    await downloadAndExtract(widget.reciter.id, widget.reciter.zipUrl, (r, _) {
+      setState(() => received = r);
+    });
     if (mounted) Navigator.pop(context);
   }
 
@@ -38,17 +34,16 @@ class _DownloadDialogState extends State<DownloadDialog> {
 
     return AlertDialog(
       title: const Center(
-        child: Text(
-          'ডাউনলোড হচ্ছে:',
-          textAlign: TextAlign.center,
-        ),
+        child: Text('ডাউনলোড হচ্ছে', textAlign: TextAlign.center),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           LinearProgressIndicator(value: received / widget.reciter.sizeBytes),
           const SizedBox(height: 12),
-          Text('${downloadedMB.toStringAsFixed(1)}MB / ${totalMB.toStringAsFixed(1)}MB'),
+          Text(
+            '${downloadedMB.toStringAsFixed(1)}MB / ${totalMB.toStringAsFixed(1)}MB',
+          ),
         ],
       ),
     );

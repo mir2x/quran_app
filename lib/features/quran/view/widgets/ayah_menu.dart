@@ -2,11 +2,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../../../core/services/downloader.dart';
+import '../../../../core/services/fileChecker.dart';
 import '../../model/bookmark.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
-import 'download_dialog.dart';
-import 'download_permission_dialog.dart';
+import '../../../../shared/downloader/download_dialog.dart';
+import '../../../../shared/downloader/download_permission_dialog.dart';
 
 class AyahMenu extends ConsumerWidget {
   const AyahMenu({super.key, required this.anchorRect});
@@ -49,7 +49,7 @@ class AyahMenu extends ConsumerWidget {
               IconButton(
                 onPressed: () async {
                   final reciterId = ref.read(selectedReciterProvider);
-                  final downloaded = await isReciterDownloaded(reciterId);
+                  final downloaded = await isDownloaded(reciterId);
                   if (!downloaded) {
                     final reciter = ref
                         .read(reciterCatalogueProvider)

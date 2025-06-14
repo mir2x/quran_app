@@ -1,19 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants.dart';
 import '../../../core/services/audio_service.dart';
-import '../../../core/services/downloader.dart';
+import '../../../core/services/fileChecker.dart';
 import '../model/audio_state.dart';
 import '../model/ayah_box.dart';
 import '../model/ayah_timing.dart';
 import '../model/bookmark.dart';
 import '../model/reciter_asset.dart';
-import '../view/widgets/download_dialog.dart';
 
 final ayahCountsProvider = Provider<List<int>>((ref) {
   return [
@@ -341,7 +339,7 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
 
   Future<String> getAudioAssetPath(int sura) async {
     final padded = sura.toString().padLeft(3, '0');
-    final path = await getLocalReciterPath(_reciter);
+    final path = await getLocalPath(_reciter);
     return '$path/$_reciter/$padded.mp3';
   }
 }
