@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants.dart';
+import '../../../core/services/audio_service.dart';
+import '../model/audio_state.dart';
 import '../model/ayah_box.dart';
+import '../model/ayah_timing.dart';
 import '../model/bookmark.dart';
 
 final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
@@ -49,6 +52,10 @@ class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   }
 
   void clear() => state = null;
+
+  void selectFromAudio(int ayah) {
+    state = SelectedAyahState(ayah, Rect.zero); // No menu
+  }
 }
 
 final selectedAyahProvider =
@@ -56,6 +63,15 @@ StateNotifierProvider<SelectedAyahNotifier, SelectedAyahState?>(
         (ref) => SelectedAyahNotifier());
 
 final currentPageProvider = StateProvider<int>((_) => 0);
+
+final currentSuraProvider = Provider<int>((ref) {
+  final page = ref.watch(currentPageProvider);
+  final boxes = ref.watch(boxesForPageProvider(page));
+
+  if (boxes.isEmpty) return 1;
+  return boxes.first.suraNumber;
+});
+
 
 class TouchModeNotifier extends StateNotifier<bool> {
   TouchModeNotifier() : super(false);
@@ -124,3 +140,81 @@ class BookmarkNotifier extends AsyncNotifier<List<Bookmark>> {
 
 final bookmarkProvider =
 AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(BookmarkNotifier.new);
+
+
+final reciters = ['maher', 'huthaify', 'husary'];
+
+final selectedReciterProvider = StateProvider<String>((_) => reciters.first);
+
+final audioVMProvider = AsyncNotifierProvider<AudioVM, List<AyahTiming>>(AudioVM.new);
+
+class AudioVM extends AsyncNotifier<List<AyahTiming>> {
+  late String _reciter;
+
+  @override
+  Future<List<AyahTiming>> build() async {
+    _reciter = ref.watch(selectedReciterProvider);
+    return _loadTimingForReciter(_reciter);
+  }
+
+  Future<List<AyahTiming>> _loadTimingForReciter(String reciter) async {
+    final jsonStr = await rootBundle.loadString('assets/$reciter/timings.json');
+    final decoded = jsonDecode(jsonStr) as List;
+    return decoded.map((e) => AyahTiming.fromJson(e)).toList(growable: false);
+  }
+
+  List<AyahTiming> getTimingsForSura(int sura) {
+    return state.value?.where((t) => t.sura == sura).toList() ?? [];
+  }
+
+  int getLastAyah(int sura) {
+    final timings = getTimingsForSura(sura);
+    return timings.map((t) => t.ayah).where((a) => a != 999).fold<int>(1, (a, b) => b > a ? b : a);
+  }
+
+  String getAudioAssetPath(int sura) {
+    final padded = sura.toString().padLeft(3, '0');
+    return 'assets/$_reciter/$padded.mp3';
+  }
+}
+
+final selectedStartAyahProvider = StateProvider<int>((_) => 1);
+final selectedEndAyahProvider = StateProvider<int>((_) => 1);
+
+class QuranAudioNotifier extends StateNotifier<QuranAudioState?> {
+  QuranAudioNotifier() : super(null);
+
+  void start(int surah, int ayah) {
+    state = QuranAudioState(surah: surah, ayah: ayah, isPlaying: true);
+  }
+
+  void updateAyah(int ayah) {
+    if (state != null) {
+      state = state!.copyWith(ayah: ayah);
+    }
+  }
+
+  void pause() {
+    if (state != null) {
+      state = state!.copyWith(isPlaying: false);
+    }
+  }
+
+  void resume() {
+    if (state != null) {
+      state = state!.copyWith(isPlaying: true);
+    }
+  }
+
+  void stop() {
+    state = null;
+  }
+}
+
+final quranAudioProvider = StateNotifierProvider<QuranAudioNotifier, QuranAudioState?>(
+      (ref) => QuranAudioNotifier(),
+);
+
+final audioPlayerServiceProvider = Provider<AudioControllerService>((ref) {
+  return AudioControllerService(ref);
+});

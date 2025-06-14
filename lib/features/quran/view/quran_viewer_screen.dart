@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quran_app/features/quran/view/widgets/audio_bottom_sheet.dart';
+import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
 
 import '../../../../core/theme.dart'; // primaryColor, bottomBarHeight
 import '../model/bookmark.dart';
@@ -82,7 +84,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     child: Row(
       children: [
         /* left icon */
-        IconButton(icon: const Icon(Icons.play_arrow), onPressed: () {}),
+        IconButton(
+          icon: const Icon(Icons.play_arrow),
+          onPressed: () {
+            final sura = ref.read(currentSuraProvider);
+
+            showModalBottomSheet(
+              context: context,
+              builder: (_) => AudioBottomSheet(currentSura: sura),
+            );
+          },
+        ),
 
         /* expandable dropdown */
         Expanded(
@@ -117,7 +129,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
                     // … then clear highlight *if the mode is now locked*
                     if (!ref.read(touchModeProvider))
-                      return; // on just turned ON
+                      return;
                     ref.read(selectedAyahProvider.notifier).clear();
                   },
                 );
@@ -294,8 +306,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     );
   }
 
-  /* ─────────────  build  ───────────── */
-
   @override
   Widget build(BuildContext context) {
     final currentPage = ref.watch(currentPageProvider);
@@ -381,7 +391,25 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
               bottomNavigationBar: _buildBottomBar(
                 ref.watch(drawerOpenProvider),
               ),
-              body: viewer,
+              body: Stack(
+                children: [
+                  viewer,
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final audio = ref.watch(quranAudioProvider);
+                      if (audio == null || !audio.isPlaying) return const SizedBox.shrink();
+
+                      return Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: kBottomNavigationBarHeight,
+                        child: AudioControllerBar(color: Theme.of(context).primaryColor),
+                      );
+                    },
+                  ),
+                ],
+              ),
+
             );
           },
         );

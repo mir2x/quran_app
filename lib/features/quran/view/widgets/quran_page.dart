@@ -72,7 +72,7 @@ class QuranPage extends ConsumerWidget {
                   painter: AyahHighlighter(
                       boxes, selected?.ayahNumber, scaleX, scaleY),
                 ),
-                if (selectedState != null)
+                if (selectedState != null && selectedState.anchorRect != Rect.zero)
                   AyahMenu(anchorRect: selectedState.anchorRect),
               ],
             ),
