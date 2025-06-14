@@ -403,9 +403,9 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     math.max(0, pageCount - 1),
                   );
                   ref.read(currentPageProvider.notifier).state = p.toInt();
-                  // if (ref.read(quranAudioProvider) == null) {
-                  //   ref.read(selectedAyahProvider.notifier).clear();
-                  // }
+                  if (ref.watch(quranAudioProvider) == null) {
+                    ref.read(selectedAyahProvider.notifier).clear();
+                  }
                   return false;
                 },
                 child: ListView.builder(
@@ -446,7 +446,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       return Positioned(
                         left: 0,
                         right: 0,
-                        bottom: kBottomNavigationBarHeight,
+                        bottom: 0,
                         child: AudioControllerBar(color: Theme.of(context).primaryColor),
                       );
                     },
