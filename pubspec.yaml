@@ -36,10 +36,7 @@ flutter:
     - assets/image/front_page/
     - assets/audio_json/
     - assets/audio/
-    - assets/maher_muaiqly/
-    - assets/page_003.png
-    - assets/page_004.png
-    - assets/ayah_boxes.json
+
 
   fonts:
     - family: SolaimanLipi

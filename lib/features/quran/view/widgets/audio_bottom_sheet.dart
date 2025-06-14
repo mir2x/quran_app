@@ -5,6 +5,7 @@ import '../../viewmodel/ayah_highlight_viewmodel.dart';
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
   final int currentSura;
+
   const AudioBottomSheet({super.key, required this.currentSura});
 
   @override
@@ -27,100 +28,77 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final audioVM = ref.watch(audioVMProvider);
+    final selectedReciter = ref.watch(selectedReciterProvider);
     final startAyah = ref.watch(selectedStartAyahProvider);
     final endAyah = ref.watch(selectedEndAyahProvider);
+    final ayahCounts = ref.watch(ayahCountsProvider);
+    final lastAyah = ayahCounts[widget.currentSura - 1];
+    final ayahOptions = List.generate(lastAyah, (i) => i + 1);
 
-    return audioVM.when(
-      data: (_) {
-        final vm = ref.read(audioVMProvider.notifier);
-        final selectedReciter = ref.watch(selectedReciterProvider);
-        final lastAyah = vm.getLastAyah(widget.currentSura);
-        final ayahOptions = List.generate(lastAyah, (i) => i + 1);
-
-        return Container(
-          color: const Color(0xFF294B39),
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _labeledDropdown(
-                label: "ক্বারী",
-                icon: HugeIcons.solidStandardMuslim,
-                value: reciters.entries
-                    .firstWhere((e) => e.value == selectedReciter)
-                    .key,
-                items: reciters.keys.toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    ref.read(selectedReciterProvider.notifier).state =
+    return Container(
+      color: const Color(0xFF294B39),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _labeledDropdown(
+            label: "ক্বারী",
+            icon: HugeIcons.solidStandardMuslim,
+            value: reciters.entries
+                .firstWhere((e) => e.value == selectedReciter)
+                .key,
+            items: reciters.keys.toList(),
+            onChanged: (val) {
+              if (val != null) {
+                ref.read(selectedReciterProvider.notifier).state =
                     reciters[val]!;
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              _labeledDropdown<int>(
-                label: "শুরু আয়াত",
-                icon: HugeIcons.solidRoundedSquareArrowLeft03,
-                value: startAyah,
-                items: ayahOptions,
-                onChanged: (val) {
-                  if (val != null) {
-                    ref.read(selectedStartAyahProvider.notifier).state = val;
-                    if (val > endAyah) {
-                      ref.read(selectedEndAyahProvider.notifier).state = val;
-                    }
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              _labeledDropdown<int>(
-                label: "শেষ আয়াত",
-                icon: HugeIcons.solidRoundedSquareArrowRight03,
-                value: endAyah,
-                items: ayahOptions.where((a) => a >= startAyah).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    ref.read(selectedEndAyahProvider.notifier).state = val;
-                  }
-                },
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(HugeIcons.solidRoundedPlay),
-                  label: const Text('Play'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF294B39),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  onPressed: () async {
-                    final from = ref.read(selectedStartAyahProvider);
-                    final to = ref.read(selectedEndAyahProvider);
-                    final service = ref.read(audioPlayerServiceProvider);
-                    service.setCurrentSura(widget.currentSura);
-                    await service.playAyahs(from, to);
-                    Navigator.pop(context);
-                  },
-                ),
-              )
-            ],
+              }
+            },
           ),
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(child: Text("Error: $e", style: TextStyle(color: Colors.red))),
+          const SizedBox(height: 12),
+          _labeledDropdown<int>(
+            label: "শুরু আয়াত",
+            icon: HugeIcons.solidRoundedSquareArrowLeft03,
+            value: startAyah,
+            items: ayahOptions,
+            onChanged: (val) {
+              if (val != null) {
+                ref.read(selectedStartAyahProvider.notifier).state = val;
+                if (val > endAyah) {
+                  ref.read(selectedEndAyahProvider.notifier).state = val;
+                }
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          _labeledDropdown<int>(
+            label: "শেষ আয়াত",
+            icon: HugeIcons.solidRoundedSquareArrowRight03,
+            value: endAyah,
+            items: ayahOptions.where((a) => a >= startAyah).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                ref.read(selectedEndAyahProvider.notifier).state = val;
+              }
+            },
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(HugeIcons.solidRoundedPlay),
+              label: const Text('Play'),
+              onPressed: () async {
+                final from = ref.read(selectedStartAyahProvider);
+                final to = ref.read(selectedEndAyahProvider);
+                final service = ref.read(audioPlayerServiceProvider);
+                service.setCurrentSura(widget.currentSura);
+                await service.playAyahs(from, to);
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -178,4 +156,3 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
     );
   }
 }
-
