@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,7 +15,24 @@ void main() async {
     url: 'https://ntgkoryrbfyhcbqfnsbx.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50Z2tvcnlyYmZ5aGNicWZuc2J4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTIyMDQwNSwiZXhwIjoyMDY0Nzk2NDA1fQ.8E8CkezPBhpKZ8YIZjcCc9HCiUH1tpvm4-1iwEXTDh4',
   );
+  await logReciterFolder('maher_muaiqly');
   runApp(const ProviderScope(child: QuranApp()));
+}
+
+Future<void> logReciterFolder(String reciterId) async {
+  final dir = await getApplicationDocumentsDirectory();
+  final reciterDir = Directory('${dir.path}/$reciterId');
+
+  if (!await reciterDir.exists()) {
+    print('❌ Directory does not exist: ${reciterDir.path}');
+    return;
+  }
+
+  print('📂 Contents of ${reciterDir.path}:');
+  await for (var entity in reciterDir.list(recursive: true, followLinks: false)) {
+    final type = entity is File ? '📄 File' : '📁 Folder';
+    print('  $type: ${entity.path}');
+  }
 }
 
 

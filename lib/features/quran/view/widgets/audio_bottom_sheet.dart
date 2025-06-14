@@ -3,13 +3,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 
-class AudioBottomSheet extends ConsumerWidget {
+class AudioBottomSheet extends ConsumerStatefulWidget {
   final int currentSura;
-
   const AudioBottomSheet({super.key, required this.currentSura});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AudioBottomSheet> createState() => _AudioBottomSheetState();
+}
+
+class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
+  bool _loadingTriggered = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadingTriggered) {
+      _loadingTriggered = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(audioVMProvider.notifier).loadWithContext(context);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final audioVM = ref.watch(audioVMProvider);
     final startAyah = ref.watch(selectedStartAyahProvider);
     final endAyah = ref.watch(selectedEndAyahProvider);
@@ -18,7 +35,7 @@ class AudioBottomSheet extends ConsumerWidget {
       data: (_) {
         final vm = ref.read(audioVMProvider.notifier);
         final selectedReciter = ref.watch(selectedReciterProvider);
-        final lastAyah = vm.getLastAyah(currentSura);
+        final lastAyah = vm.getLastAyah(widget.currentSura);
         final ayahOptions = List.generate(lastAyah, (i) => i + 1);
 
         return Container(
@@ -87,7 +104,7 @@ class AudioBottomSheet extends ConsumerWidget {
                     final from = ref.read(selectedStartAyahProvider);
                     final to = ref.read(selectedEndAyahProvider);
                     final service = ref.read(audioPlayerServiceProvider);
-                    service.setCurrentSura(currentSura);
+                    service.setCurrentSura(widget.currentSura);
                     await service.playAyahs(from, to);
                     Navigator.pop(context);
                   },
@@ -145,9 +162,11 @@ class AudioBottomSheet extends ConsumerWidget {
                 items: items.map((e) {
                   return DropdownMenuItem<T>(
                     value: e,
-                    child: Text(e.toString(),
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white)),
+                    child: Text(
+                      e.toString(),
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   );
                 }).toList(),
                 onChanged: onChanged,
@@ -159,3 +178,4 @@ class AudioBottomSheet extends ConsumerWidget {
     );
   }
 }
+

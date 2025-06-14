@@ -1,0 +1,51 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/services/downloader.dart';
+import '../../model/reciter_asset.dart';
+
+class DownloadDialog extends StatefulWidget {
+  final ReciterAsset reciter;
+
+  const DownloadDialog({super.key, required this.reciter});
+
+  @override
+  State<DownloadDialog> createState() => _DownloadDialogState();
+}
+
+class _DownloadDialogState extends State<DownloadDialog> {
+  int received = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startDownload();
+  }
+
+  Future<void> _startDownload() async {
+    await downloadAndExtractReciter(
+      widget.reciter,
+          (r, _) {
+        setState(() => received = r);
+      },
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalMB = widget.reciter.sizeBytes / (1024 * 1024);
+    final downloadedMB = received / (1024 * 1024);
+
+    return AlertDialog(
+      title: Text('ডাউনলোড হচ্ছে: ${widget.reciter.name}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(value: received / widget.reciter.sizeBytes),
+          const SizedBox(height: 12),
+          Text('${downloadedMB.toStringAsFixed(1)}MB / ${totalMB.toStringAsFixed(1)}MB'),
+        ],
+      ),
+    );
+  }
+}

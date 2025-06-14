@@ -55,10 +55,10 @@ class AudioControllerService {
     final actualStartAyahTiming = _timings[_currentIndex];
     _startAyah = actualStartAyahTiming.ayah;
 
-    final audioPath = ref.read(audioVMProvider.notifier).getAudioAssetPath(_sura);
+    final audioPath = await ref.read(audioVMProvider.notifier).getAudioAssetPath(_sura);
 
     try {
-      await _player.setAsset(audioPath);
+      await _player.setFilePath(audioPath);
     } catch (e) {
       debugPrint('Error loading audio asset: $audioPath, Error: $e');
       return;

@@ -1,15 +1,19 @@
 import 'dart:convert';
-import 'dart:math' as math;
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants.dart';
 import '../../../core/services/audio_service.dart';
+import '../../../core/services/downloader.dart';
 import '../model/audio_state.dart';
 import '../model/ayah_box.dart';
 import '../model/ayah_timing.dart';
 import '../model/bookmark.dart';
+import '../model/reciter_asset.dart';
+import '../view/widgets/download_dialog.dart';
 
 final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
   final jsonStr = await rootBundle.loadString('assets/ayah_boxes.json');
@@ -167,13 +171,28 @@ AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(BookmarkNotifier.new);
 
 
 final Map<String, String> reciters = {
-  'সৌদ আল-শুরাইম': 'saud_shuraim',
   'মাহের আল মুয়াইক্বিলি': 'maher_muaiqly',
+  'সৌদ আল-শুরাইম': 'saud_shuraim',
   'আলী জাবের': 'ali_jaber',
   'আব্দুল মুনিম আব্দুল মুবদি': 'abdul_munim_mubdi',
 };
 
 final selectedReciterProvider = StateProvider<String>((_) => reciters.values.first);
+
+final reciterCatalogueProvider = Provider<List<ReciterAsset>>((_) => const [
+  ReciterAsset(
+    id: 'maher_muaiqly',
+    name: 'মাহের আল মুয়াইক্বিলি',
+    zipUrl: 'https://ntgkoryrbfyhcbqfnsbx.supabase.co/storage/v1/object/public/assets/audio/maher_muaiqly.zip',
+    sizeBytes: 51097600,
+  ),
+  ReciterAsset(
+    id: 'ali_jaber',
+    name: 'আলী জাবের',
+    zipUrl: 'https://example.com/assets/ali_jaber.zip',
+    sizeBytes: 10000000,
+  ),
+]);
 
 final audioVMProvider = AsyncNotifierProvider<AudioVM, List<AyahTiming>>(AudioVM.new);
 
@@ -183,13 +202,42 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
   @override
   Future<List<AyahTiming>> build() async {
     _reciter = ref.watch(selectedReciterProvider);
-    return _loadTimingForReciter(_reciter);
+    return [];
   }
 
-  Future<List<AyahTiming>> _loadTimingForReciter(String reciter) async {
-    final jsonStr = await rootBundle.loadString('assets/$reciter/timings.json');
+  Future<void> loadWithContext(BuildContext context) async {
+    _reciter = ref.read(selectedReciterProvider);
+    final downloaded = await isReciterDownloaded(_reciter);
+
+    if (!downloaded) {
+      final reciter = ref.read(reciterCatalogueProvider)
+          .firstWhere((r) => r.id == _reciter);
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => DownloadDialog(
+          reciter: reciter,
+        ),
+      );
+    }
+
+    final timings = await _loadTimingFromLocal(_reciter);
+    state = AsyncData(timings);
+  }
+
+  Future<List<AyahTiming>> _loadTimingFromLocal(String reciter) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/$reciter/$reciter/timings.json');
+    final jsonStr = await file.readAsString();
     final decoded = jsonDecode(jsonStr) as List;
     return decoded.map((e) => AyahTiming.fromJson(e)).toList(growable: false);
+  }
+
+  Future<String> getAudioAssetPath(int sura) async {
+    final padded = sura.toString().padLeft(3, '0');
+    final path = await getLocalReciterPath(_reciter);
+    return '$path/$_reciter/$padded.mp3';
   }
 
   List<AyahTiming> getTimingsForSura(int sura) {
@@ -200,12 +248,8 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
     final timings = getTimingsForSura(sura);
     return timings.map((t) => t.ayah).where((a) => a != 999).fold<int>(1, (a, b) => b > a ? b : a);
   }
-
-  String getAudioAssetPath(int sura) {
-    final padded = sura.toString().padLeft(3, '0');
-    return 'assets/$_reciter/$padded.mp3';
-  }
 }
+
 
 final selectedStartAyahProvider = StateProvider<int>((_) => 1);
 final selectedEndAyahProvider = StateProvider<int>((_) => 1);
