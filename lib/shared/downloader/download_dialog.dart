@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/services/downloader.dart';
-import '../../features/quran/model/reciter_asset.dart';
 
 class DownloadDialog extends StatefulWidget {
-  final ReciterAsset reciter;
+  final String id;
+  final String zipUrl;
+  final int sizeBytes;
 
-  const DownloadDialog({super.key, required this.reciter});
+  const DownloadDialog({super.key, required this.id, required this.zipUrl, required this.sizeBytes});
 
   @override
   State<DownloadDialog> createState() => _DownloadDialogState();
@@ -21,7 +22,7 @@ class _DownloadDialogState extends State<DownloadDialog> {
   }
 
   Future<void> _startDownload() async {
-    await downloadAndExtract(widget.reciter.id, widget.reciter.zipUrl, (r, _) {
+    await downloadAndExtract(widget.id, widget.zipUrl, (r, _) {
       setState(() => received = r);
     });
     if (mounted) Navigator.pop(context);
@@ -29,7 +30,7 @@ class _DownloadDialogState extends State<DownloadDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final totalMB = widget.reciter.sizeBytes / (1024 * 1024);
+    final totalMB = widget.sizeBytes / (1024 * 1024);
     final downloadedMB = received / (1024 * 1024);
 
     return AlertDialog(
@@ -39,7 +40,7 @@ class _DownloadDialogState extends State<DownloadDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          LinearProgressIndicator(value: received / widget.reciter.sizeBytes),
+          LinearProgressIndicator(value: received / widget.sizeBytes),
           const SizedBox(height: 12),
           Text(
             '${downloadedMB.toStringAsFixed(1)}MB / ${totalMB.toStringAsFixed(1)}MB',

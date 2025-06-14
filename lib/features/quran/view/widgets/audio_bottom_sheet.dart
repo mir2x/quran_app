@@ -82,21 +82,21 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 final reciterId = ref.read(selectedReciterProvider);
 
                 // Step 1: Check if downloaded
-                final downloaded = await isDownloaded(reciterId);
+                final downloaded = await isAssetDownloaded(reciterId);
 
                 if (!downloaded) {
                   final reciter = ref.read(reciterCatalogueProvider)
                       .firstWhere((r) => r.id == reciterId);
 
                   final confirmed =
-                  await downloadPermissionDialog(context, reciter.name);
+                  await downloadPermissionDialog(context, "audio", reciterName: reciter.name);
 
                   if (!confirmed) return;
 
                   await showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (_) => DownloadDialog(reciter: reciter),
+                    builder: (_) => DownloadDialog(id: reciter.id, zipUrl: reciter.zipUrl, sizeBytes: reciter.sizeBytes),
                   );
                 }
 

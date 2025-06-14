@@ -8,7 +8,7 @@ Future<void> downloadAndExtract(
     final String url,
     void Function(int received, int total) onProgress,
     ) async {
-  final dirPath = await getLocalPath(id);
+  final dirPath = await getLocalPath(id);         // Target dir: /.../reciter_name/
   final zipPath = '$dirPath.zip';
 
   await Directory(dirPath).create(recursive: true);
@@ -22,13 +22,15 @@ Future<void> downloadAndExtract(
 
   final bytes = File(zipPath).readAsBytesSync();
   final archive = ZipDecoder().decodeBytes(bytes);
+
   for (final file in archive) {
-    final filePath = '$dirPath/${file.name}';
     if (file.isFile) {
+      // Extract filename only (remove any folders in the zip path)
+      final flattenedFileName = file.name.split(Platform.pathSeparator).last;
+      final filePath = '$dirPath/$flattenedFileName';
+
       final outFile = File(filePath)..createSync(recursive: true);
       outFile.writeAsBytesSync(file.content as List<int>);
-    } else {
-      Directory(filePath).createSync(recursive: true);
     }
   }
 

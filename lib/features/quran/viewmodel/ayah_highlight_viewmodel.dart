@@ -156,21 +156,6 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
       .toList(growable: false);
 });
 
-final boxesForPageProvider2 = FutureProvider.family<List<AyahBox>, int>((ref, pageIndex) async {
-  final allAsync = ref.watch(allBoxesProvider);
-
-  final all = await allAsync.when(
-    data: (d) => d,
-    loading: () => <AyahBox>[],
-    error: (_, __) => <AyahBox>[],
-  );
-
-
-  if (pageIndex < kFirstPageNumber) return [];
-
-  return all.where((b) => b.pageNumber == pageIndex).toList(growable: false);
-});
-
 class SelectedAyahState {
   final int ayahNumber;
   final Rect anchorRect;
@@ -331,7 +316,7 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
 
   Future<List<AyahTiming>> _loadTimingFromLocal(String reciter) async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$reciter/$reciter/timings.json');
+    final file = File('${dir.path}/$reciter/timings.json');
     final jsonStr = await file.readAsString();
     final decoded = jsonDecode(jsonStr) as List;
     return decoded.map((e) => AyahTiming.fromJson(e)).toList(growable: false);
@@ -340,11 +325,9 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
   Future<String> getAudioAssetPath(int sura) async {
     final padded = sura.toString().padLeft(3, '0');
     final path = await getLocalPath(_reciter);
-    return '$path/$_reciter/$padded.mp3';
+    return '$path/$padded.mp3';
   }
 }
-
-
 
 final selectedStartAyahProvider = StateProvider<int>((_) => 1);
 final selectedEndAyahProvider = StateProvider<int>((_) => 1);

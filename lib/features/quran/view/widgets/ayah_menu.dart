@@ -49,20 +49,21 @@ class AyahMenu extends ConsumerWidget {
               IconButton(
                 onPressed: () async {
                   final reciterId = ref.read(selectedReciterProvider);
-                  final downloaded = await isDownloaded(reciterId);
+                  final downloaded = await isAssetDownloaded(reciterId);
                   if (!downloaded) {
                     final reciter = ref
                         .read(reciterCatalogueProvider)
                         .firstWhere((r) => r.id == reciterId);
                     final confirmed = await downloadPermissionDialog(
                       context,
-                      reciter.name,
+                      "audio",
+                      reciterName:  reciter.name,
                     );
                     if (!confirmed) return;
                     await showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (_) => DownloadDialog(reciter: reciter),
+                      builder: (_) => DownloadDialog(id: reciter.id, zipUrl: reciter.zipUrl, sizeBytes: reciter.sizeBytes),
                     );
                   }
                   await ref.read(audioVMProvider.notifier).loadTimings();

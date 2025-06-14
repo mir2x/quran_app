@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:quran_app/features/home_old/presentation/screens/home_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -57,7 +58,7 @@ class QuranApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const EditionSelectionScreen(),
+      home: const HomeScreen(),
     );
   }
 }

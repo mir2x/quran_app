@@ -1,18 +1,26 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../../../shared/downloader/download_dialog.dart';
+import '../../../../shared/downloader/download_permission_dialog.dart';
+import '../../../quran/view/quran_viewer_screen.dart';
+import '../../model/quran_edition.dart';
+import '../providers/home_providers.dart';
 
-import '../../../asset_loader/presentation/screens/asset_loader_dialog.dart';
-import '../../data/data_sources/quran_edition_data.dart';
-import '../../domain/entities/quran_edition.dart';
-
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final screenWidth = MediaQuery.of(context).size.width;
     final horizontalPadding = screenWidth * 0.05;
     const verticalPadding = 24.0;
     const gridSpacing = 16.0;
+
+    final quranEditions = ref.watch(quranEditionProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
@@ -26,7 +34,7 @@ class HomeScreen extends StatelessWidget {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: quranEditionData.length,
+              itemCount: quranEditions.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: gridSpacing,
@@ -34,7 +42,7 @@ class HomeScreen extends StatelessWidget {
                 childAspectRatio: 0.65,
               ),
               itemBuilder: (context, index) {
-                return _QuranEditionGridItem(edition: quranEditionData[index]);
+                return _QuranEditionGridItem(edition: quranEditions[index]);
               },
             ),
           ],
@@ -44,13 +52,16 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _QuranEditionGridItem extends StatelessWidget {
+
+class _QuranEditionGridItem extends ConsumerWidget {
   final QuranEdition edition;
 
   const _QuranEditionGridItem({required this.edition});
 
+  bool get hasCheckmark => edition.isDownloaded;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AspectRatio(
       aspectRatio: 0.65,
       child: LayoutBuilder(
@@ -64,18 +75,42 @@ class _QuranEditionGridItem extends StatelessWidget {
                 height: imageHeight,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(8.0),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => AssetLoaderDialog(
-                        assetPath: edition.assetPath,
-                        imageWidth: edition.imageWidth,
-                        imageHeight: edition.imageHeight,
-                        imageFiles: edition.imageFiles,
-                        jsonFiles: edition.jsonFiles,
-                      ),
-                    );
+                  onTap: () async {
+                    if (!edition.isDownloaded) {
+                      final confirmed = await downloadPermissionDialog(
+                        context,
+                        "edition",
+                        editionName: edition.title,
+                      );
+                      if (!confirmed) return;
+
+                      await showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => DownloadDialog(
+                          id: edition.id,
+                          zipUrl: edition.url,
+                          sizeBytes: edition.sizeBytes,
+                        ),
+                      );
+                      ref.read(quranEditionProvider.notifier).markAsDownloaded(edition.id);
+                    }
+
+                    final dir = await getApplicationDocumentsDirectory();
+                    final editionDir = Directory('${dir.path}/${edition.id}');
+
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => QuranViewerScreen(
+                            editionDir: editionDir,
+                            imageWidth: edition.imageWidth,
+                            imageHeight: edition.imageHeight,
+                          ),
+                        ),
+                      );
+                    }
                   },
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -103,15 +138,10 @@ class _QuranEditionGridItem extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (edition.hasCheckmark)
+                      if (hasCheckmark)
                         Positioned(
-                          top: -20,
-                          child: Image.asset(
-                            'assets/checkmark_overlay.png',
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          ),
+                          top: -15,
+                          child: Icon(HugeIcons.solidRoundedLocationCheck02, size: 36)
                         ),
                     ],
                   ),
@@ -140,3 +170,4 @@ class _QuranEditionGridItem extends StatelessWidget {
     );
   }
 }
+
