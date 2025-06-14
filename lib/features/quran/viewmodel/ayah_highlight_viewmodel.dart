@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -242,3 +243,5 @@ final quranAudioProvider = StateNotifierProvider<QuranAudioNotifier, QuranAudioS
 final audioPlayerServiceProvider = Provider<AudioControllerService>((ref) {
   return AudioControllerService(ref);
 });
+
+final navigateToPageCommandProvider = StateProvider<int?>((_) => null);

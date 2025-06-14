@@ -42,7 +42,9 @@ class AyahMenu extends ConsumerWidget {
                 },
                 icon: const Icon(Icons.bookmark),
               ),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
+              IconButton(onPressed: () {
+                ref.read(navigateToPageCommandProvider.notifier).state = 5;
+              }, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),

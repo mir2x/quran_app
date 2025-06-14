@@ -309,6 +309,45 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final currentPage = ref.watch(currentPageProvider);
+    ref.listen<int?>(navigateToPageCommandProvider, (prevPageNum, newPageNum) async {
+      if (newPageNum != null) {
+        final targetPageIndex = newPageNum - 1;
+
+        final pageCount = await _pageCountF;
+
+        if (targetPageIndex >= 0 && targetPageIndex < pageCount) {
+          final currentOrientation = MediaQuery.of(context).orientation;
+          final width = MediaQuery.of(context).size.width;
+
+          if (currentOrientation == Orientation.portrait && _portraitCtrl != null) {
+            _portraitCtrl!.animateToPage(
+              targetPageIndex,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          } else if (currentOrientation == Orientation.landscape && _landscapeCtrl != null) {
+            final itemH = width / _aspect;
+            final offset = targetPageIndex * itemH;
+
+            _landscapeCtrl!.animateTo(
+              offset,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+
+          Future.microtask(() {
+            ref.read(navigateToPageCommandProvider.notifier).state = null;
+          });
+
+        } else {
+          debugPrint('Navigation command received for invalid page number: $newPageNum');
+          Future.microtask(() {
+            ref.read(navigateToPageCommandProvider.notifier).state = null;
+          });
+        }
+      }
+    });
 
     return FutureBuilder<int>(
       future: _pageCountF,
