@@ -37,7 +37,12 @@ class _DownloadDialogState extends State<DownloadDialog> {
     final downloadedMB = received / (1024 * 1024);
 
     return AlertDialog(
-      title: Text('ডাউনলোড হচ্ছে: ${widget.reciter.name}'),
+      title: const Center(
+        child: Text(
+          'ডাউনলোড হচ্ছে:',
+          textAlign: TextAlign.center,
+        ),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

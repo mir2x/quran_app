@@ -325,23 +325,8 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
     return [];
   }
 
-  Future<void> loadWithContext(BuildContext context) async {
+  Future<void> loadTimings() async {
     _reciter = ref.read(selectedReciterProvider);
-    final downloaded = await isReciterDownloaded(_reciter);
-
-    if (!downloaded) {
-      final reciter = ref.read(reciterCatalogueProvider)
-          .firstWhere((r) => r.id == _reciter);
-
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => DownloadDialog(
-          reciter: reciter,
-        ),
-      );
-    }
-
     final timings = await _loadTimingFromLocal(_reciter);
     state = AsyncData(timings);
   }
@@ -359,16 +344,8 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
     final path = await getLocalReciterPath(_reciter);
     return '$path/$_reciter/$padded.mp3';
   }
-
-  List<AyahTiming> getTimingsForSura(int sura) {
-    return state.value?.where((t) => t.sura == sura).toList() ?? [];
-  }
-
-  // int getLastAyah(int sura) {
-  //   final timings = getTimingsForSura(sura);
-  //   return timings.map((t) => t.ayah).where((a) => a != 999).fold<int>(1, (a, b) => b > a ? b : a);
-  // }
 }
+
 
 
 final selectedStartAyahProvider = StateProvider<int>((_) => 1);

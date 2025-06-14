@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../../../core/services/downloader.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
+import 'download_dialog.dart';
+import 'download_permission_dialog.dart';
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
   final int currentSura;
@@ -13,19 +16,6 @@ class AudioBottomSheet extends ConsumerStatefulWidget {
 }
 
 class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
-  bool _loadingTriggered = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_loadingTriggered) {
-      _loadingTriggered = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(audioVMProvider.notifier).loadWithContext(context);
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final selectedReciter = ref.watch(selectedReciterProvider);
@@ -89,6 +79,31 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
               icon: const Icon(HugeIcons.solidRoundedPlay),
               label: const Text('Play'),
               onPressed: () async {
+                final reciterId = ref.read(selectedReciterProvider);
+
+                // Step 1: Check if downloaded
+                final downloaded = await isReciterDownloaded(reciterId);
+
+                if (!downloaded) {
+                  final reciter = ref.read(reciterCatalogueProvider)
+                      .firstWhere((r) => r.id == reciterId);
+
+                  final confirmed =
+                  await downloadPermissionDialog(context, reciter.name);
+
+                  if (!confirmed) return;
+
+                  await showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => DownloadDialog(reciter: reciter),
+                  );
+                }
+
+                // Step 3: Load timing after download
+                await ref.read(audioVMProvider.notifier).loadTimings();
+
+                // Step 4: Proceed with playback
                 final from = ref.read(selectedStartAyahProvider);
                 final to = ref.read(selectedEndAyahProvider);
                 final service = ref.read(audioPlayerServiceProvider);
@@ -96,6 +111,7 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 await service.playAyahs(from, to);
                 if (context.mounted) Navigator.pop(context);
               },
+
             ),
           ),
         ],

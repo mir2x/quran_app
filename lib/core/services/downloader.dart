@@ -48,6 +48,6 @@ Future<void> downloadAndExtractReciter(
     }
   }
 
-  await File(zipPath).delete(); // cleanup
+  await File(zipPath).delete();
   await markReciterAsDownloaded(reciter.id);
 }
