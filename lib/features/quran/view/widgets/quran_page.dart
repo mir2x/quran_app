@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
-import '../quran_viewer_screen.dart';
 import 'ayah_highlighter.dart';
+import 'ayah_menu.dart';
 
 
 class QuranPage extends ConsumerWidget {

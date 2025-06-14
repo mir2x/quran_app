@@ -81,13 +81,17 @@ StateNotifierProvider<SelectedAyahNotifier, SelectedAyahState?>(
 final currentPageProvider = StateProvider<int>((_) => 0);
 
 final currentSuraProvider = Provider<int>((ref) {
-  final page = ref.watch(currentPageProvider);
-  final boxesAsync = ref.watch(boxesForPageProvider2(page + 1));
+  final page = ref.watch(currentPageProvider) + 1;
 
-  return boxesAsync.when(
-    data: (boxes) => boxes.isEmpty ? 1 : boxes.first.suraNumber,
-    loading: () => 1,
-    error: (_, __) => 1,
+  final allBoxes = ref.watch(allBoxesProvider);
+  return allBoxes.maybeWhen(
+    data: (d) {
+      final pageBoxes = d
+          .where((b) => b.pageNumber == page)
+          .toList(growable: false);
+      return pageBoxes.isEmpty ? 1 : pageBoxes.first.suraNumber;
+    },
+    orElse: () => 1,
   );
 });
 
