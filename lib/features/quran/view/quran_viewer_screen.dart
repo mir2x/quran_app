@@ -80,14 +80,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   );
 
   Widget _buildBottomBar(bool drawerOpen) => BottomAppBar(
-    height: bottomBarHeight,
+    height: kBottomNavigationBarHeight,
     child: Row(
       children: [
         /* left icon */
         IconButton(
           icon: const Icon(Icons.play_arrow),
           onPressed: () {
-            final sura = ref.read(currentSuraProvider);
+            final sura = ref.watch(currentSuraProvider);
+            final page = ref.watch(currentPageProvider);
+            debugPrint(sura.toString());
+            debugPrint(page.toString());
 
             showModalBottomSheet(
               context: context,
@@ -397,7 +400,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   Consumer(
                     builder: (context, ref, _) {
                       final audio = ref.watch(quranAudioProvider);
-                      if (audio == null || !audio.isPlaying) return const SizedBox.shrink();
+                      if (audio == null) return const SizedBox.shrink(); // Only hide on full stop
 
                       return Positioned(
                         left: 0,

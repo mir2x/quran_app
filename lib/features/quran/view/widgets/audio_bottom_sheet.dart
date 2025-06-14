@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../quran_old/domain/entities/ayah_box.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 
 

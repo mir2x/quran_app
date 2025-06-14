@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +31,21 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
   return all
       .where((b) => b.pageNumber == logicalPage)
       .toList(growable: false);
+});
+
+final boxesForPageProvider2 = FutureProvider.family<List<AyahBox>, int>((ref, pageIndex) async {
+  final allAsync = ref.watch(allBoxesProvider);
+
+  final all = await allAsync.when(
+    data: (d) => d,
+    loading: () => <AyahBox>[],
+    error: (_, __) => <AyahBox>[],
+  );
+
+
+  if (pageIndex < kFirstPageNumber) return [];
+
+  return all.where((b) => b.pageNumber == pageIndex).toList(growable: false);
 });
 
 
@@ -66,11 +82,15 @@ final currentPageProvider = StateProvider<int>((_) => 0);
 
 final currentSuraProvider = Provider<int>((ref) {
   final page = ref.watch(currentPageProvider);
-  final boxes = ref.watch(boxesForPageProvider(page));
+  final boxesAsync = ref.watch(boxesForPageProvider2(page + 1));
 
-  if (boxes.isEmpty) return 1;
-  return boxes.first.suraNumber;
+  return boxesAsync.when(
+    data: (boxes) => boxes.isEmpty ? 1 : boxes.first.suraNumber,
+    loading: () => 1,
+    error: (_, __) => 1,
+  );
 });
+
 
 
 class TouchModeNotifier extends StateNotifier<bool> {
