@@ -166,9 +166,14 @@ final bookmarkProvider =
 AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(BookmarkNotifier.new);
 
 
-final reciters = ['maher', 'huthaify', 'husary'];
+final Map<String, String> reciters = {
+  'সৌদ আল-শুরাইম': 'saud_shuraim',
+  'মাহের আল মুয়াইক্বিলি': 'maher_muaiqly',
+  'আলী জাবের': 'ali_jaber',
+  'আব্দুল মুনিম আব্দুল মুবদি': 'abdul_munim_mubdi',
+};
 
-final selectedReciterProvider = StateProvider<String>((_) => reciters.first);
+final selectedReciterProvider = StateProvider<String>((_) => reciters.values.first);
 
 final audioVMProvider = AsyncNotifierProvider<AudioVM, List<AyahTiming>>(AudioVM.new);
 

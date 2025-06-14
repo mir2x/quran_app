@@ -20,6 +20,9 @@ dependencies:
   supabase_flutter: ^2.9.0
   path_provider: ^2.1.5
   archive: ^4.0.7
+  hugeicons:
+    hosted: https://onepub.dev/api/kdpxxpsdav/
+    version: ^0.0.12
 
 dev_dependencies:
   flutter_test:
@@ -33,7 +36,7 @@ flutter:
     - assets/image/front_page/
     - assets/audio_json/
     - assets/audio/
-    - assets/maher/
+    - assets/maher_muaiqly/
     - assets/page_003.png
     - assets/page_004.png
     - assets/ayah_boxes.json

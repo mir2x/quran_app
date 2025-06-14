@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../../model/bookmark.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
@@ -40,12 +41,12 @@ class AyahMenu extends ConsumerWidget {
                     );
                   }
                 },
-                icon: const Icon(Icons.bookmark),
+                icon: const Icon(HugeIcons.solidStandardStackStar),
               ),
               IconButton(onPressed: () {
                 final ayah = ref.read(selectedAyahProvider)!.ayahNumber;
                 ref.read(audioPlayerServiceProvider).playAyahs(ayah, ayah);
-              }, icon: const Icon(Icons.play_arrow)),
+              }, icon: const Icon(HugeIcons.solidRoundedPlay)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),

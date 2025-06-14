@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/features/quran/view/widgets/audio_bottom_sheet.dart';
 import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
+import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
 
 import '../../../../core/theme.dart';
 import '../model/bookmark.dart';
@@ -21,6 +22,7 @@ class QuranViewerScreen extends ConsumerStatefulWidget {
 
 class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   final _rootKey = GlobalKey<ScaffoldState>();
+
   PageController? _portraitCtrl;
   ScrollController? _landscapeCtrl;
 
@@ -29,12 +31,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   late final Future<int> _pageCountF;
 
   static const double _aspect = 720 / 1057;
-
-  static const List<String> reciters = [
-    'Al-Afasy',
-    'Al-Hudhaify',
-    'Abdul Basit',
-  ];
 
   @override
   void initState() {
@@ -77,6 +73,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   );
 
   Widget _buildBottomBar(bool drawerOpen) => BottomAppBar(
+
     height: kBottomNavigationBarHeight,
     child: Row(
       children: [
@@ -95,17 +92,27 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             );
           },
         ),
-
         /* expandable dropdown */
         Expanded(
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: reciters.first,
-              isExpanded: true,
-              items: reciters
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+              value: reciters.entries
+                  .firstWhere((e) => e.value == ref.watch(selectedReciterProvider))
+                  .key, // display name as dropdown value
+              items: reciters.keys
+                  .map(
+                    (displayName) => DropdownMenuItem(
+                  value: displayName,
+                  child: Text(displayName),
+                ),
+              )
                   .toList(),
-              onChanged: (_) {},
+              onChanged: (val) {
+                if (val != null) {
+                  ref.read(selectedReciterProvider.notifier).state =
+                  reciters[val]!;
+                }
+              },
             ),
           ),
         ),
@@ -432,9 +439,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                 isOpen ? drawer.open() : drawer.close();
               },
               appBar: _buildAppBar(),
-              bottomNavigationBar: _buildBottomBar(
-                ref.watch(drawerOpenProvider),
-              ),
+              bottomNavigationBar: BottomBar(drawerOpen: ref.watch(drawerOpenProvider), rootKey: _rootKey),
               body: Stack(
                 children: [
                   viewer,
@@ -461,5 +466,3 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     );
   }
 }
-
-

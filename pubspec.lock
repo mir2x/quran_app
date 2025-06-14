@@ -232,6 +232,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  hugeicons:
+    dependency: "direct main"
+    description:
+      name: hugeicons
+      sha256: af6c48b959b698255a887737bea3b86aa197f01675b07efc1480c675122838f9
+      url: "https://onepub.dev/api/kdpxxpsdav/"
+    source: hosted
+    version: "0.0.12"
   just_audio:
     dependency: "direct main"
     description:
