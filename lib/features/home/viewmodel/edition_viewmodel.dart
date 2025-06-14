@@ -14,7 +14,9 @@ final catalogueProvider = Provider<List<QuranEdition>>((_) => const [
     name: 'Colorful Tajweed',
     zipUrl:
     'https://ntgkoryrbfyhcbqfnsbx.supabase.co/storage/v1/object/public/assets/colorful_tajweed/asset.zip',
-    sizeBytes: 8346364, // 310 MB
+    sizeBytes: 8346364,
+    imageWidth: 720,
+    imageHeight: 1057,
   ),
   // QuranEdition(
   //   id: 'madina_mushaf',

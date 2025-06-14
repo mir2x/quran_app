@@ -2,19 +2,23 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:quran_app/features/quran/view/widgets/audio_bottom_sheet.dart';
 import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
-
 import '../../../../core/theme.dart';
-import '../model/bookmark.dart';
 import 'widgets/quran_page.dart';
 import '../viewmodel/ayah_highlight_viewmodel.dart';
 
 class QuranViewerScreen extends ConsumerStatefulWidget {
-  const QuranViewerScreen({super.key, required this.editionDir});
-
   final Directory editionDir;
+  final int imageWidth;
+  final int imageHeight;
+
+  const QuranViewerScreen({
+    super.key,
+    required this.editionDir,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
 
   @override
   ConsumerState<QuranViewerScreen> createState() => _QuranViewerState();
@@ -30,7 +34,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   late final Future<int> _pageCountF;
 
-  static const double _aspect = 720 / 1057;
+  double get _aspect => widget.imageWidth / widget.imageHeight;
 
   @override
   void initState() {
@@ -54,7 +58,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   PreferredSizeWidget _buildAppBar() => AppBar(
     leading: Builder(
-      // ② tap → openDrawer()
       builder: (ctx) => IconButton(
         icon: const Icon(Icons.menu),
         onPressed: () => Scaffold.of(ctx).openDrawer(),
@@ -137,10 +140,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error loading bookmarks')),
             data: (bookmarks) {
-              final ayahBookmarks =
-              bookmarks.where((b) => b.type == 'ayah').toList();
-              final pageBookmarks =
-              bookmarks.where((b) => b.type == 'page').toList();
+              final ayahBookmarks = bookmarks
+                  .where((b) => b.type == 'ayah')
+                  .toList();
+              final pageBookmarks = bookmarks
+                  .where((b) => b.type == 'page')
+                  .toList();
 
               return Column(
                 children: [
@@ -165,7 +170,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                             return ListTile(
                               title: Text(b.identifier),
                               subtitle: Text(
-                                  'Added: ${b.timestamp.toLocal().toString().split('.').first}'),
+                                'Added: ${b.timestamp.toLocal().toString().split('.').first}',
+                              ),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () => ref
@@ -182,7 +188,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                             return ListTile(
                               title: Text('Page ${b.identifier.split('-')[1]}'),
                               subtitle: Text(
-                                  'Added: ${b.timestamp.toLocal().toString().split('.').first}'),
+                                'Added: ${b.timestamp.toLocal().toString().split('.').first}',
+                              ),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () => ref
@@ -207,7 +214,10 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final currentPage = ref.watch(currentPageProvider);
-    ref.listen<int?>(navigateToPageCommandProvider, (prevPageNum, newPageNum) async {
+    ref.listen<int?>(navigateToPageCommandProvider, (
+      prevPageNum,
+      newPageNum,
+    ) async {
       if (newPageNum != null) {
         final targetPageIndex = newPageNum - 1;
 
@@ -217,13 +227,15 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           final currentOrientation = MediaQuery.of(context).orientation;
           final width = MediaQuery.of(context).size.width;
 
-          if (currentOrientation == Orientation.portrait && _portraitCtrl != null) {
+          if (currentOrientation == Orientation.portrait &&
+              _portraitCtrl != null) {
             _portraitCtrl!.animateToPage(
               targetPageIndex,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
             );
-          } else if (currentOrientation == Orientation.landscape && _landscapeCtrl != null) {
+          } else if (currentOrientation == Orientation.landscape &&
+              _landscapeCtrl != null) {
             final itemH = width / _aspect;
             final offset = targetPageIndex * itemH;
 
@@ -237,9 +249,10 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           Future.microtask(() {
             ref.read(navigateToPageCommandProvider.notifier).state = null;
           });
-
         } else {
-          debugPrint('Navigation command received for invalid page number: $newPageNum');
+          debugPrint(
+            'Navigation command received for invalid page number: $newPageNum',
+          );
           Future.microtask(() {
             ref.read(navigateToPageCommandProvider.notifier).state = null;
           });
@@ -277,8 +290,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
             Widget viewer;
             if (ori == Orientation.portrait) {
-              final isAudioPlaying = ref.read(quranAudioProvider) != null;
-              /* horizontal RTL page-snap */
               viewer = PageView.builder(
                 controller: _portraitCtrl!,
                 reverse: true,
@@ -289,8 +300,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     ref.read(selectedAyahProvider.notifier).clear();
                   }
                 },
-                itemBuilder: (_, idx) =>
-                    QuranPage(pageIndex: idx, editionDir: widget.editionDir),
+                itemBuilder: (_, idx) => QuranPage(
+                  pageIndex: idx,
+                  editionDir: widget.editionDir,
+                  imageWidth: widget.imageWidth,
+                  imageHeight: widget.imageHeight,
+                ),
               );
             } else {
               /* vertical continuous scroll */
@@ -316,6 +331,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     child: QuranPage(
                       pageIndex: idx,
                       editionDir: widget.editionDir,
+                      imageWidth: widget.imageWidth,
+                      imageHeight: widget.imageHeight,
                     ),
                   ),
                 ),
@@ -330,26 +347,31 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                 isOpen ? drawer.open() : drawer.close();
               },
               appBar: _buildAppBar(),
-              bottomNavigationBar: BottomBar(drawerOpen: ref.watch(drawerOpenProvider), rootKey: _rootKey),
+              bottomNavigationBar: BottomBar(
+                drawerOpen: ref.watch(drawerOpenProvider),
+                rootKey: _rootKey,
+              ),
               body: Stack(
                 children: [
                   viewer,
                   Consumer(
                     builder: (context, ref, _) {
                       final audio = ref.watch(quranAudioProvider);
-                      if (audio == null) return const SizedBox.shrink(); // Only hide on full stop
-
+                      if (audio == null) {
+                        return const SizedBox.shrink();
+                      }
                       return Positioned(
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        child: AudioControllerBar(color: Theme.of(context).primaryColor),
+                        child: AudioControllerBar(
+                          color: Theme.of(context).primaryColor,
+                        ),
                       );
                     },
                   ),
                 ],
               ),
-
             );
           },
         );

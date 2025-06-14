@@ -2,12 +2,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
-
+import '../../../../core/services/downloader.dart';
 import '../../model/bookmark.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
+import 'download_dialog.dart';
+import 'download_permission_dialog.dart';
 
 class AyahMenu extends ConsumerWidget {
   const AyahMenu({super.key, required this.anchorRect});
+
   final Rect anchorRect;
 
   @override
@@ -36,17 +39,38 @@ class AyahMenu extends ConsumerWidget {
                   final page = ref.read(currentPageProvider);
                   if (ayah != null) {
                     final identifier = 'ayah-$page:$ayah';
-                    ref.read(bookmarkProvider.notifier).add(
-                      Bookmark(type: 'ayah', identifier: identifier),
-                    );
+                    ref
+                        .read(bookmarkProvider.notifier)
+                        .add(Bookmark(type: 'ayah', identifier: identifier));
                   }
                 },
                 icon: const Icon(HugeIcons.solidStandardStackStar),
               ),
-              IconButton(onPressed: () {
-                final ayah = ref.read(selectedAyahProvider)!.ayahNumber;
-                ref.read(audioPlayerServiceProvider).playAyahs(ayah, ayah);
-              }, icon: const Icon(HugeIcons.solidRoundedPlay)),
+              IconButton(
+                onPressed: () async {
+                  final reciterId = ref.read(selectedReciterProvider);
+                  final downloaded = await isReciterDownloaded(reciterId);
+                  if (!downloaded) {
+                    final reciter = ref
+                        .read(reciterCatalogueProvider)
+                        .firstWhere((r) => r.id == reciterId);
+                    final confirmed = await downloadPermissionDialog(
+                      context,
+                      reciter.name,
+                    );
+                    if (!confirmed) return;
+                    await showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => DownloadDialog(reciter: reciter),
+                    );
+                  }
+                  await ref.read(audioVMProvider.notifier).loadTimings();
+                  final ayah = ref.read(selectedAyahProvider)!.ayahNumber;
+                  ref.read(audioPlayerServiceProvider).playAyahs(ayah, ayah);
+                },
+                icon: const Icon(HugeIcons.solidRoundedPlay),
+              ),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),
               IconButton(onPressed: () {}, icon: const Icon(Icons.copy)),

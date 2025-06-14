@@ -52,6 +52,8 @@ class EditionSelectionScreen extends ConsumerWidget {
                     MaterialPageRoute(
                       builder: (_) => QuranViewerScreen(
                         editionDir: storage.dirFor(edition.id),
+                        imageWidth: edition.imageWidth,
+                        imageHeight: edition.imageHeight,
                       ),
                     ),
                   );

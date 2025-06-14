@@ -9,12 +9,12 @@ import 'ayah_menu.dart';
 
 
 class QuranPage extends ConsumerWidget {
-  const QuranPage({super.key, required this.pageIndex, required this.editionDir});
   final int pageIndex;
   final Directory editionDir;
+  final int imageWidth;
+  final int imageHeight;
+  const QuranPage({super.key, required this.pageIndex, required this.editionDir, required this.imageWidth, required this.imageHeight});
 
-  static const double _imgW = 720;
-  static const double _imgH = 1057;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,8 +36,8 @@ class QuranPage extends ConsumerWidget {
       error:   (e, _) => Center(child: Text(e.toString())),
       data:    (_) => LayoutBuilder(
         builder: (_, constraints) {
-          final scaleX = constraints.maxWidth  / _imgW;
-          final scaleY = constraints.maxHeight / _imgH;
+          final scaleX = constraints.maxWidth  / imageWidth;
+          final scaleY = constraints.maxHeight / imageHeight;
 
           void onTapDown(TapDownDetails d) {
             final logicX = d.localPosition.dx / scaleX;
