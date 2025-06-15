@@ -133,11 +133,41 @@ final ayahCountsProvider = Provider<List<int>>((ref) {
 });
 
 
+// final allBoxesProvider = FutureProvider.family<List<AyahBox>, String>((ref, path) async {
+//   final jsonStr = await rootBundle.loadString(path);
+//   final decoded = jsonDecode(jsonStr) as List;
+//   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
+// });
+
+class EditionDirNotifier extends StateNotifier<Directory?> {
+  EditionDirNotifier() : super(null);
+
+  void set(Directory dir) => state = dir;
+
+  void clear() => state = null;
+}
+
+final editionDirProvider =
+StateNotifierProvider<EditionDirNotifier, Directory?>(
+        (_) => EditionDirNotifier());
+
 final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
-  final jsonStr = await rootBundle.loadString('assets/ayah_boxes.json');
+  final dir = ref.watch(editionDirProvider);
+  if (dir == null) throw Exception('editionDir not set');
+
+  final jsonFile = File('${dir.path}/ayah_boxes.json');
+  final jsonStr = await jsonFile.readAsString();
   final decoded = jsonDecode(jsonStr) as List;
+
   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
 });
+
+
+// final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
+//   final jsonStr = await rootBundle.loadString('assets/ayah_boxes.json');
+//   final decoded = jsonDecode(jsonStr) as List;
+//   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
+// });
 
 final boxesForPageProvider =
 Provider.family<List<AyahBox>, int>((ref, pageIndex) {

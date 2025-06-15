@@ -13,7 +13,8 @@ class QuranPage extends ConsumerWidget {
   final Directory editionDir;
   final int imageWidth;
   final int imageHeight;
-  const QuranPage({super.key, required this.pageIndex, required this.editionDir, required this.imageWidth, required this.imageHeight});
+  final String imageExt;
+  const QuranPage({super.key, required this.pageIndex, required this.editionDir, required this.imageWidth, required this.imageHeight, required this.imageExt,});
 
 
   @override
@@ -29,7 +30,7 @@ class QuranPage extends ConsumerWidget {
         : ref.watch(boxesForPageProvider(pageNumber));
     final notifier      = ref.read(selectedAyahProvider.notifier);
     final selected      = ref.watch(selectedAyahProvider);
-    final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.png');
+    final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.$imageExt');
 
     return allBoxesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),

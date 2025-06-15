@@ -8,7 +8,9 @@ class QuranEdition {
   final int sizeBytes;
   final int imageWidth;
   final int imageHeight;
+  final String imageExt;
   final bool isDownloaded;
+
 
   const QuranEdition({
     required this.id,
@@ -18,6 +20,7 @@ class QuranEdition {
     required this.sizeBytes,
     required this.imageWidth,
     required this.imageHeight,
+    required this.imageExt,
     this.isDownloaded = false,
   });
 
@@ -30,6 +33,7 @@ class QuranEdition {
       coverImagePath: coverImagePath,
       imageWidth: imageWidth,
       imageHeight: imageHeight,
+      imageExt: imageExt,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       url: url,
       sizeBytes: sizeBytes,
@@ -46,6 +50,7 @@ class QuranEdition {
       sizeBytes: map['sizeBytes'],
       imageWidth: map['width'],
       imageHeight: map['height'],
+      imageExt: map['ext'],
       isDownloaded: downloaded,
     );
   }

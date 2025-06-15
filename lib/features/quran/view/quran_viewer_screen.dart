@@ -12,12 +12,14 @@ class QuranViewerScreen extends ConsumerStatefulWidget {
   final Directory editionDir;
   final int imageWidth;
   final int imageHeight;
+  final String imageExt;
 
   const QuranViewerScreen({
     super.key,
     required this.editionDir,
     required this.imageWidth,
     required this.imageHeight,
+    required this.imageExt,
   });
 
   @override
@@ -39,13 +41,16 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(editionDirProvider.notifier).set(widget.editionDir);
+    });
     _pageCountF = _detectPageCount();
   }
 
   Future<int> _detectPageCount() async =>
       (await widget.editionDir
               .list()
-              .where((f) => f.path.endsWith('.png'))
+              .where((f) => f.path.endsWith('.${widget.imageExt}'))
               .toList())
           .length;
 
@@ -81,7 +86,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       child: Builder(
         builder: (context) {
           final media = MediaQuery.of(context);
-          final double topInset = kToolbarHeight + media.padding.top; // AppBar
+          final double topInset = kToolbarHeight + media.padding.top;
           final double bottomInset = bottomBarHeight + media.padding.bottom;
 
           return Padding(
@@ -89,14 +94,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             child: SizedBox(
               width: 250,
               child: Material(
-                // identical look to Drawer
                 elevation: 2,
                 clipBehavior: Clip.antiAlias,
                 child: DefaultTabController(
                   length: 3,
                   child: Column(
                     children: [
-                      // TabBarView comes first
                       Expanded(
                         child: TabBarView(
                           children: [
@@ -106,13 +109,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                           ],
                         ),
                       ),
-                      // TabBar comes after (at the bottom)
                       Container(
-                        color: primaryColor,
-                        child: const TabBar(
+                        color: const Color(0xFFB2FF59), // Light green
+                        child: TabBar(
                           labelColor: Colors.white,
-                          indicatorColor: Colors.white,
-                          tabs: [
+                          unselectedLabelColor: Colors.black87,
+                          indicator: BoxDecoration(
+                            color: const Color(0xFF1B5E20), // Full dark green for active tab
+                            borderRadius: BorderRadius.zero,
+                          ),
+                          indicatorSize: TabBarIndicatorSize.tab, // Fills the whole tab
+                          tabs: const [
                             Tab(text: 'সূরা'),
                             Tab(text: 'পারা'),
                             Tab(text: 'বুকমার্ক'),
@@ -129,6 +136,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       ),
     );
   }
+
+
 
   Widget _buildBookmarkTabView() {
     return DefaultTabController(
@@ -305,6 +314,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   editionDir: widget.editionDir,
                   imageWidth: widget.imageWidth,
                   imageHeight: widget.imageHeight,
+                  imageExt: widget.imageExt,
                 ),
               );
             } else {
@@ -333,6 +343,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       editionDir: widget.editionDir,
                       imageWidth: widget.imageWidth,
                       imageHeight: widget.imageHeight,
+                      imageExt: widget.imageExt,
                     ),
                   ),
                 ),

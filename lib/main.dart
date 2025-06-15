@@ -13,7 +13,7 @@ void main() async {
     url: 'https://ntgkoryrbfyhcbqfnsbx.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50Z2tvcnlyYmZ5aGNicWZuc2J4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTIyMDQwNSwiZXhwIjoyMDY0Nzk2NDA1fQ.8E8CkezPBhpKZ8YIZjcCc9HCiUH1tpvm4-1iwEXTDh4',
   );
-  await logReciterFolder('maher_muaiqly');
+  await logReciterFolder('colorful_hafezi');
   runApp(const ProviderScope(child: QuranApp()));
 }
 

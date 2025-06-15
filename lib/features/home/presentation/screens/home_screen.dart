@@ -106,6 +106,7 @@ class _QuranEditionGridItem extends ConsumerWidget {
                             editionDir: editionDir,
                             imageWidth: edition.imageWidth,
                             imageHeight: edition.imageHeight,
+                            imageExt: edition.imageExt,
                           ),
                         ),
                       );
