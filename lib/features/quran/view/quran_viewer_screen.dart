@@ -80,7 +80,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     ],
   );
 
-  Widget _buildSideDrawer() {
+  Widget _buildSideDrawer(Map<int, int> suraMapping, Map<int, int> paraMapping) {
     return Align(
       alignment: Alignment.topLeft,
       child: Builder(
@@ -103,8 +103,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       Expanded(
                         child: TabBarView(
                           children: [
-                            Center(child: Text('Surah list ⏤ TODO')),
-                            Center(child: Text('Para list ⏤ TODO')),
+                            _buildSurahListTabView(suraMapping),
+                            _buildParaListTabView(paraMapping),
                             _buildBookmarkTabView(),
                           ],
                         ),
@@ -137,7 +137,47 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     );
   }
 
+  Widget _buildSurahListTabView(Map<int, int> suraMapping) {
+    return ListView.builder(
+      itemCount: 114,
+      itemBuilder: (context, index) {
+        final suraNumber = index + 1;
+        final startPage = suraMapping[suraNumber];
+        final surahName = "সূরা $suraNumber";
+        return ListTile(
+          title: Text('$surahName'),
+          trailing: Text('পৃষ্ঠা $startPage'),
+          onTap: () {
+            if (startPage != null) {
+              ref.read(navigateToPageCommandProvider.notifier).state = startPage;
+              Navigator.of(context).pop();
+            }
+          },
+        );
+      },
+    );
+  }
 
+  Widget _buildParaListTabView(Map<int, int> paraMapping) {
+    return ListView.builder(
+      itemCount: 30,
+      itemBuilder: (context, index) {
+        final paraNumber = index + 1;
+        final startPage = paraMapping[paraNumber];
+        final paraName = "পারা $paraNumber";
+        return ListTile(
+          title: Text('$paraName'),
+          trailing: Text('পৃষ্ঠা $startPage'), // Show the page number
+          onTap: () {
+            if (startPage != null) {
+              ref.read(navigateToPageCommandProvider.notifier).state = startPage;
+              Navigator.of(context).pop();
+            }
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildBookmarkTabView() {
     return DefaultTabController(
@@ -222,6 +262,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final suraMapping = ref.watch(suraPageMappingProvider);
+    final paraMapping = ref.watch(paraPageMappingProvider);
     final currentPage = ref.watch(currentPageProvider);
     ref.listen<int?>(navigateToPageCommandProvider, (
       prevPageNum,
@@ -352,7 +394,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
             return Scaffold(
               key: _rootKey,
-              drawer: _buildSideDrawer(),
+              drawer: _buildSideDrawer(suraMapping, paraMapping),
               onDrawerChanged: (isOpen) {
                 final drawer = ref.read(drawerOpenProvider.notifier);
                 isOpen ? drawer.open() : drawer.close();

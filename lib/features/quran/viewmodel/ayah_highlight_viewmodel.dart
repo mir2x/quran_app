@@ -158,7 +158,6 @@ final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
   final jsonFile = File('${dir.path}/ayah_boxes.json');
   final jsonStr = await jsonFile.readAsString();
   final decoded = jsonDecode(jsonStr) as List;
-
   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
 });
 
@@ -410,3 +409,90 @@ final navigateToPageCommandProvider = StateProvider<int?>((_) => null);
 void navigateToPage({required WidgetRef ref, required int pageNumber}) {
   ref.read(navigateToPageCommandProvider.notifier).state = pageNumber;
 }
+
+const List<(int sura, int ayah)> paraStarts = [
+  (1, 1),   // Para 1 starts Sura 1, Ayah 1 (Al-Fatiha)
+  (2, 142), // Para 2 starts Sura 2, Ayah 142 (Al-Baqarah)
+  (2, 253), // Para 3 starts Sura 2, Ayah 253 (Al-Baqarah)
+  (3, 93),  // Para 4 starts Sura 3, Ayah 93 (Al-Imran)
+  (4, 24),  // Para 5 starts Sura 4, Ayah 24 (An-Nisa)
+  (4, 148), // Para 6 starts Sura 4, Ayah 148 (An-Nisa)
+  (5, 83),  // Para 7 starts Sura 5, Ayah 83 (Al-Ma'idah)
+  (6, 111), // Para 8 starts Sura 6, Ayah 111 (Al-An'am)
+  (7, 88),  // Para 9 starts Sura 7, Ayah 88 (Al-A'raf)
+  (8, 41),  // Para 10 starts Sura 8, Ayah 41 (Al-Anfal)
+  (9, 93),  // Para 11 starts Sura 9, Ayah 93 (At-Tawbah)
+  (11, 6),  // Para 12 starts Sura 11, Ayah 6 (Hud)
+  (12, 53), // Para 13 starts Sura 12, Ayah 53 (Yusuf)
+  (15, 1),  // Para 14 starts Sura 15, Ayah 1 (Al-Hijr)
+  (17, 1),  // Para 15 starts Sura 17, Ayah 1 (Al-Isra)
+  (18, 75), // Para 16 starts Sura 18, Ayah 75 (Al-Kahf)
+  (21, 1),  // Para 17 starts Sura 21, Ayah 1 (Al-Anbiya)
+  (23, 1),  // Para 18 starts Sura 23, Ayah 1 (Al-Mu'minun)
+  (25, 21), // Para 19 starts Sura 25, Ayah 21 (Al-Furqan)
+  (27, 56), // Para 20 starts Sura 27, Ayah 56 (An-Naml)
+  (29, 46), // Para 21 starts Sura 29, Ayah 46 (Al-'Ankabut)
+  (33, 31), // Para 22 starts Sura 33, Ayah 31 (Al-Ahzab)
+  (36, 22), // Para 23 starts Sura 36, Ayah 22 (Ya-Sin)
+  (39, 32), // Para 24 starts Sura 39, Ayah 32 (Az-Zumar)
+  (41, 47), // Para 25 starts Sura 41, Ayah 47 (Fussilat)
+  (46, 1),  // Para 26 starts Sura 46, Ayah 1 (Al-Ahqaf)
+  (51, 31), // Para 27 starts Sura 51, Ayah 31 (Adh-Dhariyat)
+  (58, 1),  // Para 28 starts Sura 58, Ayah 1 (Al-Mujadila)
+  (67, 1),  // Para 29 starts Sura 67, Ayah 1 (Al-Mulk)
+  (78, 1),  // Para 30 starts Sura 78, Ayah 1 (An-Naba)
+];
+
+
+final suraPageMappingProvider = Provider<Map<int, int>>((ref) {
+  final allBoxesAsync = ref.watch(allBoxesProvider);
+
+  return allBoxesAsync.maybeWhen(
+    data: (boxes) {
+      final Map<int, int> suraMapping = {};
+      final Set<int> foundSuras = {};
+      for (final box in boxes) {
+        if (box.suraNumber >= 1 && box.suraNumber <= 114 && box.ayahNumber >= 1) {
+          if (!foundSuras.contains(box.suraNumber)) {
+            suraMapping[box.suraNumber] = box.pageNumber;
+            foundSuras.add(box.suraNumber);
+          }
+        }
+      }
+      for (int i = 1; i <= 114; i++) {
+        if (!suraMapping.containsKey(i)) {
+        }
+      }
+
+      return suraMapping;
+    },
+    orElse: () => const {},
+  );
+});
+
+final paraPageMappingProvider = Provider<Map<int, int>>((ref) {
+  final allBoxesAsync = ref.watch(allBoxesProvider);
+
+  return allBoxesAsync.maybeWhen(
+    data: (boxes) {
+      final Map<int, int> paraMapping = {};
+      for (int i = 0; i < paraStarts.length; i++) {
+        final paraNum = i + 1;
+        final (startSura, startAyah) = paraStarts[i];
+        final startBox = boxes.firstWhereOrNull(
+              (box) =>
+          box.suraNumber == startSura &&
+              box.ayahNumber == startAyah,
+        );
+
+        if (startBox != null) {
+          paraMapping[paraNum] = startBox.pageNumber;
+        } else {
+          print('Warning: Start box for Para $paraNum ($startSura:$startAyah) not found in ayah_boxes.json');
+        }
+      }
+      return paraMapping;
+    },
+    orElse: () => const {},
+  );
+});
