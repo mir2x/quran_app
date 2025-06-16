@@ -80,7 +80,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     ],
   );
 
-  Widget _buildSideDrawer(Map<int, int> suraMapping, Map<int, int> paraMapping) {
+  Widget _buildSideDrawer() {
     return Align(
       alignment: Alignment.topLeft,
       child: Builder(
@@ -88,6 +88,42 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           final media = MediaQuery.of(context);
           final double topInset = kToolbarHeight + media.padding.top;
           final double bottomInset = bottomBarHeight + media.padding.bottom;
+
+          // Watch the mappings and ayah counts
+          final suraMapping = ref.watch(suraPageMappingProvider);
+          final paraMapping = ref.watch(paraPageMappingProvider);
+          final ayahMapping = ref.watch(ayahPageMappingProvider);
+          final ayahCounts = ref.watch(ayahCountsProvider);
+          final suraNames = ref.watch(suraNamesProvider); // Get sura names
+
+          // Check if main data (allBoxesProvider) is still loading or has error
+          final allBoxesAsync = ref.watch(allBoxesProvider);
+          final bool isLoading = allBoxesAsync.isLoading;
+          final bool hasError = allBoxesAsync.hasError;
+
+
+          // Determine content based on loading/error state
+          Widget suraParaContent;
+          if (isLoading) {
+            suraParaContent = const Center(child: CircularProgressIndicator());
+          } else if (hasError) {
+            suraParaContent = Center(child: Text('Error loading data: ${allBoxesAsync.error}'));
+          } else if (suraMapping.isEmpty || paraMapping.isEmpty || ayahMapping.isEmpty) {
+            // This state might be hit briefly even after data is loaded if mappings are being built.
+            // Could indicate an issue if it persists.
+            suraParaContent = const Center(child: Text('Processing data...'));
+          }
+          else {
+            // Data is ready, build the tab views
+            suraParaContent = TabBarView(
+              children: [
+                // Pass necessary data to the updated Surah tab view
+                _buildSurahAyahTabView(suraMapping, ayahCounts, suraNames, ayahMapping),
+                _buildParaListTabView(paraMapping),
+                _buildBookmarkTabView(),
+              ],
+            );
+          }
 
           return Padding(
             padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
@@ -101,14 +137,10 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   child: Column(
                     children: [
                       Expanded(
-                        child: TabBarView(
-                          children: [
-                            _buildSurahListTabView(suraMapping),
-                            _buildParaListTabView(paraMapping),
-                            _buildBookmarkTabView(),
-                          ],
-                        ),
+                        // Use the content determined above
+                        child: suraParaContent,
                       ),
+                      // ... Your TabBar remains the same ...
                       Container(
                         color: const Color(0xFFB2FF59), // Light green
                         child: TabBar(
@@ -137,24 +169,107 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     );
   }
 
-  Widget _buildSurahListTabView(Map<int, int> suraMapping) {
+  Widget _buildSurahAyahTabView(
+      Map<int, int> suraMapping,
+      List<int> ayahCounts,
+      List<String> suraNames,
+      Map<(int, int), int> ayahPageMapping,
+      ) {
+    final selectedSurah = ref.watch(selectedNavigationSurahProvider);
+
+    if (selectedSurah == null) {
+      // Show list of all Surahs
+      return _buildSurahList(suraMapping, ayahCounts, suraNames);
+    } else {
+      // Show list of Ayahs for the selected Surah
+      return _buildAyahListForSurah(selectedSurah, ayahCounts, suraNames, ayahPageMapping);
+    }
+  }
+
+
+  // Helper method to build the list of all Surahs
+  Widget _buildSurahList(Map<int, int> suraMapping, List<int> ayahCounts, List<String> suraNames) {
+    // Check if data is missing (shouldn't happen if we only reach here when data is loaded)
+    if (suraNames.length < 114 || ayahCounts.length < 114 || suraMapping.isEmpty) {
+      return const Center(child: Text('Data incomplete.'));
+    }
+
     return ListView.builder(
       itemCount: 114,
       itemBuilder: (context, index) {
         final suraNumber = index + 1;
-        final startPage = suraMapping[suraNumber];
-        final surahName = "সূরা $suraNumber";
+        final startPage = suraMapping[suraNumber]; // Use the mapping
+        final totalAyahs = ayahCounts[index]; // Ayah counts list is 0-indexed
+        final surahName = suraNames[index]; // Sura names list is 0-indexed
+
         return ListTile(
-          title: Text('$surahName'),
-          trailing: Text('পৃষ্ঠা $startPage'),
+          title: Text('$suraNumber. $surahName'),
+          subtitle: Text('আয়াত: $totalAyahs, পৃষ্ঠা: ${startPage ?? 'N/A'}'), // Show ayah count and start page
           onTap: () {
-            if (startPage != null) {
-              ref.read(navigateToPageCommandProvider.notifier).state = startPage;
-              Navigator.of(context).pop();
-            }
+            // Select this surah to show its ayahs
+            ref.read(selectedNavigationSurahProvider.notifier).state = suraNumber;
           },
         );
       },
+    );
+  }
+
+  Widget _buildAyahListForSurah(int suraNumber, List<int> ayahCounts, List<String> suraNames, Map<(int, int), int> ayahPageMapping) {
+    if (suraNumber < 1 || suraNumber > 114) {
+      return const Center(child: Text('Invalid Surah number selected.'));
+    }
+
+    final totalAyahs = ayahCounts[suraNumber - 1]; // Ayah counts list is 0-indexed
+    final surahName = suraNames[suraNumber - 1]; // Sura names list is 0-indexed
+
+
+    return Column(
+      children: [
+        // Add a "Back" button at the top
+        ListTile(
+          leading: const Icon(Icons.arrow_back),
+          title: Text('সব সূরা দেখুন'),
+          onTap: () {
+            // Go back to the list of all surahs
+            ref.read(selectedNavigationSurahProvider.notifier).state = null;
+          },
+        ),
+        const Divider(height: 1), // Optional divider
+
+        Expanded(
+          child: ListView.builder(
+            itemCount: totalAyahs,
+            itemBuilder: (context, index) {
+              final ayahNumber = index + 1;
+              // Get the page number for this specific Ayah
+              final targetPage = ayahPageMapping[(suraNumber, ayahNumber)];
+
+              return ListTile(
+                title: Text('আয়াত $ayahNumber'),
+                trailing: targetPage != null ? Text('পৃষ্ঠা $targetPage') : const Text('N/A'),
+                onTap: () {
+                  if (targetPage != null) {
+                    // Navigate to the page
+                    ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
+                    // Update the selected ayah provider for highlighting
+                    // We set Rect.zero initially, QuranPage will calculate the real rect later
+                    ref.read(selectedAyahProvider.notifier).selectFromAudio(ayahNumber); // Use selectFromAudio or add a new method like selectForNavigation
+
+                    // Close the drawer
+                    Navigator.of(context).pop();
+                  } else {
+                    // Handle case where ayah page is not found (shouldn't happen with complete data)
+                    // Optionally show a Snackbar or dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Page data not found for this Ayah')),
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -394,7 +509,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
             return Scaffold(
               key: _rootKey,
-              drawer: _buildSideDrawer(suraMapping, paraMapping),
+              drawer: _buildSideDrawer(),
               onDrawerChanged: (isOpen) {
                 final drawer = ref.read(drawerOpenProvider.notifier);
                 isOpen ? drawer.open() : drawer.close();
