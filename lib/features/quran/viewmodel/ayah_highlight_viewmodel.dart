@@ -272,17 +272,36 @@ final currentPageProvider = StateProvider<int>((_) => 0);
 
 final currentSuraProvider = Provider<int>((ref) {
   final page = ref.watch(currentPageProvider) + 1;
+  if (page == 1) {
+    return 1;
+  }
+  if (page == 2) {
+    return 2;
+  }
 
-  final allBoxes = ref.watch(allBoxesProvider);
-  return allBoxes.maybeWhen(
-    data: (d) {
-      final pageBoxes = d
-          .where((b) => b.pageNumber == page)
-          .toList(growable: false);
-      return pageBoxes.isEmpty ? 1 : pageBoxes.first.suraNumber;
-    },
-    orElse: () => 1,
-  );
+  final suraMapping = ref.watch(suraPageMappingProvider);
+
+  if (suraMapping.isEmpty) {
+    return 1;
+  }
+
+  int currentSura = 1; // Default starting point
+
+  final sortedSuraStarts = List.from(suraMapping.entries.toList()
+    ..sort((a, b) => a.value.compareTo(b.value)));
+
+  for (final entry in sortedSuraStarts) {
+    final suraNum = entry.key;
+    final startPage = entry.value;
+
+    if (startPage <= page) {
+      currentSura = suraNum;
+    } else {
+      break;
+    }
+  }
+
+  return currentSura;
 });
 
 class TouchModeNotifier extends StateNotifier<bool> {

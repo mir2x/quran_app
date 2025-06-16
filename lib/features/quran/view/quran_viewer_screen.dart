@@ -172,7 +172,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       ref.read(currentPageProvider.notifier).state = idx;
                       final currentSelectedState = ref.read(selectedAyahProvider);
                       // Clear the selected ayah ONLY if it was selected by audio.
-                      if (currentSelectedState?.source == AyahSelectionSource.audio) {
+                      if (currentSelectedState?.source == AyahSelectionSource.tap) {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
                     },
@@ -195,7 +195,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       ref.read(currentPageProvider.notifier).state = p.toInt();
                       final currentSelectedState = ref.read(selectedAyahProvider);
                       // Clear the selected ayah ONLY if it was selected by audio.
-                      if (currentSelectedState?.source == AyahSelectionSource.audio) {
+                      if (currentSelectedState?.source == AyahSelectionSource.tap) {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
                       return false;

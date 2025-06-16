@@ -4,6 +4,16 @@ import '../../model/quran_edition.dart';
 Future<List<QuranEdition>> getQuranEditionData() async {
   final editions = [
     {
+      'id': 'imdadia_hafezi',
+      'title': 'হাফিজি কুরআন\n(এমদাদিয়া লাইব্রেরী)',
+      'cover': 'assets/image/front_page/imdadia_hafezi.jpg',
+      'url' : 'https://ntgkoryrbfyhcbqfnsbx.supabase.co/storage/v1/object/public/assets/imdadia_hafezi/asset.zip',
+      'sizeBytes': 31035392,
+      'width': 1152,
+      'height': 2048,
+      'ext': 'jpg',
+    },
+    {
       'id': 'hafezi',
       'title': 'হাফিজি কুরআন',
       'cover': 'assets/image/front_page/hafezi.jpg',
@@ -33,16 +43,6 @@ Future<List<QuranEdition>> getQuranEditionData() async {
     //   'height': 2125,
     //   'ext': 'jpg',
     // },
-    {
-      'id': 'imdadia_hafezi',
-      'title': 'হাফিজি কুরআন\n(এমদাদিয়া লাইব্রেরী)',
-      'cover': 'assets/image/front_page/imdadia_hafezi.jpg',
-      'url' : 'https://ntgkoryrbfyhcbqfnsbx.supabase.co/storage/v1/object/public/assets/imdadia_hafezi/asset.zip',
-      'sizeBytes': 31035392,
-      'width': 1152,
-      'height': 2048,
-      'ext': 'jpg',
-    },
     {
       'id': 'madani',
       'title': 'মাদানী কুরআন\n(উসমানী প্রিন্ট)',

@@ -89,6 +89,8 @@ class AyahMenu extends ConsumerWidget {
                     );
                   }
                   await ref.read(audioVMProvider.notifier).loadTimings();
+                  final service = ref.read(audioPlayerServiceProvider);
+                  service.setCurrentSura(ref.watch(currentSuraProvider));
                   final ayah = ref.read(selectedAyahProvider)!.ayahNumber;
                   ref.read(audioPlayerServiceProvider).playAyahs(ayah, ayah);
                 },
