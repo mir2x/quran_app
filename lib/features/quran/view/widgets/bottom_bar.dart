@@ -100,13 +100,36 @@ class BottomBar extends ConsumerWidget {
             onPressed: () => OrientationToggle.toggle(),
           ),
           _iconBtn(
-            icon: HugeIcons.solidStandardStackStar,
+            icon: HugeIcons.solidStandardStackStar, // Your icon
             onPressed: () {
-              final page = ref.read(currentPageProvider);
-              final identifier = 'page-$page';
-              ref.read(bookmarkProvider.notifier).add(
-                Bookmark(type: 'page', identifier: identifier),
-              );
+              final currentPage = ref.read(currentPageProvider) + 1; // 1-based page
+              final quranInfoService = ref.read(quranInfoServiceProvider); // Read the service provider
+
+              final page = currentPage;
+              final sura = quranInfoService.getSuraByPage(page); // Get a representative Sura for the page
+              final para = quranInfoService.getParaByPage(page); // Get Para for the page
+
+              // Consider using 'page-${page}' as identifier for uniqueness
+              final identifier = 'page-$page'; // Unique identifier for page bookmark
+
+              // Ensure sura and para are found before creating bookmark
+              if (sura != null && para != null) {
+                final bookmark = Bookmark(
+                  type: 'page',
+                  identifier: identifier,
+                  sura: sura, // Store representative Sura
+                  para: para, // Store Para
+                  page: page, // Store Page
+                  // ayah is null for page bookmarks
+                );
+
+                ref.read(bookmarkProvider.notifier).add(bookmark);
+              } else {
+                // Handle case where sura or para could not be determined for the page
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not determine Sura/Para for this page')),
+                );
+              }
             },
           ),
           _iconBtn(icon: HugeIcons.solidRoundedArrowExpand, onPressed: (){})

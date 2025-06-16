@@ -733,3 +733,93 @@ final paraPageRangesProvider = Provider<Map<int, List<int>>>((ref) {
 });
 
 final selectedNavigationParaProvider = StateProvider<int?>((_) => null);
+
+// In your ayah_highlight_viewmodel.dart or a new quran_info_service.dart
+
+// --- Helper to get Para number by Sura and Ayah ---
+// Requires the global paraStarts list (already defined)
+
+
+// --- Helper Service to access Quran info ---
+// This service will read the mapping providers
+class QuranInfoService {
+  final Ref _ref;
+  QuranInfoService(this._ref);
+
+  int getParaBySuraAyah(int sura, int ayah) {
+    // Iterate through the Para start points
+    for (int i = 0; i < paraStarts.length; i++) {
+      final (startSura, startAyah) = paraStarts[i];
+      // If current sura is less than the start sura of the next para, it's in the current para
+      // OR if current sura is the same, check the ayah number
+      if (sura < startSura || (sura == startSura && ayah < startAyah)) {
+        return i; // Return the 1-based Para number (i is 0-based index, Para i+1 starts here)
+      }
+    }
+    // If loop completes, it's in the last Para (Para 30)
+    return 30;
+  }
+
+  // Get the Para number for a given page
+  int? getParaByPage(int page) {
+    final paraMapping = _ref.read(paraPageMappingProvider); // Read the mapping provider
+
+    // Find the largest para number whose start page is <= the given page
+    int? currentPara;
+    int latestStartPage = -1; // Use -1 as a starting point, assuming page numbers are >= 1
+
+    // Iterate through the para mapping entries
+    for (final entry in paraMapping.entries) {
+      final paraNum = entry.key;
+      final startPage = entry.value;
+
+      if (startPage <= page && startPage > latestStartPage) {
+        currentPara = paraNum;
+        latestStartPage = startPage;
+      }
+    }
+    // If page 1 or 2 is requested and no Para starts before or on it,
+    // manually return Para 1. Assuming kFirstPageNumber is 3.
+    if (currentPara == null && page >= 1 && page < kFirstPageNumber) {
+      return 1;
+    }
+
+    return currentPara; // Return the found Para number or null if not found
+  }
+
+  // Get the Sura number for a given page
+  int? getSuraByPage(int page) {
+    // Handle special pages 1 and 2 manually
+    if (page == 1) return 1; // Al-Fatiha
+    if (page == 2) return 2; // Al-Baqarah starts
+
+    // For pages with box data, use the suraPageMappingProvider
+    final suraMapping = _ref.read(suraPageMappingProvider); // Read the mapping provider
+
+    // Find the largest sura number whose start page is <= the given page
+    int? currentSura;
+    int latestStartPage = -1; // Use -1 as a starting point, assuming page numbers are >= 1
+
+    // Iterate through the sura mapping entries
+    for (final entry in suraMapping.entries) {
+      final suraNum = entry.key;
+      final startPage = entry.value;
+
+      if (startPage <= page && startPage > latestStartPage) {
+        currentSura = suraNum;
+        latestStartPage = startPage;
+      }
+    }
+
+    return currentSura; // Return the found Sura number or null
+  }
+
+  // Get the page number for a specific Sura and Ayah
+  int? getPageBySuraAyah(int sura, int ayah) {
+    final ayahPageMapping = _ref.read(ayahPageMappingProvider);
+    return ayahPageMapping[(sura, ayah)];
+  }
+}
+
+// Provide the QuranInfoService
+final quranInfoServiceProvider = Provider<QuranInfoService>((ref) => QuranInfoService(ref));

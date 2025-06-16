@@ -35,13 +35,35 @@ class AyahMenu extends ConsumerWidget {
             children: [
               IconButton(
                 onPressed: () {
-                  final ayah = ref.read(selectedAyahProvider)?.ayahNumber;
-                  final page = ref.read(currentPageProvider);
-                  if (ayah != null) {
-                    final identifier = 'ayah-$page:$ayah';
-                    ref
-                        .read(bookmarkProvider.notifier)
-                        .add(Bookmark(type: 'ayah', identifier: identifier));
+                  final selectedAyahState = ref.read(selectedAyahProvider);
+                  final currentPage = ref.read(currentPageProvider) + 1; // 1-based page
+                  final quranInfoService = ref.read(quranInfoServiceProvider); // Read the service provider
+
+                  if (selectedAyahState != null) {
+                    final sura = selectedAyahState.suraNumber;
+                    final ayah = selectedAyahState.ayahNumber;
+
+                    final para = quranInfoService.getParaBySuraAyah(sura, ayah); // Get Para from Sura/Ayah
+                    final page = currentPage; // The page the user is currently viewing
+
+                    // Consider using 'ayah-${sura}-${ayah}' as identifier for uniqueness and future proofing
+                    final identifier = 'ayah-$sura-$ayah'; // Unique identifier for ayah bookmark
+
+                    final bookmark = Bookmark(
+                      type: 'ayah',
+                      identifier: identifier,
+                      sura: sura,
+                      ayah: ayah,
+                      para: para,
+                      page: page,
+                    );
+
+                    ref.read(bookmarkProvider.notifier).add(bookmark);
+                  } else {
+                    // Handle case where no ayah is selected (shouldn't happen if button is only visible when ayah is selected)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No Ayah selected to bookmark')),
+                    );
                   }
                 },
                 icon: const Icon(HugeIcons.solidStandardStackStar),

@@ -3,22 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
+
+
 class BookmarkNavigationView extends ConsumerWidget {
   const BookmarkNavigationView({super.key});
 
   @override
-  // ConsumerWidget's build method automatically provides WidgetRef ref
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the bookmarks provider
     final bookmarksAsync = ref.watch(bookmarkProvider);
+    final suraNames = ref.watch(suraNamesProvider);
 
-    // DefaultTabController is for the nested tabs (Ayah/Page)
     return DefaultTabController(
       length: 2,
-      // The child of DefaultTabController is the widget that contains the TabBar and TabBarView
       child: bookmarksAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error loading bookmarks')),
+        // Include error details in the message for debugging
+        error: (e, s) => Center(child: Text('Error loading bookmarks: ${e.toString()}\n$s')),
         data: (bookmarks) {
           final ayahBookmarks = bookmarks
               .where((b) => b.type == 'ayah')
@@ -27,14 +27,13 @@ class BookmarkNavigationView extends ConsumerWidget {
               .where((b) => b.type == 'page')
               .toList();
 
-          // Return the Column containing the TabBar and TabBarView
           return Column(
             children: [
               Container(
-                color: primaryColor.withOpacity(.1),
+                color: Colors.lightGreen,
                 child: const TabBar(
-                  labelColor: primaryColor,
-                  unselectedLabelColor: Colors.grey,
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.white,
                   tabs: [
                     Tab(text: 'আয়াত'),
                     Tab(text: 'পৃষ্ঠা'),
@@ -49,45 +48,43 @@ class BookmarkNavigationView extends ConsumerWidget {
                       itemCount: ayahBookmarks.length,
                       itemBuilder: (_, i) {
                         final b = ayahBookmarks[i];
+                        // Safely access nullable fields for display
+                        final suraName = (b.sura != null && b.sura! > 0 && b.sura! <= suraNames.length)
+                            ? suraNames[b.sura! - 1]
+                            : 'Unknown Sura';
+                        // Use null-aware operators or provide default text
+                        final titleText = b.sura != null && b.ayah != null && b.para != null && b.page != null
+                            ? 'সূরা ${b.sura} ($suraName): আয়াত ${b.ayah} (পারা ${b.para}, পৃষ্ঠা ${b.page})'
+                            : 'Bookmark ID: ${b.identifier} (Data incomplete)'; // Fallback for incomplete data
+
                         return ListTile(
-                          title: Text(b.identifier), // Consider formatting like "Sura X: Ayah Y"
+                          title: Text(titleText),
                           subtitle: Text(
                             'Added: ${b.timestamp.toLocal().toString().split('.').first}',
                           ),
                           onTap: () {
-                            try {
-                              final parts = b.identifier.split('-');
-                              if (parts.length == 3 && parts[0] == 'ayah') {
-                                final sura = int.parse(parts[1]);
-                                final ayah = int.parse(parts[2]);
-                                // Need ayahPageMappingProvider to get the page
-                                final ayahPageMapping = ref.read(ayahPageMappingProvider);
-                                final targetPage = ayahPageMapping[(sura, ayah)];
-                                if (targetPage != null) {
-                                  ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
-                                  // Highlight the ayah after navigation
-                                  ref.read(selectedAyahProvider.notifier).selectByNavigation(sura, ayah); // Use navigation source
-                                  Navigator.of(context).pop(); // Close drawer
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Page not found for this Ayah bookmark')),
-                                  );
-                                }
-                              } else if (parts.length == 2 && parts[0] == 'page') {
-                                // This should be handled by the page bookmark list, but adding a fallback
-                                final page = int.parse(parts[1]);
-                                ref.read(navigateToPageCommandProvider.notifier).state = page;
-                                ref.read(selectedAyahProvider.notifier).clear(); // Clear ayah highlight when navigating by page
+                            // Navigation logic for Ayah bookmark
+                            // Check if essential fields are available before navigating
+                            if (b.sura != null && b.ayah != null && b.page != null) {
+                              try {
+                                final sura = b.sura!;
+                                final ayah = b.ayah!;
+                                final targetPage = b.page!; // Use stored page directly
+
+                                ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
+                                // Highlight the ayah after navigation
+                                ref.read(selectedAyahProvider.notifier).selectByNavigation(sura, ayah); // Use navigation source
                                 Navigator.of(context).pop(); // Close drawer
-                              } else {
+
+                              } catch (e) {
+                                debugPrint('Error during ayah bookmark navigation: $e');
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Invalid bookmark format')),
+                                  const SnackBar(content: Text('Could not navigate to bookmark')),
                                 );
                               }
-                            } catch (e) {
-                              debugPrint('Error navigating from bookmark: $e');
+                            } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Could not navigate to bookmark')),
+                                const SnackBar(content: Text('Bookmark data incomplete. Cannot navigate.')),
                               );
                             }
                           },
@@ -104,30 +101,40 @@ class BookmarkNavigationView extends ConsumerWidget {
                     ListView.builder(
                       itemCount: pageBookmarks.length,
                       itemBuilder: (_, i) {
-                        final b = pageBookmarks[i]; // b.identifier should be 'page-X'
+                        final b = pageBookmarks[i];
+                        // Safely access nullable fields for display
+                        final suraName = (b.sura != null && b.sura! > 0 && b.sura! <= suraNames.length)
+                            ? suraNames[b.sura! - 1]
+                            : 'Unknown Sura';
+                        // Use null-aware operators or provide default text
+                        final titleText = b.page != null && b.sura != null && b.para != null
+                            ? 'পৃষ্ঠা ${b.page} (সূরা ${b.sura}, পারা ${b.para})' // Format page bookmark title
+                            : 'Bookmark ID: ${b.identifier} (Data incomplete)'; // Fallback for incomplete data
+
+
                         return ListTile(
-                          title: Text('Page ${b.identifier.split('-')[1]}'),
+                          title: Text(titleText),
                           subtitle: Text(
                             'Added: ${b.timestamp.toLocal().toString().split('.').first}',
                           ),
                           onTap: () {
-                            try {
-                              final parts = b.identifier.split('-');
-                              if (parts.length == 2 && parts[0] == 'page') {
-                                final page = int.parse(parts[1]);
+                            // Navigation logic for Page bookmark
+                            // Check if essential fields are available before navigating
+                            if (b.page != null) {
+                              try {
+                                final page = b.page!;
                                 ref.read(navigateToPageCommandProvider.notifier).state = page;
                                 ref.read(selectedAyahProvider.notifier).clear(); // Clear ayah highlight when navigating by page
                                 Navigator.of(context).pop(); // Close drawer
-                              } else {
-                                // This should be handled by the ayah bookmark list, but adding a fallback
+                              } catch (e) {
+                                debugPrint('Error during page bookmark navigation: $e');
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Invalid bookmark format')),
+                                  const SnackBar(content: Text('Could not navigate to bookmark')),
                                 );
                               }
-                            } catch (e) {
-                              debugPrint('Error navigating from page bookmark: $e');
+                            } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Could not navigate to bookmark')),
+                                const SnackBar(content: Text('Bookmark data incomplete. Cannot navigate.')),
                               );
                             }
                           },
@@ -141,12 +148,12 @@ class BookmarkNavigationView extends ConsumerWidget {
                       },
                     ),
                   ],
-                )
+                ),
               ),
             ],
           );
         },
-      ), // bookmarksAsync.when ends here, this is the child
-    ); // DefaultTabController ends here
+      ),
+    );
   }
 }
