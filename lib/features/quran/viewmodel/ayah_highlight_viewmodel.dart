@@ -186,28 +186,49 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
 });
 
 class SelectedAyahState {
+  final int suraNumber;
   final int ayahNumber;
   final Rect anchorRect;
 
-  const SelectedAyahState(this.ayahNumber, this.anchorRect);
+  const SelectedAyahState(this.suraNumber, this.ayahNumber, this.anchorRect);
+
+  SelectedAyahState copyWith({
+    int? suraNumber,
+    int? ayahNumber,
+    Rect? anchorRect,
+  }) {
+    return SelectedAyahState(
+      suraNumber ?? this.suraNumber,
+      ayahNumber ?? this.ayahNumber,
+      anchorRect ?? this.anchorRect,
+    );
+  }
 }
 
 class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   SelectedAyahNotifier() : super(null);
 
-  void select(int ayah, Rect anchorRect) {
-    if (state?.ayahNumber == ayah) {
-      state = null;
+  void select(int sura, int ayah, Rect anchorRect) {
+    if (state?.suraNumber == sura && state?.ayahNumber == ayah) {
+      state = null; // Deselect if tapping the same ayah again
     } else {
-      state = SelectedAyahState(ayah, anchorRect);
+      state = SelectedAyahState(sura, ayah, anchorRect); // Select new ayah
     }
   }
 
   void clear() => state = null;
 
-  void selectFromAudio(int ayah) {
-    if (state?.ayahNumber != ayah) {
-      state = SelectedAyahState(ayah, Rect.zero);
+  void selectFromAudio(int sura, int ayah) {
+    if (state == null || state!.suraNumber != sura || state!.ayahNumber != ayah) {
+      state = SelectedAyahState(sura, ayah, Rect.zero); // Use Rect.zero to indicate programmatic selection
+    } else if (state!.suraNumber == sura && state!.ayahNumber == ayah && state!.anchorRect != Rect.zero) {
+      state = state!.copyWith(anchorRect: Rect.zero);
+    }
+  }
+
+  void updateRect(Rect rect) {
+    if (state != null) {
+      state = state!.copyWith(anchorRect: rect);
     }
   }
 }

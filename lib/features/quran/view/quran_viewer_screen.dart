@@ -253,7 +253,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
                     // Update the selected ayah provider for highlighting
                     // We set Rect.zero initially, QuranPage will calculate the real rect later
-                    ref.read(selectedAyahProvider.notifier).selectFromAudio(ayahNumber); // Use selectFromAudio or add a new method like selectForNavigation
+                    // --- FIX: Pass suraNumber here ---
+                    ref.read(selectedAyahProvider.notifier).selectFromAudio(suraNumber, ayahNumber);
 
                     // Close the drawer
                     Navigator.of(context).pop();

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quran_app/core/services/audio_service.dart';
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
@@ -32,6 +33,8 @@ class QuranPage extends ConsumerWidget {
     final selected      = ref.watch(selectedAyahProvider);
     final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.$imageExt');
 
+
+
     return allBoxesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error:   (e, _) => Center(child: Text(e.toString())),
@@ -40,22 +43,61 @@ class QuranPage extends ConsumerWidget {
           final scaleX = constraints.maxWidth  / imageWidth;
           final scaleY = constraints.maxHeight / imageHeight;
 
+          if (selectedState != null && selectedState.anchorRect == Rect.zero && pageNumber != -1) {
+            if (selectedState.suraNumber != null && selectedState.ayahNumber != null) {
+              final firstBoxOnPage = boxes.firstWhereOrNull(
+                    (box) =>
+                box.suraNumber == selectedState.suraNumber &&
+                    box.ayahNumber == selectedState.ayahNumber,
+              );
+
+              if (firstBoxOnPage != null) {
+                // If the box exists on this page, calculate its scaled rect and update the state.
+                final scaleX = constraints.maxWidth  / imageWidth;
+                final scaleY = constraints.maxHeight / imageHeight;
+
+                final calculatedRect = Rect.fromLTWH(
+                  firstBoxOnPage.minX * scaleX,
+                  firstBoxOnPage.minY * scaleY,
+                  firstBoxOnPage.width * scaleX,
+                  firstBoxOnPage.height * scaleY,
+                );
+
+                // Use Future.microtask to avoid calling setState during build/layout
+                Future.microtask(() {
+                  // Update the provider with the calculated Rect, but keep sura/ayah the same
+                  // Need a method in the notifier for this, or update the state directly.
+                  // Let's add an updateRect method.
+                  // notifier.updateRect(calculatedRect); // Assuming you add this method
+                  // OR
+                  ref.read(selectedAyahProvider.notifier).state = selectedState.copyWith(anchorRect: calculatedRect); // If using copyWith
+                });
+              }
+              // If firstBoxOnPage is null, the selected ayah is not on this page,
+              // so we don't highlight anything on this page.
+            }
+          }
+
           void onTapDown(TapDownDetails d) {
             final logicX = d.localPosition.dx / scaleX;
             final logicY = d.localPosition.dy / scaleY;
             final tapped = boxes.where((b) => b.contains(logicX, logicY)).toList();
             if (tapped.isNotEmpty) {
-              final ayah = tapped.first.ayahNumber;
-              final firstBox = boxes
-                  .where((b) => b.ayahNumber == ayah)
+              final tappedSura = tapped.first.suraNumber;
+              final tappedAyah = tapped.first.ayahNumber;
+
+              final firstBoxOnPage = boxes
+                  .where((b) => b.suraNumber == tappedSura && b.ayahNumber == tappedAyah)
                   .reduce((a, b) => a.boxId < b.boxId ? a : b);
               final rect = Rect.fromLTWH(
-                firstBox.minX * scaleX,
-                firstBox.minY * scaleY,
-                firstBox.width * scaleX,
-                firstBox.height * scaleY,
+                firstBoxOnPage.minX * scaleX,
+                firstBoxOnPage.minY * scaleY,
+                firstBoxOnPage.width * scaleX,
+                firstBoxOnPage.height * scaleY,
               );
-              notifier.select(ayah, rect);
+              notifier.select(tappedSura, tappedAyah, rect);
+            } else {
+              notifier.clear();
             }
           }
 
@@ -70,9 +112,11 @@ class QuranPage extends ConsumerWidget {
                   fit: BoxFit.fill,
                 ),
                 CustomPaint(
+                  // Pass the sura number to highlighter too if needed for logic
                   painter: AyahHighlighter(
-                      boxes, selected?.ayahNumber, scaleX, scaleY),
+                      boxes, selectedState?.suraNumber, selectedState?.ayahNumber, scaleX, scaleY), // Pass suraNumber
                 ),
+                // Only show menu if there's a selected state AND the Rect is valid (not Rect.zero)
                 if (selectedState != null && selectedState.anchorRect != Rect.zero)
                   AyahMenu(anchorRect: selectedState.anchorRect),
               ],
