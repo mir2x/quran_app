@@ -123,7 +123,7 @@ class AudioControllerService {
     if (firstAyahBox != null) {
       final ayahPage = firstAyahBox.pageNumber;
 
-      ref.read(selectedAyahProvider.notifier).selectFromAudio(sura, ayah);
+      ref.read(selectedAyahProvider.notifier).selectByAudio(sura, ayah);
 
       final currentPageIndex = ref.read(currentPageProvider);
       final currentPageNumber = currentPageIndex + 1;

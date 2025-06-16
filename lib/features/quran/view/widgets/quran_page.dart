@@ -19,84 +19,82 @@ class QuranPage extends ConsumerWidget {
 
 
   @override
+  // Inside QuranPage build method
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
     final allBoxesAsync = ref.watch(allBoxesProvider);
-    final selectedState = ref.watch(selectedAyahProvider);
+    final selectedState = ref.watch(selectedAyahProvider); // Watch the selected ayah state
     final logicalPage = pageIndex + 1;
-    final pageNumber  = logicalPage < kFirstPageNumber
-        ? -1
-        : logicalPage;
-    final boxes = pageNumber == -1
-        ? const <AyahBox>[]
-        : ref.watch(boxesForPageProvider(pageNumber));
-    final notifier      = ref.read(selectedAyahProvider.notifier);
-    final selected      = ref.watch(selectedAyahProvider);
+    final pageNumber  = logicalPage < kFirstPageNumber ? -1 : logicalPage;
+    final boxes = pageNumber == -1 ? const <AyahBox>[] : ref.watch(boxesForPageProvider(pageNumber));
+    final notifier = ref.read(selectedAyahProvider.notifier); // Get the notifier once
     final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.$imageExt');
-
 
 
     return allBoxesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error:   (e, _) => Center(child: Text(e.toString())),
-      data:    (_) => LayoutBuilder(
+      data:    (_) => LayoutBuilder( // <-- LayoutBuilder is crucial here
         builder: (_, constraints) {
           final scaleX = constraints.maxWidth  / imageWidth;
           final scaleY = constraints.maxHeight / imageHeight;
 
-          if (selectedState != null && selectedState.anchorRect == Rect.zero && pageNumber != -1) {
-            if (selectedState.suraNumber != null && selectedState.ayahNumber != null) {
-              final firstBoxOnPage = boxes.firstWhereOrNull(
-                    (box) =>
-                box.suraNumber == selectedState.suraNumber &&
-                    box.ayahNumber == selectedState.ayahNumber,
+          // --- Calculate Highlight Rects and Menu Anchor for THIS page ---
+          List<Rect> highlightRectsOnThisPage = [];
+          Rect? menuAnchorRectOnThisPage;
+
+          // If an ayah is selected globally AND this page is a valid page with boxes
+          if (selectedState != null && pageNumber != -1) {
+            // Find ALL boxes on *this* page that belong to the selected (sura, ayah)
+            final boxesForSelectedAyah = boxes.where(
+                  (box) =>
+              box.suraNumber == selectedState.suraNumber &&
+                  box.ayahNumber == selectedState.ayahNumber,
+            ).toList(); // Convert to list to iterate
+
+            if (boxesForSelectedAyah.isNotEmpty) {
+              // Calculate scaled rects for highlighting (potentially multiple for multi-line ayah)
+              highlightRectsOnThisPage = boxesForSelectedAyah.map((box) {
+                return Rect.fromLTWH(
+                  box.minX * scaleX,
+                  box.minY * scaleY,
+                  box.width * scaleX,
+                  box.height * scaleY,
+                );
+              }).toList();
+
+              // Determine the anchor rect for the menu. Usually the first box on the page.
+              // Need to be careful about RTL. The first box in the list might not be the visual "first".
+              // A simple way is to find the box with the minimum X *on this page*.
+              // Or, if boxId increments logically, find the box with the minimum boxId among those on this page.
+              final firstBoxOnPageForSelectedAyah = boxesForSelectedAyah.reduce((a, b) => a.boxId < b.boxId ? a : b); // Assumes boxId works
+
+              menuAnchorRectOnThisPage = Rect.fromLTWH(
+                firstBoxOnPageForSelectedAyah.minX * scaleX,
+                firstBoxOnPageForSelectedAyah.minY * scaleY,
+                firstBoxOnPageForSelectedAyah.width * scaleX,
+                firstBoxOnPageForSelectedAyah.height * scaleY,
               );
 
-              if (firstBoxOnPage != null) {
-                // If the box exists on this page, calculate its scaled rect and update the state.
-                final scaleX = constraints.maxWidth  / imageWidth;
-                final scaleY = constraints.maxHeight / imageHeight;
-
-                final calculatedRect = Rect.fromLTWH(
-                  firstBoxOnPage.minX * scaleX,
-                  firstBoxOnPage.minY * scaleY,
-                  firstBoxOnPage.width * scaleX,
-                  firstBoxOnPage.height * scaleY,
-                );
-
-                // Use Future.microtask to avoid calling setState during build/layout
-                Future.microtask(() {
-                  // Update the provider with the calculated Rect, but keep sura/ayah the same
-                  // Need a method in the notifier for this, or update the state directly.
-                  // Let's add an updateRect method.
-                  // notifier.updateRect(calculatedRect); // Assuming you add this method
-                  // OR
-                  ref.read(selectedAyahProvider.notifier).state = selectedState.copyWith(anchorRect: calculatedRect); // If using copyWith
-                });
-              }
-              // If firstBoxOnPage is null, the selected ayah is not on this page,
-              // so we don't highlight anything on this page.
             }
           }
+          // --- End Calculate Highlight Rects ---
 
+
+          // Ensure onTapDown only works when not in touch mode
           void onTapDown(TapDownDetails d) {
             final logicX = d.localPosition.dx / scaleX;
             final logicY = d.localPosition.dy / scaleY;
-            final tapped = boxes.where((b) => b.contains(logicX, logicY)).toList();
-            if (tapped.isNotEmpty) {
-              final tappedSura = tapped.first.suraNumber;
-              final tappedAyah = tapped.first.ayahNumber;
+            // Find boxes on THIS page that contain the tap point
+            final tappedBoxes = boxes.where((b) => b.contains(logicX, logicY)).toList();
 
-              final firstBoxOnPage = boxes
-                  .where((b) => b.suraNumber == tappedSura && b.ayahNumber == tappedAyah)
-                  .reduce((a, b) => a.boxId < b.boxId ? a : b);
-              final rect = Rect.fromLTWH(
-                firstBoxOnPage.minX * scaleX,
-                firstBoxOnPage.minY * scaleY,
-                firstBoxOnPage.width * scaleX,
-                firstBoxOnPage.height * scaleY,
-              );
-              notifier.select(tappedSura, tappedAyah, rect);
+            if (tappedBoxes.isNotEmpty) {
+              final tappedSura = tappedBoxes.first.suraNumber;
+              final tappedAyah = tappedBoxes.first.ayahNumber;
+              // Use the selectByTap method
+              notifier.selectByTap(tappedSura, tappedAyah);
             } else {
+              // If no box is tapped, clear the selection
               notifier.clear();
             }
           }
@@ -111,19 +109,19 @@ class QuranPage extends ConsumerWidget {
                   imgFile,
                   fit: BoxFit.fill,
                 ),
+                // Pass the calculated list of rects to the highlighter
+                // Highlighter will draw all rects in the list
                 CustomPaint(
-                  // Pass the sura number to highlighter too if needed for logic
-                  painter: AyahHighlighter(
-                      boxes, selectedState?.suraNumber, selectedState?.ayahNumber, scaleX, scaleY), // Pass suraNumber
+                  painter: AyahHighlighter(highlightRectsOnThisPage), // Pass list of rects
                 ),
-                // Only show menu if there's a selected state AND the Rect is valid (not Rect.zero)
-                if (selectedState != null && selectedState.anchorRect != Rect.zero)
-                  AyahMenu(anchorRect: selectedState.anchorRect),
+                // Show menu ONLY if source is tap AND we have a valid anchor rect on this page
+                if (selectedState != null && selectedState.source == AyahSelectionSource.tap && menuAnchorRectOnThisPage != null)
+                  AyahMenu(anchorRect: menuAnchorRectOnThisPage!), // Use the calculated anchor rect
               ],
             ),
           );
-        },
-      ),
+        }, // <-- LayoutBuilder builder ends here
+      ), // <-- LayoutBuilder ends here
     );
   }
 }

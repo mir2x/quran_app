@@ -254,7 +254,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     // Update the selected ayah provider for highlighting
                     // We set Rect.zero initially, QuranPage will calculate the real rect later
                     // --- FIX: Pass suraNumber here ---
-                    ref.read(selectedAyahProvider.notifier).selectFromAudio(suraNumber, ayahNumber);
+                    ref.read(selectedAyahProvider.notifier).selectByNavigation(suraNumber, ayahNumber);
 
                     // Close the drawer
                     Navigator.of(context).pop();
@@ -378,8 +378,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final suraMapping = ref.watch(suraPageMappingProvider);
-    final paraMapping = ref.watch(paraPageMappingProvider);
     final currentPage = ref.watch(currentPageProvider);
     ref.listen<int?>(navigateToPageCommandProvider, (
       prevPageNum,
@@ -463,7 +461,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                 itemCount: pageCount,
                 onPageChanged: (idx) {
                   ref.read(currentPageProvider.notifier).state = idx;
-                  if (ref.watch(quranAudioProvider) == null) {
+                  final currentSelectedState = ref.read(selectedAyahProvider);
+                  if (currentSelectedState?.source == AyahSelectionSource.audio) {
                     ref.read(selectedAyahProvider.notifier).clear();
                   }
                 },
@@ -484,7 +483,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     math.max(0, pageCount - 1),
                   );
                   ref.read(currentPageProvider.notifier).state = p.toInt();
-                  if (ref.watch(quranAudioProvider) == null) {
+                  final currentSelectedState = ref.read(selectedAyahProvider);
+                  if (currentSelectedState?.source == AyahSelectionSource.audio) {
                     ref.read(selectedAyahProvider.notifier).clear();
                   }
                   return false;

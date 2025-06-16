@@ -185,22 +185,30 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
       .toList(growable: false);
 });
 
+// Add this enum somewhere accessible, e.g., in ayah_highlight_viewmodel.dart
+enum AyahSelectionSource {
+  tap, // Manually tapped by user (show menu)
+  audio, // Selected by audio playback (highlight only)
+  navigation, // Selected by navigating from list (highlight only)
+}
+
 class SelectedAyahState {
   final int suraNumber;
   final int ayahNumber;
-  final Rect anchorRect;
+  final AyahSelectionSource source; // Add source field
 
-  const SelectedAyahState(this.suraNumber, this.ayahNumber, this.anchorRect);
+  const SelectedAyahState(this.suraNumber, this.ayahNumber, this.source);
 
+  // Optional: copyWith method for easy state updates if needed elsewhere
   SelectedAyahState copyWith({
     int? suraNumber,
     int? ayahNumber,
-    Rect? anchorRect,
+    AyahSelectionSource? source,
   }) {
     return SelectedAyahState(
       suraNumber ?? this.suraNumber,
       ayahNumber ?? this.ayahNumber,
-      anchorRect ?? this.anchorRect,
+      source ?? this.source,
     );
   }
 }
@@ -208,31 +216,40 @@ class SelectedAyahState {
 class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   SelectedAyahNotifier() : super(null);
 
-  void select(int sura, int ayah, Rect anchorRect) {
-    if (state?.suraNumber == sura && state?.ayahNumber == ayah) {
-      state = null; // Deselect if tapping the same ayah again
+  // Method called when user taps an ayah
+  void selectByTap(int sura, int ayah) {
+    // If the *same* sura and ayah was already selected by tap, deselect it.
+    // If it was selected by audio/nav, tapping it changes it to a tap selection.
+    if (state?.suraNumber == sura && state?.ayahNumber == ayah && state?.source == AyahSelectionSource.tap) {
+      state = null; // Deselect
     } else {
-      state = SelectedAyahState(sura, ayah, anchorRect); // Select new ayah
+      state = SelectedAyahState(sura, ayah, AyahSelectionSource.tap); // Select with tap source
     }
   }
 
-  void clear() => state = null;
-
-  void selectFromAudio(int sura, int ayah) {
-    if (state == null || state!.suraNumber != sura || state!.ayahNumber != ayah) {
-      state = SelectedAyahState(sura, ayah, Rect.zero); // Use Rect.zero to indicate programmatic selection
-    } else if (state!.suraNumber == sura && state!.ayahNumber == ayah && state!.anchorRect != Rect.zero) {
-      state = state!.copyWith(anchorRect: Rect.zero);
+  // Method called when audio playback changes ayah
+  void selectByAudio(int sura, int ayah) {
+    // Always set the state for audio tracking, but only if it's different
+    // or the source wasn't already audio (to avoid unnecessary rebuilds).
+    if (state == null || state!.suraNumber != sura || state!.ayahNumber != ayah || state!.source != AyahSelectionSource.audio) {
+      state = SelectedAyahState(sura, ayah, AyahSelectionSource.audio);
     }
   }
 
-  void updateRect(Rect rect) {
-    if (state != null) {
-      state = state!.copyWith(anchorRect: rect);
+  // Method called when navigating from lists
+  void selectByNavigation(int sura, int ayah) {
+    // Set state for navigation highlight.
+    if (state == null || state!.suraNumber != sura || state!.ayahNumber != ayah || state!.source != AyahSelectionSource.navigation) {
+      state = SelectedAyahState(sura, ayah, AyahSelectionSource.navigation);
     }
+  }
+
+  void clear() {
+    state = null;
   }
 }
 
+// Update the provider definition to use the new Notifier and State
 final selectedAyahProvider =
 StateNotifierProvider<SelectedAyahNotifier, SelectedAyahState?>(
         (ref) => SelectedAyahNotifier());
