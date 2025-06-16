@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
+import 'package:quran_app/features/quran/view/widgets/drawer/side_drawer.dart';
 import '../../../../core/theme.dart';
 import 'widgets/quran_page.dart';
 import '../viewmodel/ayah_highlight_viewmodel.dart';
@@ -390,26 +391,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     );
   }
 
-  Widget _buildParaListTabView(Map<int, int> paraMapping) {
-    return ListView.builder(
-      itemCount: 30,
-      itemBuilder: (context, index) {
-        final paraNumber = index + 1;
-        final startPage = paraMapping[paraNumber];
-        final paraName = "পারা $paraNumber";
-        return ListTile(
-          title: Text('$paraName'),
-          trailing: Text('পৃষ্ঠা $startPage'), // Show the page number
-          onTap: () {
-            if (startPage != null) {
-              ref.read(navigateToPageCommandProvider.notifier).state = startPage;
-              Navigator.of(context).pop();
-            }
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildBookmarkTabView() {
     return DefaultTabController(
@@ -656,7 +637,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
                 return Scaffold(
                   key: _rootKey,
-                  drawer: _buildSideDrawer(), // This will internally watch providers
+                  drawer: const SideDrawer(), // This will internally watch providers
                   onDrawerChanged: (isOpen) {
                     final drawer = ref.read(drawerOpenProvider.notifier);
                     isOpen ? drawer.open() : drawer.close();
