@@ -132,41 +132,55 @@ final ayahCountsProvider = Provider<List<int>>((ref) {
   ];
 });
 
+class EditionConfig {
+  final Directory dir;
+  final int imageWidth;
+  final int imageHeight;
+  final String imageExt;
+  // Potentially add edition ID or name if needed
+  const EditionConfig({
+    required this.dir,
+    required this.imageWidth,
+    required this.imageHeight,
+    required this.imageExt,
+  });
+}
 
-// final allBoxesProvider = FutureProvider.family<List<AyahBox>, String>((ref, path) async {
-//   final jsonStr = await rootBundle.loadString(path);
-//   final decoded = jsonDecode(jsonStr) as List;
-//   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
-// });
-
-class EditionDirNotifier extends StateNotifier<Directory?> {
-  EditionDirNotifier() : super(null);
-
-  void set(Directory dir) => state = dir;
-
+class EditionConfigNotifier extends StateNotifier<EditionConfig?> {
+  EditionConfigNotifier() : super(null);
+  void set(EditionConfig config) => state = config;
   void clear() => state = null;
 }
 
-final editionDirProvider =
-StateNotifierProvider<EditionDirNotifier, Directory?>(
-        (_) => EditionDirNotifier());
+// Provide the edition configuration
+final editionConfigProvider = StateNotifierProvider<EditionConfigNotifier, EditionConfig?>((_) => EditionConfigNotifier());
 
+// --- Update existing providers to watch editionConfigProvider ---
+
+// Update allBoxesProvider
 final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
-  final dir = ref.watch(editionDirProvider);
-  if (dir == null) throw Exception('editionDir not set');
+  final config = ref.watch(editionConfigProvider);
+  if (config == null) throw Exception('edition config not set'); // Ensure config is available
 
-  final jsonFile = File('${dir.path}/ayah_boxes.json');
+  final jsonFile = File('${config.dir.path}/ayah_boxes.json');
+  // print('Loading ayah_boxes.json from: ${jsonFile.path}'); // Optional: for debugging
   final jsonStr = await jsonFile.readAsString();
   final decoded = jsonDecode(jsonStr) as List;
   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
 });
 
+// New provider for total page count (based on image files)
+final totalPageCountProvider = FutureProvider<int>((ref) async {
+  final config = ref.watch(editionConfigProvider);
+  if (config == null) throw Exception('edition config not set'); // Ensure config is available
 
-// final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
-//   final jsonStr = await rootBundle.loadString('assets/ayah_boxes.json');
-//   final decoded = jsonDecode(jsonStr) as List;
-//   return decoded.map((e) => AyahBox.fromJson(e)).toList(growable: false);
-// });
+  final fileList = await config.dir
+      .list()
+      .where((f) => f.path.endsWith('.${config.imageExt}'))
+      .toList();
+  // debugPrint('Detected ${fileList.length} pages in ${config.dir.path}'); // Optional: for debugging
+  return fileList.length;
+});
 
 final boxesForPageProvider =
 Provider.family<List<AyahBox>, int>((ref, pageIndex) {
@@ -678,3 +692,44 @@ final paraPageMappingProvider = Provider<Map<int, int>>((ref) {
     orElse: () => const {},
   );
 });
+
+final paraPageRangesProvider = Provider<Map<int, List<int>>>((ref) {
+  final paraMapping = ref.watch(paraPageMappingProvider);
+  final totalPageCountAsync = ref.watch(totalPageCountProvider); // Watch the FutureProvider result
+
+  // If mappings or total count are not ready, return empty map
+  if (paraMapping.isEmpty || !totalPageCountAsync.hasValue) {
+    return const {};
+  }
+
+  final totalPages = totalPageCountAsync.value!; // Get the loaded total pages
+
+  final Map<int, List<int>> pageRanges = {};
+
+  for (int i = 1; i <= 30; i++) {
+    final startPage = paraMapping[i]; // Get start page for current para
+
+    // Determine the end page for the current Para.
+    // It's either the page before the next Para starts, or the total number of pages for Para 30.
+    final endPage = (i < 30)
+        ? paraMapping[i + 1] != null ? paraMapping[i + 1]! - 1 : null // End before next para starts
+        : totalPages; // Last para ends on the total last page
+
+    // Ensure startPage and endPage are valid and sequential
+    if (startPage != null && endPage != null && startPage <= endPage) {
+      // Generate the list of page numbers from startPage to endPage (inclusive)
+      pageRanges[i] = List<int>.generate(endPage - startPage + 1, (j) => startPage + j);
+    } else if (startPage != null && endPage == null) {
+      // This case means the start page for the next para (or total pages for para 30) wasn't found.
+      // Log a warning or handle as an error.
+      print('Warning: Could not determine end page for Para $i (start $startPage). Missing data?');
+    } else if (startPage == null) {
+      // This case means the start page for this para wasn't found (already warned in paraPageMappingProvider).
+      print('Warning: Start page not found for Para $i.');
+    }
+  }
+
+  return pageRanges;
+});
+
+final selectedNavigationParaProvider = StateProvider<int?>((_) => null);

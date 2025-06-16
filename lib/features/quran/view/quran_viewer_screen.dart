@@ -42,17 +42,15 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(editionDirProvider.notifier).set(widget.editionDir);
+      ref.read(editionConfigProvider.notifier).set(EditionConfig(
+        dir: widget.editionDir,
+        imageWidth: widget.imageWidth,
+        imageHeight: widget.imageHeight,
+        imageExt: widget.imageExt,
+      ));
     });
-    _pageCountF = _detectPageCount();
   }
 
-  Future<int> _detectPageCount() async =>
-      (await widget.editionDir
-              .list()
-              .where((f) => f.path.endsWith('.${widget.imageExt}'))
-              .toList())
-          .length;
 
   @override
   void dispose() {
@@ -80,6 +78,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     ],
   );
 
+  // Inside _QuranViewerState class
+
   Widget _buildSideDrawer() {
     return Align(
       alignment: Alignment.topLeft,
@@ -89,37 +89,49 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           final double topInset = kToolbarHeight + media.padding.top;
           final double bottomInset = bottomBarHeight + media.padding.bottom;
 
-          // Watch the mappings and ayah counts
+          // Watch the data needed for the drawer views
           final suraMapping = ref.watch(suraPageMappingProvider);
           final paraMapping = ref.watch(paraPageMappingProvider);
           final ayahMapping = ref.watch(ayahPageMappingProvider);
           final ayahCounts = ref.watch(ayahCountsProvider);
           final suraNames = ref.watch(suraNamesProvider); // Get sura names
+          final paraPageRanges = ref.watch(paraPageRangesProvider); // Watch the new provider
 
-          // Check if main data (allBoxesProvider) is still loading or has error
+          // Check if main data (allBoxesProvider, totalPageCountProvider, and mappings) is still loading or has error
           final allBoxesAsync = ref.watch(allBoxesProvider);
-          final bool isLoading = allBoxesAsync.isLoading;
-          final bool hasError = allBoxesAsync.hasError;
+          final totalPageCountAsync = ref.watch(totalPageCountProvider);
+
+          final bool isLoading = allBoxesAsync.isLoading || totalPageCountAsync.isLoading;
+          final bool hasError = allBoxesAsync.hasError || totalPageCountAsync.hasError;
+
+          // Also check if necessary mappings are loaded when data is available
+          final bool isDataReady = !isLoading && !hasError &&
+              suraMapping.isNotEmpty &&
+              paraMapping.isNotEmpty &&
+              ayahMapping.isNotEmpty &&
+              paraPageRanges.isNotEmpty;
 
 
-          // Determine content based on loading/error state
-          Widget suraParaContent;
+          Widget tabContent; // Widget to place inside the TabBarView
           if (isLoading) {
-            suraParaContent = const Center(child: CircularProgressIndicator());
+            tabContent = const Center(child: CircularProgressIndicator());
           } else if (hasError) {
-            suraParaContent = Center(child: Text('Error loading data: ${allBoxesAsync.error}'));
-          } else if (suraMapping.isEmpty || paraMapping.isEmpty || ayahMapping.isEmpty) {
-            // This state might be hit briefly even after data is loaded if mappings are being built.
-            // Could indicate an issue if it persists.
-            suraParaContent = const Center(child: Text('Processing data...'));
+            // Display specific error if needed
+            final errorText = allBoxesAsync.hasError ? allBoxesAsync.error.toString() : totalPageCountAsync.error.toString();
+            tabContent = Center(child: Text('Error loading data:\n$errorText'));
+          } else if (!isDataReady) {
+            // Data might be loaded but mappings still being processed or unexpectedly empty
+            tabContent = const Center(child: Text('Processing data...'));
           }
           else {
-            // Data is ready, build the tab views
-            suraParaContent = TabBarView(
+            // Data and mappings are ready, build the tab views
+            tabContent = TabBarView(
               children: [
-                // Pass necessary data to the updated Surah tab view
+                // Surah tab view
                 _buildSurahAyahTabView(suraMapping, ayahCounts, suraNames, ayahMapping),
-                _buildParaListTabView(paraMapping),
+                // Para tab view - pass the page ranges
+                _buildParaTabView(paraPageRanges),
+                // Bookmark tab view
                 _buildBookmarkTabView(),
               ],
             );
@@ -138,20 +150,20 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     children: [
                       Expanded(
                         // Use the content determined above
-                        child: suraParaContent,
+                        child: tabContent, // Use tabContent here
                       ),
                       // ... Your TabBar remains the same ...
                       Container(
                         color: const Color(0xFFB2FF59), // Light green
-                        child: TabBar(
+                        child: const TabBar( // Added const as children are constant
                           labelColor: Colors.white,
                           unselectedLabelColor: Colors.black87,
                           indicator: BoxDecoration(
-                            color: const Color(0xFF1B5E20), // Full dark green for active tab
+                            color: Color(0xFF1B5E20), // Full dark green for active tab
                             borderRadius: BorderRadius.zero,
                           ),
                           indicatorSize: TabBarIndicatorSize.tab, // Fills the whole tab
-                          tabs: const [
+                          tabs: [
                             Tab(text: 'সূরা'),
                             Tab(text: 'পারা'),
                             Tab(text: 'বুকমার্ক'),
@@ -168,6 +180,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       ),
     );
   }
+
+  // Keep _buildSurahAyahTabView as is (updated in previous step)
+  // Keep _buildBookmarkTabView as is
+
+  // Remove the old _buildParaListTabView method as it's replaced by _buildParaTabView, _buildParaList, and _buildParaPageList
+  // Widget _buildParaListTabView(Map<int, int> paraMapping) { ... } // Remove this method
 
   Widget _buildSurahAyahTabView(
       Map<int, int> suraMapping,
@@ -186,10 +204,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     }
   }
 
-
-  // Helper method to build the list of all Surahs
   Widget _buildSurahList(Map<int, int> suraMapping, List<int> ayahCounts, List<String> suraNames) {
-    // Check if data is missing (shouldn't happen if we only reach here when data is loaded)
     if (suraNames.length < 114 || ayahCounts.length < 114 || suraMapping.isEmpty) {
       return const Center(child: Text('Data incomplete.'));
     }
@@ -198,13 +213,13 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       itemCount: 114,
       itemBuilder: (context, index) {
         final suraNumber = index + 1;
-        final startPage = suraMapping[suraNumber]; // Use the mapping
-        final totalAyahs = ayahCounts[index]; // Ayah counts list is 0-indexed
-        final surahName = suraNames[index]; // Sura names list is 0-indexed
+        final startPage = suraMapping[suraNumber];
+        final totalAyahs = ayahCounts[index];
+        final surahName = suraNames[index];
 
         return ListTile(
           title: Text('$suraNumber. $surahName'),
-          subtitle: Text('আয়াত: $totalAyahs, পৃষ্ঠা: ${startPage ?? 'N/A'}'), // Show ayah count and start page
+          subtitle: Text('আয়াত: $totalAyahs, পৃষ্ঠা: ${startPage ?? 'N/A'}'),
           onTap: () {
             // Select this surah to show its ayahs
             ref.read(selectedNavigationSurahProvider.notifier).state = suraNumber;
@@ -220,8 +235,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     }
 
     final totalAyahs = ayahCounts[suraNumber - 1]; // Ayah counts list is 0-indexed
-    final surahName = suraNames[suraNumber - 1]; // Sura names list is 0-indexed
-
 
     return Column(
       children: [
@@ -265,6 +278,109 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       const SnackBar(content: Text('Page data not found for this Ayah')),
                     );
                   }
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildParaTabView(Map<int, List<int>> paraPageRanges) {
+    final selectedPara = ref.watch(selectedNavigationParaProvider);
+
+    if (selectedPara == null) {
+      // Show list of all Paras
+      return _buildParaList(paraPageRanges);
+    } else {
+      // Show list of pages for the selected Para
+      return _buildParaPageList(selectedPara, paraPageRanges);
+    }
+  }
+
+  Widget _buildParaList(Map<int, List<int>> paraPageRanges) {
+    // Check if data is missing
+    if (paraPageRanges.isEmpty) {
+      // This state should ideally be caught by the loading checks in _buildSideDrawer
+      return const Center(child: Text('Para data not loaded.'));
+    }
+
+    return ListView.builder(
+      itemCount: 30, // There are 30 Paras
+      itemBuilder: (context, index) {
+        final paraNumber = index + 1;
+        final pageNumbers = paraPageRanges[paraNumber]; // Get the list of pages
+
+        // Display the first page number and the count of pages if available
+        final String subtitleText;
+        if (pageNumbers != null && pageNumbers.isNotEmpty) {
+          subtitleText = 'পৃষ্ঠা ${pageNumbers.first} - ${pageNumbers.last} (${pageNumbers.length} পৃষ্ঠা)';
+        } else {
+          subtitleText = 'পৃষ্ঠা তথ্য পাওয়া যায়নি';
+        }
+
+        return ListTile(
+          title: Text('পারা $paraNumber'),
+          subtitle: Text(subtitleText),
+          onTap: () {
+            // Select this para to show its pages
+            if (pageNumbers != null && pageNumbers.isNotEmpty) {
+              ref.read(selectedNavigationParaProvider.notifier).state = paraNumber;
+            } else {
+              // Optionally show a message if no page data for this para
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('পৃষ্ঠা তথ্য পাওয়া যায়নি $paraNumber')),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildParaPageList(int paraNumber, Map<int, List<int>> paraPageRanges) {
+    // Validate paraNumber and get the page list
+    final pageNumbers = paraPageRanges[paraNumber];
+
+    if (pageNumbers == null || pageNumbers.isEmpty) {
+      // Should ideally not happen if the Para list was built correctly
+      return const Center(child: Text('Page data not found for this Para.'));
+    }
+
+    // Get the Para name if you had one (using index is fine for now)
+    final paraName = "পারা $paraNumber"; // Placeholder
+
+
+    return Column(
+      children: [
+        // Add a "Back" button at the top
+        ListTile(
+          leading: const Icon(Icons.arrow_back),
+          title: Text('$paraName'), // Title can be the Para number
+          onTap: () {
+            // Go back to the list of all paras
+            ref.read(selectedNavigationParaProvider.notifier).state = null;
+          },
+        ),
+        const Divider(height: 1), // Optional divider
+
+        Expanded(
+          child: ListView.builder(
+            itemCount: pageNumbers.length,
+            itemBuilder: (context, index) {
+              final pageNumber = pageNumbers[index]; // Get the actual page number
+
+              return ListTile(
+                title: Text('পৃষ্ঠা $pageNumber'),
+                onTap: () {
+                  // Navigate to the selected page number
+                  ref.read(navigateToPageCommandProvider.notifier).state = pageNumber;
+                  // No ayah highlighting needed here, just page navigation.
+                  // Clear any existing ayah highlight if desired when navigating by page
+                  ref.read(selectedAyahProvider.notifier).clear();
+                  // Close the drawer
+                  Navigator.of(context).pop();
                 },
               );
             },
@@ -379,16 +495,22 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final currentPage = ref.watch(currentPageProvider);
+    final allBoxesAsync = ref.watch(allBoxesProvider);
+
+    // Listen for navigation commands
     ref.listen<int?>(navigateToPageCommandProvider, (
-      prevPageNum,
-      newPageNum,
-    ) async {
+        prevPageNum,
+        newPageNum,
+        ) async {
+      // Your existing navigation logic here...
+      // You'll need the total page count for clamping. Watch it here too.
+      final totalPageCountAsync = ref.read(totalPageCountProvider); // Read the provider (no rebuild needed)
+      final pageCount = totalPageCountAsync.value ?? 604; // Use loaded value, fallback to a large number if not ready
+
       if (newPageNum != null) {
-        final targetPageIndex = newPageNum - 1;
+        final targetPageIndex = newPageNum - 1; // 0-based index
 
-        final pageCount = await _pageCountF;
-
-        if (targetPageIndex >= 0 && targetPageIndex < pageCount) {
+        if (targetPageIndex >= 0 && targetPageIndex < pageCount) { // Use pageCount from provider
           final currentOrientation = MediaQuery.of(context).orientation;
           final width = MediaQuery.of(context).size.width;
 
@@ -425,122 +547,148 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       }
     });
 
-    return FutureBuilder<int>(
-      future: _pageCountF,
-      builder: (_, s) {
-        if (!s.hasData) {
-          return const Scaffold(
+    return allBoxesAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, s) => Scaffold( // Add stacktrace 's' for better debugging
+        appBar: _buildAppBar(), // Show app bar even on error
+        body: Center(child: Text('Error loading Quran data: ${e.toString()}\n$s')),
+      ),
+      data: (allBoxes) {
+        // Data is loaded, we can now build the main screen
+        // Note: We don't strictly *need* allBoxes here, just that the provider has data.
+        // We can now watch other data providers like suraMapping, paraMapping etc in _buildSideDrawer.
+
+        // Need total page count here for the ListView/PageView item count
+        final totalPageCountAsync = ref.watch(totalPageCountProvider);
+
+        // If total page count is still loading, show a loader within the data state?
+        // Or maybe wait for totalPageCountProvider before building the main view?
+        // Let's watch totalPageCountProvider directly in the build method.
+        return totalPageCountAsync.when(
+          loading: () => const Scaffold( // Show loading if page count isn't ready
             body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final pageCount = s.data!;
-        return OrientationBuilder(
-          builder: (_, ori) {
-            final width = MediaQuery.of(context).size.width;
-            final itemH = width / _aspect;
+          ),
+          error: (e, s) => Scaffold( // Handle error if page count fails
+            appBar: _buildAppBar(),
+            body: Center(child: Text('Error loading page count: ${e.toString()}\n$s')),
+          ),
+          data: (pageCount) {
+            // BOTH allBoxes and totalPageCount are loaded
+            return OrientationBuilder(
+              builder: (_, ori) {
+                // ... rest of your OrientationBuilder logic ...
+                final width = MediaQuery.of(context).size.width;
+                final itemH = width / _aspect;
 
-            /* create the proper controller if orientation changed */
-            if (ori != _lastOri) {
-              if (ori == Orientation.portrait) {
-                _portraitCtrl?.dispose();
-                _portraitCtrl = PageController(initialPage: currentPage);
-              } else {
-                _landscapeCtrl?.dispose();
-                _landscapeCtrl = ScrollController(
-                  initialScrollOffset: currentPage * itemH,
-                );
-              }
-              _lastOri = ori;
-            }
+                /* create the proper controller if orientation changed */
+                if (ori != _lastOri) {
+                  // Keep initialPage/initialScrollOffset logic as is using currentPage
+                  if (ori == Orientation.portrait) {
+                    _portraitCtrl?.dispose();
+                    _portraitCtrl = PageController(initialPage: ref.read(currentPageProvider)); // Use ref.read here
+                  } else {
+                    _landscapeCtrl?.dispose();
+                    _landscapeCtrl = ScrollController(
+                      initialScrollOffset: ref.read(currentPageProvider) * itemH, // Use ref.read here
+                    );
+                  }
+                  _lastOri = ori;
+                }
 
-            Widget viewer;
-            if (ori == Orientation.portrait) {
-              viewer = PageView.builder(
-                controller: _portraitCtrl!,
-                reverse: true,
-                itemCount: pageCount,
-                onPageChanged: (idx) {
-                  ref.read(currentPageProvider.notifier).state = idx;
-                  final currentSelectedState = ref.read(selectedAyahProvider);
-                  if (currentSelectedState?.source == AyahSelectionSource.audio) {
-                    ref.read(selectedAyahProvider.notifier).clear();
-                  }
-                },
-                itemBuilder: (_, idx) => QuranPage(
-                  pageIndex: idx,
-                  editionDir: widget.editionDir,
-                  imageWidth: widget.imageWidth,
-                  imageHeight: widget.imageHeight,
-                  imageExt: widget.imageExt,
-                ),
-              );
-            } else {
-              /* vertical continuous scroll */
-              viewer = NotificationListener<ScrollUpdateNotification>(
-                onNotification: (n) {
-                  final p = (n.metrics.pixels / itemH).round().clamp(
-                    0,
-                    math.max(0, pageCount - 1),
-                  );
-                  ref.read(currentPageProvider.notifier).state = p.toInt();
-                  final currentSelectedState = ref.read(selectedAyahProvider);
-                  if (currentSelectedState?.source == AyahSelectionSource.audio) {
-                    ref.read(selectedAyahProvider.notifier).clear();
-                  }
-                  return false;
-                },
-                child: ListView.builder(
-                  controller: _landscapeCtrl!,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: pageCount,
-                  itemBuilder: (_, idx) => SizedBox(
-                    height: itemH,
-                    width: double.infinity,
-                    child: QuranPage(
-                      pageIndex: idx,
+                Widget viewer;
+                if (ori == Orientation.portrait) {
+                  viewer = PageView.builder(
+                    controller: _portraitCtrl!,
+                    reverse: true,
+                    itemCount: pageCount, // Use the loaded pageCount
+                    onPageChanged: (idx) {
+                      ref.read(currentPageProvider.notifier).state = idx;
+                      final currentSelectedState = ref.read(selectedAyahProvider);
+                      // Clear the selected ayah ONLY if it was selected by audio.
+                      if (currentSelectedState?.source == AyahSelectionSource.audio) {
+                        ref.read(selectedAyahProvider.notifier).clear();
+                      }
+                    },
+                    itemBuilder: (_, idx) => QuranPage(
+                      pageIndex: idx, // Pass 0-based index
                       editionDir: widget.editionDir,
                       imageWidth: widget.imageWidth,
                       imageHeight: widget.imageHeight,
                       imageExt: widget.imageExt,
                     ),
-                  ),
-                ),
-              );
-            }
-
-            return Scaffold(
-              key: _rootKey,
-              drawer: _buildSideDrawer(),
-              onDrawerChanged: (isOpen) {
-                final drawer = ref.read(drawerOpenProvider.notifier);
-                isOpen ? drawer.open() : drawer.close();
-              },
-              appBar: _buildAppBar(),
-              bottomNavigationBar: BottomBar(
-                drawerOpen: ref.watch(drawerOpenProvider),
-                rootKey: _rootKey,
-              ),
-              body: Stack(
-                children: [
-                  viewer,
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final audio = ref.watch(quranAudioProvider);
-                      if (audio == null) {
-                        return const SizedBox.shrink();
-                      }
-                      return Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: AudioControllerBar(
-                          color: Theme.of(context).primaryColor,
-                        ),
+                  );
+                } else {
+                  /* vertical continuous scroll */
+                  viewer = NotificationListener<ScrollUpdateNotification>(
+                    onNotification: (n) {
+                      final p = (n.metrics.pixels / itemH).round().clamp(
+                        0,
+                        math.max(0, pageCount - 1), // Use the loaded pageCount
                       );
+                      ref.read(currentPageProvider.notifier).state = p.toInt();
+                      final currentSelectedState = ref.read(selectedAyahProvider);
+                      // Clear the selected ayah ONLY if it was selected by audio.
+                      if (currentSelectedState?.source == AyahSelectionSource.audio) {
+                        ref.read(selectedAyahProvider.notifier).clear();
+                      }
+                      return false;
                     },
+                    child: ListView.builder(
+                      controller: _landscapeCtrl!,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: pageCount, // Use the loaded pageCount
+                      itemBuilder: (_, idx) => SizedBox(
+                        height: itemH,
+                        width: double.infinity,
+                        child: QuranPage(
+                          pageIndex: idx, // Pass 0-based index
+                          editionDir: widget.editionDir,
+                          imageWidth: widget.imageWidth,
+                          imageHeight: widget.imageHeight,
+                          imageExt: widget.imageExt,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return Scaffold(
+                  key: _rootKey,
+                  drawer: _buildSideDrawer(), // This will internally watch providers
+                  onDrawerChanged: (isOpen) {
+                    final drawer = ref.read(drawerOpenProvider.notifier);
+                    isOpen ? drawer.open() : drawer.close();
+                  },
+                  appBar: _buildAppBar(),
+                  bottomNavigationBar: BottomBar(
+                    drawerOpen: ref.watch(drawerOpenProvider),
+                    rootKey: _rootKey,
                   ),
-                ],
-              ),
+                  body: Stack(
+                    children: [
+                      viewer,
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final audio = ref.watch(quranAudioProvider);
+                          if (audio == null) {
+                            return const SizedBox.shrink();
+                          }
+                          return Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: AudioControllerBar(
+                              color: Theme.of(context).primaryColor,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
