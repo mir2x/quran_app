@@ -304,6 +304,8 @@ final currentSuraProvider = Provider<int>((ref) {
   return currentSura;
 });
 
+final selectedAudioSuraProvider = StateProvider<int>((_) => 1);
+
 class TouchModeNotifier extends StateNotifier<bool> {
   TouchModeNotifier() : super(false);
   void toggle() => state = !state;
