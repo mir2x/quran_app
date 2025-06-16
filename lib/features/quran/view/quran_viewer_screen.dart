@@ -219,38 +219,50 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   );
                 }
 
-                return Scaffold(
-                  key: _rootKey,
-                  drawer: const SideDrawer(),
-                  onDrawerChanged: (isOpen) {
-                    final drawer = ref.read(drawerOpenProvider.notifier);
-                    isOpen ? drawer.open() : drawer.close();
+                return PopScope(
+                  canPop: false,
+                  onPopInvokedWithResult: (didPop, result) async {
+                    if (didPop) return;
+                    final orientation = MediaQuery.of(context).orientation;
+                    if (orientation == Orientation.landscape) {
+                      OrientationToggle.toggle();
+                    } else {
+                      Navigator.pop(context);
+                    }
                   },
-                  appBar: _buildAppBar(),
-                  bottomNavigationBar: BottomBar(
-                    drawerOpen: ref.watch(drawerOpenProvider),
-                    rootKey: _rootKey,
-                  ),
-                  body: Stack(
-                    children: [
-                      viewer,
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final audio = ref.watch(quranAudioProvider);
-                          if (audio == null) {
-                            return const SizedBox.shrink();
-                          }
-                          return Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: AudioControllerBar(
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  child: Scaffold(
+                    key: _rootKey,
+                    drawer: const SideDrawer(),
+                    onDrawerChanged: (isOpen) {
+                      final drawer = ref.read(drawerOpenProvider.notifier);
+                      isOpen ? drawer.open() : drawer.close();
+                    },
+                    appBar: _buildAppBar(),
+                    bottomNavigationBar: BottomBar(
+                      drawerOpen: ref.watch(drawerOpenProvider),
+                      rootKey: _rootKey,
+                    ),
+                    body: Stack(
+                      children: [
+                        viewer,
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final audio = ref.watch(quranAudioProvider);
+                            if (audio == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: AudioControllerBar(
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
