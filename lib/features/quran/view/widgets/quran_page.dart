@@ -36,11 +36,12 @@ class QuranPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the necessary providers to trigger rebuilds when their state changes
     final allBoxesAsync = ref.watch(allBoxesProvider);
-    // Watch the selected ayah state - this controls menu visibility
-    final selectedState = ref.watch(selectedAyahProvider);
+    final selectedState = ref.watch(selectedAyahProvider); // Watch the selected ayah state
+    final touchModeOn = ref.watch(touchModeProvider); // Watch touch mode state
+
     final logicalPage = pageIndex + 1; // 1-based logical page number
-    // Determine the page number to use for fetching boxes (handle intro pages)
     final pageNumber  = logicalPage < kFirstPageNumber ? -1 : logicalPage; // Use -1 for intro pages without boxes
     // Get the ayah boxes for this specific page (filtered by pageNumber)
     final boxes = pageNumber == -1 ? const <AyahBox>[] : ref.watch(boxesForPageProvider(pageNumber));
@@ -50,38 +51,32 @@ class QuranPage extends ConsumerWidget {
     final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.$imageExt');
 
 
-    // --- Calculate Highlight Rects and Menu Anchor for THIS page ---
-    List<Rect> highlightRectsOnThisPage = [];
-    Rect? menuAnchorRectOnThisPage;
+    // Check if the currently selected ayah (if any) is on *this* page
+    final bool isSelectedAyahOnThisPage = selectedState != null &&
+        pageNumber != -1 &&
+        boxes.any((box) => box.suraNumber == selectedState.suraNumber && box.ayahNumber == selectedState.ayahNumber);
 
-    // If an ayah is selected globally AND this page is a valid page with boxes
-    if (selectedState != null && pageNumber != -1) {
-      // Find ALL boxes on *this* page that belong to the selected (sura, ayah)
-      final boxesForSelectedAyah = boxes.where(
-            (box) =>
-        box.suraNumber == selectedState.suraNumber &&
-            box.ayahNumber == selectedState.ayahNumber,
-      ).toList(); // Convert to list to iterate
-
-      if (boxesForSelectedAyah.isNotEmpty) {
-        // Get the size constraints provided by the LayoutBuilder (or parent)
-        // Note: We need the actual rendered size to scale correctly.
-        // The LayoutBuilder below provides this. Let's move the calculation
-        // inside the LayoutBuilder's builder function to get correct constraints.
-      }
-    }
-    // --- End Calculate Highlight Rects ---
+    // Determine if the menu should be shown on *this* page
+    // Menu is shown if an ayah is selected by tap source AND that ayah is on this page.
+    final bool showMenuOnThisPage = selectedState != null &&
+        selectedState.source == AyahSelectionSource.tap &&
+        isSelectedAyahOnThisPage;
 
 
-    // Define the onTapDown logic for ayah selection
-    // This function will be attached to a GestureDetector *within* the Stack,
-    // potentially wrapped by an IgnorePointer.
+    // Define the onTapDown logic for ayah selection or clearing
+    // This function will be attached to a GestureDetector covering the page area.
     void onTapDown(TapDownDetails d, double scaleX, double scaleY, List<AyahBox> currentPageBoxes) {
-      // If touch mode is off, handle the tap
-      // The check for touch mode should be done *before* calling this function
-      // or inside it, depending on where the GestureDetector is placed.
-      // Since we'll put the GestureDetector here, check inside:
-      if (!ref.read(touchModeProvider)) { // Only handle tap if touch mode is off
+
+      // If an ayah is currently selected via a tap (meaning the menu is shown),
+      // ANY tap on the page area should clear the selection and hide the menu.
+      if (selectedState != null && selectedState.source == AyahSelectionSource.tap) {
+        notifier.clear(); // Clear the selection state
+        return; // Stop processing here, we just cleared.
+      }
+
+      // If no ayah is selected by tap (or selected by audio/navigation),
+      // proceed with standard ayah selection logic IF touch mode is OFF.
+      if (!touchModeOn) { // Only select a new ayah if touch mode is OFF
         final logicX = d.localPosition.dx / scaleX;
         final logicY = d.localPosition.dy / scaleY;
         // Find boxes on THIS page that contain the tap point
@@ -90,15 +85,17 @@ class QuranPage extends ConsumerWidget {
         if (tappedBoxes.isNotEmpty) {
           final tappedSura = tappedBoxes.first.suraNumber;
           final tappedAyah = tappedBoxes.first.ayahNumber;
-          // Use the selectByTap method
+          // Use the selectByTap method to select the new ayah
           notifier.selectByTap(tappedSura, tappedAyah);
         } else {
-          // If no box is tapped, clear the selection (hides the menu)
-          notifier.clear();
+          // Tapped empty space when no tap-selected ayah existed. Do nothing.
+          // If you wanted tapping empty space to clear other types of selections (audio/nav),
+          // you would add notifier.clear() here, but the requirement was only
+          // to clear tap selection by tapping anywhere.
         }
       }
-      // If touch mode is on, the GestureDetector's onTapDown will be null,
-      // or this logic won't execute.
+      // If touch mode is ON, this onTapDown callback is still attached,
+      // but the selection logic within the 'if (!touchModeOn)' block is skipped.
     }
 
 
@@ -110,21 +107,23 @@ class QuranPage extends ConsumerWidget {
           final scaleX = constraints.maxWidth  / imageWidth;
           final scaleY = constraints.maxHeight / imageHeight;
 
-          // --- Recalculate Highlight Rects and Menu Anchor INSIDE LayoutBuilder ---
+          // --- Calculate Highlight Rects and Menu Anchor for THIS page ---
           List<Rect> highlightRectsOnThisPage = [];
           Rect? menuAnchorRectOnThisPage;
 
-          // If an ayah is selected globally AND this page is a valid page with boxes
-          if (selectedState != null && pageNumber != -1) {
+          // If an ayah is selected globally AND the selected ayah is on *this* page,
+          // calculate its highlight rects and menu anchor.
+          if (selectedState != null && isSelectedAyahOnThisPage) {
+
             // Find ALL boxes on *this* page that belong to the selected (sura, ayah)
             final boxesForSelectedAyah = boxes.where(
                   (box) =>
               box.suraNumber == selectedState.suraNumber &&
                   box.ayahNumber == selectedState.ayahNumber,
-            ).toList(); // Convert to list to iterate
+            ).toList();
 
             if (boxesForSelectedAyah.isNotEmpty) {
-              // Calculate scaled rects for highlighting (potentially multiple for multi-line ayah)
+              // Calculate scaled rects for highlighting
               highlightRectsOnThisPage = boxesForSelectedAyah.map((box) {
                 return Rect.fromLTWH(
                   box.minX * scaleX,
@@ -134,10 +133,9 @@ class QuranPage extends ConsumerWidget {
                 );
               }).toList();
 
-              // Determine the anchor rect for the menu.
-              // Find the box with the minimum boxId among those on this page that belong to the selected ayah.
-              // Assumes boxId increments logically within a page for a given ayah.
+              // Determine the anchor rect for the menu (usually the first box on the page)
               try {
+                // Find the box with the minimum boxId among the selected ayah's boxes on this page
                 final firstBoxOnPageForSelectedAyah = boxesForSelectedAyah.reduce((a, b) => a.boxId < b.boxId ? a : b);
 
                 menuAnchorRectOnThisPage = Rect.fromLTWH(
@@ -147,63 +145,52 @@ class QuranPage extends ConsumerWidget {
                   firstBoxOnPageForSelectedAyah.height * scaleY,
                 );
               } catch (e) {
-                // Handle case where reduce might fail (e.g., empty list, though checked by if)
                 debugPrint("Error finding first box for selected ayah on page $pageNumber: $e");
                 menuAnchorRectOnThisPage = null; // Ensure anchor is null on error
               }
             }
           }
-          // --- End Recalculate Highlight Rects ---
+          // --- End Calculate Highlight Rects ---
 
 
-          return Stack( // Removed the outer GestureDetector wrapping the Stack
+          return Stack(
             fit: StackFit.expand,
             children: [
-              // Layer 1: The Quran Page Image
+              // Layer 1: The Quran Page Image (Lowest layer)
               Image.file(
                 imgFile,
                 fit: BoxFit.fill,
               ),
 
-              // Layer 2: Ayah Highlighter (draws on top of the image)
-              // Pass the calculated list of rects to the highlighter
+              // Layer 2: Ayah Highlighter (Draws highlight on top of image)
+              // It will draw the rects calculated above.
               CustomPaint(
                 painter: AyahHighlighter(highlightRectsOnThisPage), // Pass list of rects
               ),
 
-              // Layer 3: GestureDetector for Ayah Selection Taps
-              // This layer sits above the image and highlighter but below the Ayah Menu.
-              // Use IgnorePointer to disable taps on this layer when the menu is visible.
-              IgnorePointer(
-                // Ignore taps on the page content layer when the Ayah Menu is shown
-                // (which happens when an ayah is selected by tap source)
-                ignoring: selectedState != null && selectedState.source == AyahSelectionSource.tap,
-                child: GestureDetector(
-                  // Use translucent behavior so taps on this layer are detected,
-                  // but they pass through to widgets below if no specific widget
-                  // on *this* layer consumes them (like a Container).
-                  // However, since we want this GestureDetector to handle the *entire*
-                  // page area for ayah selection, `HitTestBehavior.opaque` might also work,
-                  // as long as the AyahMenu (which is on a higher layer) correctly
-                  // consumes hits when it's visible. Let's stick with Opaque for the page area.
-                  behavior: HitTestBehavior.opaque, // Make this layer's area hit-testable
+              // Layer 3: GestureDetector for Ayah Selection/Clearing Taps
+              // This layer sits above the image and highlighter. It covers the whole page area.
+              // It needs to be able to receive taps REGARDLESS of whether the menu is visible.
+              GestureDetector(
+                // `HitTestBehavior.translucent` or `opaque` can work here.
+                // `opaque` makes the whole area consume hits, preventing hits
+                // from going to layers *below* this one. This is what we want
+                // for the page interaction area.
+                behavior: HitTestBehavior.opaque,
 
-                  // Attach the onTapDown logic here
-                  // Pass necessary parameters to the handler
-                  onTapDown: (details) => onTapDown(details, scaleX, scaleY, boxes),
+                // Attach the onTapDown logic here.
+                // Pass necessary parameters to the handler function.
+                onTapDown: (details) => onTapDown(details, scaleX, scaleY, boxes),
 
-                  // We don't need a child widget here if we just want to capture gestures over the area
-                  // If you needed visual feedback or drawing on this layer, you could add a Container or CustomPaint.
-                  child: Container(), // Use Container as a simple hit-target area
-                ),
+                // No visible child needed for the GestureDetector itself
+                child: Container(), // Simple invisible hit-target area
               ),
 
 
-              // Layer 4: Ayah Menu (Positioned at the top based on anchorRect)
-              // Show menu ONLY if source is tap AND we have a valid anchor rect on this page
-              // The AyahMenu widget itself contains tappable buttons that will
-              // consume the tap event before it reaches layers below.
-              if (selectedState != null && selectedState.source == AyahSelectionSource.tap && menuAnchorRectOnThisPage != null)
+              // Layer 4: Ayah Menu (Highest layer - above everything else)
+              // Show menu ONLY if the `showMenuOnThisPage` flag is true
+              // AND we successfully calculated a valid anchor rect.
+              if (showMenuOnThisPage && menuAnchorRectOnThisPage != null)
                 AyahMenu(anchorRect: menuAnchorRectOnThisPage!), // Use the calculated anchor rect
             ],
           );
