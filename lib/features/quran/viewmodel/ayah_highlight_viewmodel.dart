@@ -4,14 +4,12 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants.dart';
 import '../../../core/services/audio_service.dart';
 import '../../../core/services/fileChecker.dart';
 import '../model/audio_state.dart';
 import '../model/ayah_box.dart';
 import '../model/ayah_timing.dart';
-import '../model/bookmark.dart';
 import '../model/reciter_asset.dart';
 import '../model/selected_ayah_state.dart';
 

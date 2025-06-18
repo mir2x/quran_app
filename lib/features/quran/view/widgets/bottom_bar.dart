@@ -191,18 +191,16 @@ class BottomBar extends ConsumerWidget {
           // _iconBtn(icon: HugeIcons.solidRoundedArrowExpand, onPressed: (){})
 
           // Example of the old drawer toggle button (can be removed if no longer needed here)
-          // _iconBtn(
-          //   icon: drawerOpen // drawerOpen comes from the provider watch in QuranViewerScreen
-          //       ? Icons.keyboard_arrow_left
-          //       : Icons.keyboard_arrow_right,
-          //   onPressed: () {
-          //     if (drawerOpen) { // Check the state from the provider
-          //       rootKey.currentState?.closeDrawer(); // Use rootKey to close
-          //     } else {
-          //       rootKey.currentState?.openDrawer(); // Use rootKey to open
-          //     }
-          //   },
-          // ),
+          _iconBtn(
+            icon: HugeIcons.solidRoundedNavigation01,
+            onPressed: () {
+              if (drawerOpen) { // Check the state from the provider
+                rootKey.currentState?.closeDrawer(); // Use rootKey to close
+              } else {
+                rootKey.currentState?.openDrawer(); // Use rootKey to open
+              }
+            },
+          ),
         ],
       ),
     );
@@ -216,7 +214,7 @@ class BottomBar extends ConsumerWidget {
     Color color = Colors.white,
   }) {
     return IconButton(
-      iconSize: size ?? 28,
+      iconSize: size ?? 24,
       constraints: const BoxConstraints(minHeight: 64, minWidth: 48), // Ensure consistent tap area
       padding: EdgeInsets.zero, // Remove padding within the button itself
       icon: Center(child: Icon(icon, color: color)), // Center the icon visually

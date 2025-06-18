@@ -36,7 +36,7 @@ class AyahMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final screenWidth = MediaQuery.of(context).size.width;
     const menuWidth = 300.0; // Increased width to accommodate more icons
-    const menuHeight = 56.0;
+    const menuHeight = 60.0;
     const verticalOffset = 10.0;
 
     final selectedAyahState = ref.watch(selectedAyahProvider);
@@ -322,8 +322,8 @@ class AyahMenu extends ConsumerWidget {
               Expanded(
                 child: IconButton(
                   onPressed: () {
-                    /* Fullscreen logic */
-                    // Hide the menu after action
+                    ref.read(barsVisibilityProvider.notifier).hide();
+                    ref.read(drawerOpenProvider.notifier).close();
                     ref.read(selectedAyahProvider.notifier).clear();
                   },
                   icon: const Icon(Icons.fullscreen, color: Colors.white),
