@@ -310,40 +310,6 @@ class DrawerNotifier extends StateNotifier<bool> {
 final drawerOpenProvider =
 StateNotifierProvider<DrawerNotifier, bool>((_) => DrawerNotifier());
 
-class BookmarkNotifier extends AsyncNotifier<List<Bookmark>> {
-  @override
-  Future<List<Bookmark>> build() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList('bookmarks') ?? [];
-    return raw.map((e) => Bookmark.fromJson(jsonDecode(e))).toList();
-  }
-
-  Future<void> add(Bookmark b) async {
-    final list = List<Bookmark>.from(state.value ?? []);
-    if (list.any((e) => e.identifier == b.identifier)) return;
-    list.add(b);
-    state = AsyncData(list);
-    await _persist(list);
-  }
-
-  Future<void> remove(String id) async {
-    final list = List<Bookmark>.from(state.value ?? []);
-    list.removeWhere((b) => b.identifier == id);
-    state = AsyncData(list);
-    await _persist(list);
-  }
-
-  Future<void> _persist(List<Bookmark> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-        'bookmarks', data.map((b) => jsonEncode(b.toJson())).toList());
-  }
-}
-
-final bookmarkProvider =
-AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(BookmarkNotifier.new);
-
-
 final Map<String, String> reciters = {
   'মাহের আল মুয়াইক্বিলি': 'maher_muaiqly',
   'সৌদ আল-শুরাইম': 'saud_shuraim',

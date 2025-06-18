@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
+import '../../../viewmodel/bookmark_viewmodel.dart';
 
 
 

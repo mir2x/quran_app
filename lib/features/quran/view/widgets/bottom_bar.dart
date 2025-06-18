@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../model/bookmark.dart'; // Assuming this exists
 import '../../viewmodel/ayah_highlight_viewmodel.dart'; // Assuming this exists and contains necessary providers/definitions like reciters, touchModeProvider, selectedAyahProvider, OrientationToggle, quranInfoServiceProvider, bookmarkProvider, selectedReciterProvider, currentSuraProvider, currentPageProvider
+import '../../viewmodel/bookmark_viewmodel.dart'; // Assuming this contains bookmarkProvider and BookmarkNotifier (with isPageBookmarked)
 import 'audio_bottom_sheet.dart'; // Assuming this exists
 
 
@@ -23,6 +24,18 @@ class BottomBar extends ConsumerWidget {
         .firstWhere((e) => e.value == selectedReciter)
         .key;
 
+    // Watch the current page number (1-based)
+    final currentPage = ref.watch(currentPageProvider) + 1;
+    // Read the bookmark notifier
+    final bookmarkNotifier = ref.read(bookmarkProvider.notifier);
+    // Watch the bookmark provider to rebuild when bookmarks change
+    final bookmarksAsync = ref.watch(bookmarkProvider); // Watch the AsyncValue
+
+
+    // Determine if the current page is bookmarked
+    final bool isPageBookmarked = bookmarkNotifier.isPageBookmarked(currentPage);
+
+
     // Replace BottomAppBar with a Container or SizedBox
     return Container( // Changed from BottomAppBar
       height: 64, // Set the desired height
@@ -37,9 +50,9 @@ class BottomBar extends ConsumerWidget {
               // Ensure currentSuraProvider and currentPageProvider are accessible
               final sura = ref.watch(currentSuraProvider);
               // The page variable here seems unused in the modal logic, keeping it for now
-              final page = ref.watch(currentPageProvider);
+              final page = ref.watch(currentPageProvider); // This is 0-based index
               debugPrint('Current Sura: $sura');
-              debugPrint('Current Page: $page');
+              debugPrint('Current Page (0-based): $page');
 
 
               showModalBottomSheet(
@@ -48,7 +61,8 @@ class BottomBar extends ConsumerWidget {
                 // context: rootKey.currentContext ?? context, // Use root context if available
                 // Use a builder that provides a ScaffoldMessenger context
                 builder: (BuildContext context) {
-                  return AudioBottomSheet(currentSura: sura);
+                  // Pass the 1-based sura to the bottom sheet
+                  return AudioBottomSheet(currentSura: ref.read(currentSuraProvider));
                 },
                 // Set isScrollControlled to true if the content can take up more than half the screen
                 // isScrollControlled: true,
@@ -118,44 +132,58 @@ class BottomBar extends ConsumerWidget {
             icon: HugeIcons.solidSharpScreenRotation, // Assuming HugeIcons is imported
             onPressed: () => OrientationToggle.toggle(),
           ),
-          // Bookmark Button
+          // Bookmark Button (Enhanced)
           _iconBtn(
-            icon: HugeIcons.solidStandardStackStar, // Your icon, assuming HugeIcons is imported
+            // Icon changes based on bookmark status
+            icon: isPageBookmarked ? HugeIcons.solidStandardStackStar : HugeIcons.strokeStandardStackStar,
+            // Color changes based on bookmark status
+            color: isPageBookmarked ? Colors.orangeAccent : Colors.white,
             onPressed: () {
+              // Ensure context is valid
+              if (!context.mounted) return;
+
               // Use 1-based page number
-              final currentPage = ref.read(currentPageProvider) + 1;
-              // Ensure quranInfoServiceProvider and bookmarkProvider are accessible
-              final quranInfoService = ref.read(quranInfoServiceProvider);
+              final pageToBookmark = ref.read(currentPageProvider) + 1;
+              final identifier = 'page-$pageToBookmark'; // Unique identifier for page bookmark
 
-              final page = currentPage;
-              // Get representative Sura and Para for the page using the service
-              final sura = quranInfoService.getSuraByPage(page);
-              final para = quranInfoService.getParaByPage(page);
-
-              // Consider using 'page-${page}' as identifier for uniqueness
-              final identifier = 'page-$page'; // Unique identifier for page bookmark
-
-              // Ensure sura and para are found before creating bookmark
-              if (sura != null && para != null) {
-                final bookmark = Bookmark(
-                  type: 'page', // Assuming Bookmark type is 'page'
-                  identifier: identifier,
-                  sura: sura, // Store representative Sura
-                  para: para, // Store Para
-                  page: page, // Store Page
-                  // ayah is null for page bookmarks
-                );
-
-                ref.read(bookmarkProvider.notifier).add(bookmark);
-                // Optionally show a confirmation message
+              // Use the bookmarked status determined earlier
+              if (isPageBookmarked) {
+                // Remove bookmark
+                bookmarkNotifier.remove(identifier);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Page added to bookmarks')),
+                  const SnackBar(content: Text('পৃষ্ঠা বুকমার্ক থেকে সরানো হয়েছে')), // Bengali message for removed
                 );
               } else {
-                // Handle case where sura or para could not be determined for the page
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not determine Sura/Para for this page')),
-                );
+                // Add bookmark
+                // Ensure quranInfoServiceProvider is accessible
+                final quranInfoService = ref.read(quranInfoServiceProvider);
+
+                // Get representative Sura and Para for the page using the service
+                final sura = quranInfoService.getSuraByPage(pageToBookmark);
+                final para = quranInfoService.getParaByPage(pageToBookmark);
+
+                // Ensure sura and para are found before creating bookmark
+                if (sura != null && para != null) {
+                  final bookmark = Bookmark(
+                    type: 'page', // Assuming Bookmark type is 'page'
+                    identifier: identifier,
+                    sura: sura, // Store representative Sura
+                    para: para, // Store Para
+                    page: pageToBookmark, // Store Page
+                    // ayah is null for page bookmarks
+                  );
+
+                  bookmarkNotifier.add(bookmark);
+                  // Show confirmation message in Bengali
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('পৃষ্ঠা বুকমার্ক করা হয়েছে')), // Bengali message for added
+                  );
+                } else {
+                  // Handle case where sura or para could not be determined for the page
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('এই পৃষ্ঠার জন্য সূরা/পারা নির্ধারণ করা যায়নি')), // Bengali message for error
+                  );
+                }
               }
             },
           ),
