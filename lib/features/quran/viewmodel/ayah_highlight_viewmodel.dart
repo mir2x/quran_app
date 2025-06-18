@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ import '../model/ayah_box.dart';
 import '../model/ayah_timing.dart';
 import '../model/bookmark.dart';
 import '../model/reciter_asset.dart';
+import '../model/selected_ayah_state.dart';
 
 final ayahCountsProvider = Provider<List<int>>((ref) {
   return [
@@ -200,59 +202,27 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
 });
 
 // Add this enum somewhere accessible, e.g., in ayah_highlight_viewmodel.dart
-enum AyahSelectionSource {
-  tap, // Manually tapped by user (show menu)
-  audio, // Selected by audio playback (highlight only)
-  navigation, // Selected by navigating from list (highlight only)
-}
 
-class SelectedAyahState {
-  final int suraNumber;
-  final int ayahNumber;
-  final AyahSelectionSource source; // Add source field
 
-  const SelectedAyahState(this.suraNumber, this.ayahNumber, this.source);
-
-  // Optional: copyWith method for easy state updates if needed elsewhere
-  SelectedAyahState copyWith({
-    int? suraNumber,
-    int? ayahNumber,
-    AyahSelectionSource? source,
-  }) {
-    return SelectedAyahState(
-      suraNumber ?? this.suraNumber,
-      ayahNumber ?? this.ayahNumber,
-      source ?? this.source,
-    );
-  }
-}
 
 class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   SelectedAyahNotifier() : super(null);
 
-  // Method called when user taps an ayah
   void selectByTap(int sura, int ayah) {
-    // If the *same* sura and ayah was already selected by tap, deselect it.
-    // If it was selected by audio/nav, tapping it changes it to a tap selection.
     if (state?.suraNumber == sura && state?.ayahNumber == ayah && state?.source == AyahSelectionSource.tap) {
-      state = null; // Deselect
+      state = null;
     } else {
       state = SelectedAyahState(sura, ayah, AyahSelectionSource.tap); // Select with tap source
     }
   }
 
-  // Method called when audio playback changes ayah
   void selectByAudio(int sura, int ayah) {
-    // Always set the state for audio tracking, but only if it's different
-    // or the source wasn't already audio (to avoid unnecessary rebuilds).
     if (state == null || state!.suraNumber != sura || state!.ayahNumber != ayah || state!.source != AyahSelectionSource.audio) {
       state = SelectedAyahState(sura, ayah, AyahSelectionSource.audio);
     }
   }
 
-  // Method called when navigating from lists
   void selectByNavigation(int sura, int ayah) {
-    // Set state for navigation highlight.
     if (state == null || state!.suraNumber != sura || state!.ayahNumber != ayah || state!.source != AyahSelectionSource.navigation) {
       state = SelectedAyahState(sura, ayah, AyahSelectionSource.navigation);
     }
@@ -263,7 +233,6 @@ class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   }
 }
 
-// Update the provider definition to use the new Notifier and State
 final selectedAyahProvider =
 StateNotifierProvider<SelectedAyahNotifier, SelectedAyahState?>(
         (ref) => SelectedAyahNotifier());
@@ -844,3 +813,83 @@ class QuranInfoService {
 
 // Provide the QuranInfoService
 final quranInfoServiceProvider = Provider<QuranInfoService>((ref) => QuranInfoService(ref));
+
+
+class BarsVisibilityNotifier extends StateNotifier<bool> {
+  Timer? _hideTimer;
+  static const Duration _hideDuration = Duration(seconds: 5);
+  bool _autoHideArmed = true; // Flag to indicate if the initial auto-hide is still active
+
+  BarsVisibilityNotifier() : super(true) { // Start with bars visible
+    // Start the initial auto-hide timer immediately when the notifier is created
+    _startAutoHideTimer();
+  }
+
+  // Starts the timer ONLY if auto-hide is still armed
+  void _startAutoHideTimer() {
+    if (_autoHideArmed) {
+      _hideTimer?.cancel(); // Cancel any existing timer
+      _hideTimer = Timer(_hideDuration, () {
+        if (state) { // Only hide if currently visible
+          state = false; // Update state to hidden
+          _autoHideArmed = false; // Auto-hide has occurred, disarm it
+        }
+      });
+    }
+  }
+
+  // Method to show the bars.
+  // Called by user interactions like page change, orientation change, navigation.
+  // It shows the bars but does NOT restart the auto-hide timer if it's been disarmed.
+  void show() {
+    if (!state) {
+      state = true; // Show the bars
+    }
+    // We do NOT start the auto-hide timer here.
+    // The timer is only started initially by the constructor or manually if re-armed.
+  }
+
+  // Method to hide the bars.
+  // Called by user interactions like double-tap when bars are visible.
+  // It hides the bars and permanently disarms auto-hide.
+  void hide() {
+    _hideTimer?.cancel(); // Cancel any active timer (auto-hide or potential future ones)
+    if (state) {
+      state = false; // Hide the bars
+    }
+    _autoHideArmed = false; // Manual hide means auto-hide is no longer desired
+  }
+
+
+  // Method to toggle the bars visibility.
+  // Called by the double-tap gesture.
+  void toggle() {
+    if (state) {
+      // If currently visible, hide them and disable auto-hide permanently
+      hide(); // Use the hide method which also cancels the timer and disarms auto-hide
+    } else {
+      // If currently hidden, show them and disable auto-hide permanently
+      show(); // Use the show method (which doesn't start auto-hide timer if disarmed)
+      _autoHideArmed = false; // Manual show means auto-hide is no longer desired
+      _hideTimer?.cancel(); // Ensure any pending auto-hide timer is cancelled just in case
+    }
+  }
+
+  // This method can be called if you ever needed to re-enable auto-hide
+  // void armAutoHide() {
+  //    _autoHideArmed = true;
+  //    _startAutoHideTimer(); // Optionally start timer immediately upon re-arming
+  // }
+
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel(); // Cancel timer when notifier is disposed
+    super.dispose();
+  }
+}
+
+// Create the provider for bars visibility
+final barsVisibilityProvider = StateNotifierProvider<BarsVisibilityNotifier, bool>(
+      (ref) => BarsVisibilityNotifier(),
+);

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
+import 'package:quran_app/features/quran/view/widgets/custom_app_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/drawer/side_drawer.dart';
+import '../model/selected_ayah_state.dart';
 import 'widgets/quran_page.dart';
 import '../viewmodel/ayah_highlight_viewmodel.dart';
 
@@ -28,12 +30,15 @@ class QuranViewerScreen extends ConsumerStatefulWidget {
 
 class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   final _rootKey = GlobalKey<ScaffoldState>();
+  PageController? _portraitController;
+  ScrollController? _landscapeController;
 
-  PageController? _portraitCtrl;
-  ScrollController? _landscapeCtrl;
+  Orientation? _lastOrientation;
 
-  Orientation? _lastOri;
-  double get _aspect => widget.imageWidth / widget.imageHeight;
+  double get _aspectRatio => widget.imageWidth / widget.imageHeight;
+
+  static const Duration _animationDuration = Duration(milliseconds: 300);
+  static const double _bottomBarHeight = 64.0;
 
   @override
   void initState() {
@@ -51,33 +56,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   @override
   void dispose() {
-    _portraitCtrl?.dispose();
-    _landscapeCtrl?.dispose();
+    _portraitController?.dispose();
+    _landscapeController?.dispose();
     super.dispose();
   }
-
-  PreferredSizeWidget _buildAppBar() => AppBar(
-    leading: Builder(
-      builder: (ctx) => IconButton(
-        icon: const Icon(Icons.menu),
-        onPressed: () => Scaffold.of(ctx).openDrawer(),
-      ),
-    ),
-    title: const Text(
-      'কুরআন মজীদ',
-      style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 22),
-    ),
-    centerTitle: true,
-    actions: [
-      IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-      IconButton(icon: const Icon(Icons.nightlight_outlined), onPressed: () {}),
-      IconButton(icon: const Icon(Icons.g_translate), onPressed: () {}),
-    ],
-  );
 
   @override
   Widget build(BuildContext context) {
     final allBoxesAsync = ref.watch(allBoxesProvider);
+
+    final barsVisible = ref.watch(barsVisibilityProvider);
+    final barsVisibilityNotifier = ref.read(barsVisibilityProvider.notifier);
 
     ref.listen<int?>(navigateToPageCommandProvider, (
         prevPageNum,
@@ -94,18 +83,18 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           final width = MediaQuery.of(context).size.width;
 
           if (currentOrientation == Orientation.portrait &&
-              _portraitCtrl != null) {
-            _portraitCtrl!.animateToPage(
+              _portraitController != null) {
+            _portraitController!.animateToPage(
               targetPageIndex,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
             );
           } else if (currentOrientation == Orientation.landscape &&
-              _landscapeCtrl != null) {
-            final itemH = width / _aspect;
+              _landscapeController != null) {
+            final itemH = width / _aspectRatio;
             final offset = targetPageIndex * itemH;
 
-            _landscapeCtrl!.animateTo(
+            _landscapeController!.animateTo(
               offset,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -131,7 +120,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (e, s) => Scaffold(
-        appBar: _buildAppBar(),
+        appBar: CustomAppBar(),
         body: Center(child: Text('Error loading Quran data: ${e.toString()}\n$s')),
       ),
       data: (allBoxes) {
@@ -141,37 +130,36 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             body: Center(child: CircularProgressIndicator()),
           ),
           error: (e, s) => Scaffold(
-            appBar: _buildAppBar(),
+            appBar: CustomAppBar(),
             body: Center(child: Text('Error loading page count: ${e.toString()}\n$s')),
           ),
           data: (pageCount) {
             return OrientationBuilder(
               builder: (_, ori) {
                 final width = MediaQuery.of(context).size.width;
-                final itemH = width / _aspect;
-                if (ori != _lastOri) {
+                final itemH = width / _aspectRatio;
+                if (ori != _lastOrientation) {
                   if (ori == Orientation.portrait) {
-                    _portraitCtrl?.dispose();
-                    _portraitCtrl = PageController(initialPage: ref.read(currentPageProvider));
+                    _portraitController?.dispose();
+                    _portraitController = PageController(initialPage: ref.read(currentPageProvider));
                   } else {
-                    _landscapeCtrl?.dispose();
-                    _landscapeCtrl = ScrollController(
+                    _landscapeController?.dispose();
+                    _landscapeController = ScrollController(
                       initialScrollOffset: ref.read(currentPageProvider) * itemH,
                     );
                   }
-                  _lastOri = ori;
+                  _lastOrientation = ori;
                 }
 
                 Widget viewer;
                 if (ori == Orientation.portrait) {
                   viewer = PageView.builder(
-                    controller: _portraitCtrl!,
+                    controller: _portraitController!,
                     reverse: true,
-                    itemCount: pageCount, // Use the loaded pageCount
+                    itemCount: pageCount,
                     onPageChanged: (idx) {
                       ref.read(currentPageProvider.notifier).state = idx;
                       final currentSelectedState = ref.read(selectedAyahProvider);
-                      // Clear the selected ayah ONLY if it was selected by audio.
                       if (currentSelectedState?.source == AyahSelectionSource.tap) {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
@@ -185,7 +173,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     ),
                   );
                 } else {
-                  /* vertical continuous scroll */
                   viewer = NotificationListener<ScrollUpdateNotification>(
                     onNotification: (n) {
                       final p = (n.metrics.pixels / itemH).round().clamp(
@@ -201,7 +188,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       return false;
                     },
                     child: ListView.builder(
-                      controller: _landscapeCtrl!,
+                      controller: _landscapeController!,
                       physics: const BouncingScrollPhysics(),
                       itemCount: pageCount, // Use the loaded pageCount
                       itemBuilder: (_, idx) => SizedBox(
@@ -237,31 +224,71 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       final drawer = ref.read(drawerOpenProvider.notifier);
                       isOpen ? drawer.open() : drawer.close();
                     },
-                    appBar: _buildAppBar(),
-                    bottomNavigationBar: BottomBar(
-                      drawerOpen: ref.watch(drawerOpenProvider),
-                      rootKey: _rootKey,
-                    ),
-                    body: Stack(
-                      children: [
-                        viewer,
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final audio = ref.watch(quranAudioProvider);
-                            if (audio == null) {
-                              return const SizedBox.shrink();
-                            }
-                            return Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: AudioControllerBar(
-                                color: Theme.of(context).primaryColor,
+                    body: GestureDetector(
+                      onDoubleTap: barsVisibilityNotifier.toggle,
+                      child: Stack(
+                        children: [
+                          viewer,
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: AnimatedOpacity(
+                              opacity: barsVisible ? 1.0 : 0.0,
+                              duration: _animationDuration,
+                              curve: Curves.easeInOut,
+                              child: IgnorePointer(
+                                ignoring: !barsVisible,
+                                child: CustomAppBar(),
                               ),
-                            );
-                          },
-                        ),
-                      ],
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: AnimatedOpacity(
+                              opacity: barsVisible ? 1.0 : 0.0,
+                              duration: _animationDuration,
+                              curve: Curves.easeInOut,
+                              child: IgnorePointer(
+                                ignoring: !barsVisible,
+                                child: BottomBar(
+                                  drawerOpen: ref.watch(drawerOpenProvider),
+                                  rootKey: _rootKey,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final audio = ref.watch(quranAudioProvider);
+                              final isAudioPlaying = audio != null;
+                              if (!isAudioPlaying) {
+                                return const SizedBox.shrink(); // Hide when not playing
+                              }
+
+                              final double safeAreaBottom = MediaQuery.of(context).padding.bottom;
+
+                              final double dynamicBottom = barsVisible
+                                  ? _bottomBarHeight
+                                  : safeAreaBottom;
+
+                              return AnimatedPositioned(
+                                duration: _animationDuration,
+                                curve: Curves.easeInOut,
+                                left: 0,
+                                right: 0,
+                                bottom: dynamicBottom,
+                                child: AudioControllerBar(
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );

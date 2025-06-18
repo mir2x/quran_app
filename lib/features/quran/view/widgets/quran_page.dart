@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/core/services/audio_service.dart';
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
+import '../../model/selected_ayah_state.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import 'ayah_highlighter.dart';
 import 'ayah_menu.dart';
