@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
   const CustomAppBar({super.key});
@@ -12,9 +13,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
       ),
-      title: const Text(
+      title: Text(
         'কুরআন মজীদ',
-        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 22),
+        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 22.sp),
       ),
       centerTitle: true,
       actions: [

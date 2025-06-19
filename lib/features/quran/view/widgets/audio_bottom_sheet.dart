@@ -1,10 +1,17 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Import screenutil
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'package:hugeicons/hugeicons.dart';
+import 'package:quran/quran.dart' as quran; // Import the quran package
+import 'package:share_plus/share_plus.dart'; // Import share_plus
 import '../../../../core/services/fileChecker.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import '../../../../shared/downloader/download_dialog.dart';
 import '../../../../shared/downloader/download_permission_dialog.dart';
+import '../../viewmodel/bookmark_viewmodel.dart';
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
   final int currentSura; // This is the sura of the currently viewed page
@@ -58,9 +65,8 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
 
     return Container(
       color: const Color(0xFF294B39),
-      // Use symmetric padding instead of fromLTRB if you want consistent top/bottom padding
-      // Or keep fromLTRB if specific values are desired
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      // Scale padding using screenutil
+      padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 24.h),
       child: SingleChildScrollView(
         // <<< WRAP THE COLUMN WITH SingleChildScrollView
         child: Column(
@@ -95,7 +101,8 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 }
               },
             ),
-            const SizedBox(height: 12),
+            // Scale height using .h
+            SizedBox(height: 12.h),
 
             _labeledDropdown(
               label: "ক্বারী",
@@ -107,11 +114,12 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
               onChanged: (val) {
                 if (val != null) {
                   ref.read(selectedReciterProvider.notifier).state =
-                      reciters[val]!;
+                  reciters[val]!;
                 }
               },
             ),
-            const SizedBox(height: 12),
+            // Scale height using .h
+            SizedBox(height: 12.h),
             _labeledDropdown<int>(
               label: "শুরু আয়াত",
               icon: HugeIcons.solidRoundedSquareArrowLeft03,
@@ -127,7 +135,8 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 }
               },
             ),
-            const SizedBox(height: 12),
+            // Scale height using .h
+            SizedBox(height: 12.h),
             _labeledDropdown<int>(
               label: "শেষ আয়াত",
               icon: HugeIcons.solidRoundedSquareArrowRight03,
@@ -139,12 +148,24 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 }
               },
             ),
-            const SizedBox(height: 20),
+            // Scale height using .h
+            SizedBox(height: 20.h),
             SizedBox(
               width: double.infinity,
+              // Scale height of the button itself if needed,
+              // but the padding/text size within the button are scaled below.
+              // height: 50.h, // Example
               child: ElevatedButton.icon(
-                icon: const Icon(HugeIcons.solidRoundedPlay),
-                label: const Text('Play'),
+                icon: Icon(
+                  HugeIcons.solidRoundedPlay,
+                  // Scale icon size (Optional)
+                  size: 24.r,
+                ),
+                label: Text(
+                  'Play',
+                  // Scale text within the button
+                  style: TextStyle(fontSize: 16.sp),
+                ),
                 onPressed: () async {
                   final reciterId = ref.read(selectedReciterProvider);
 
@@ -201,8 +222,12 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
 
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Invalid Surah selected for playback.'),
+                        SnackBar(
+                          content: Text(
+                            'Invalid Surah selected for playback.',
+                            // Optional: Scale snackbar text
+                            style: TextStyle(fontSize: 14.sp),
+                          ),
                         ),
                       );
                     }
@@ -218,9 +243,11 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                     debugPrint('Error: Audio timings not loaded.');
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
                             'Audio timings not loaded. Please try again.',
+                            // Optional: Scale snackbar text
+                            style: TextStyle(fontSize: 14.sp),
                           ),
                         ),
                       );
@@ -235,7 +262,8 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 },
               ),
             ),
-            const SizedBox(height: 44),
+            // Scale height using .h
+            SizedBox(height: 44.h),
           ],
         ),
       ),
@@ -250,24 +278,36 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
     required void Function(T?) onChanged,
   }) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center, // Align items vertically
       children: [
-        Icon(icon, color: Colors.white, size: 20),
-        const SizedBox(width: 8),
+        Icon(
+          icon,
+          color: Colors.white,
+          // Scale icon size
+          size: 20.r,
+        ),
+        // Scale width using .w
+        SizedBox(width: 8.w),
         Text(
           "$label:",
-          style: const TextStyle(
+          style: TextStyle( // Remove const
             color: Colors.white,
             fontWeight: FontWeight.w600,
+            // Scale font size
+            fontSize: 16.sp, // Example size
           ),
         ),
-        const SizedBox(width: 12),
+        // Scale width using .w
+        SizedBox(width: 12.w),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            // Scale padding using .w and .h
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h), // Added vertical padding for dropdown height
             decoration: BoxDecoration(
               color: const Color(0xFF294B39),
               border: Border.all(color: Colors.white24),
-              borderRadius: BorderRadius.circular(8),
+              // Scale border radius using .r
+              borderRadius: BorderRadius.circular(8.r),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<T>(
@@ -275,7 +315,10 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 value: value,
                 dropdownColor: const Color(0xFF294B39),
                 iconEnabledColor: Colors.white,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Colors.white,
+                  // Scale font size of dropdown items
+                  fontSize: 16.sp, // Example size
+                ),
                 items: items.map((e) {
                   String itemText = e.toString();
                   return DropdownMenuItem<T>(
@@ -283,7 +326,10 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                     child: Text(
                       itemText, // Use the potentially formatted text
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.white,
+                        // Scale font size of dropdown items (redundant if style is set on DropdownButton, but good practice)
+                        fontSize: 16.sp, // Example size
+                      ),
                     ),
                   );
                 }).toList(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:quran_app/features/quran/view/widgets/drawer/bookmark_navigation_view.dart';
 import 'package:quran_app/features/quran/view/widgets/drawer/para_navigation_view.dart';
 import 'package:quran_app/features/quran/view/widgets/drawer/sura_navigation_view.dart';
@@ -16,8 +17,11 @@ class SideDrawer extends ConsumerWidget {
       child: Builder(
         builder: (context) {
           final media = MediaQuery.of(context);
+          // These calculations remain based on system UI elements and safe areas,
+          // not directly scaled by ScreenUtil, but their final rendered size
+          // will be part of the overall scaled layout.
           final double topInset = kToolbarHeight + media.padding.top;
-          final double bottomInset = bottomBarHeight + media.padding.bottom;
+          final double bottomInset = bottomBarHeight.h + media.padding.bottom;
 
           // Watch the data needed for the drawer views
           final suraMapping = ref.watch(suraPageMappingProvider);
@@ -65,9 +69,11 @@ class SideDrawer extends ConsumerWidget {
           }
 
           return Padding(
+            // Padding based on system UI elements remains as is.
             padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
             child: SizedBox(
-              width: 250,
+              // Use screenutil for the drawer width
+              width: 250.w,
               child: Material(
                 elevation: 2,
                 clipBehavior: Clip.antiAlias,
@@ -79,19 +85,20 @@ class SideDrawer extends ConsumerWidget {
                         // Use the content determined above
                         child: tabContent, // Use tabContent here
                       ),
-                      // ... Your TabBar remains the same ...
+                      // The TabBar height is usually determined by its content and theme,
+                      // but text size and spacing within it can be scaled.
                       Container(
                         color: const Color(0xFFB2FF59), // Light green
-                        child: const TabBar( // Added const as children are constant
+                        child: TabBar( // Removed const as Tab(text:) uses .sp
                           labelColor: Colors.white,
                           unselectedLabelColor: Colors.black87,
-                          indicator: BoxDecoration(
+                          indicator: const BoxDecoration( // Kept const as decoration values are const
                             color: Color(0xFF1B5E20), // Full dark green for active tab
                             borderRadius: BorderRadius.zero,
                           ),
                           indicatorSize: TabBarIndicatorSize.tab, // Fills the whole tab
                           tabs: [
-                            Tab(text: 'সূরা'),
+                            Tab(text: 'সূরা'), // Text widget within Tab will be scaled if using .sp
                             Tab(text: 'পারা'),
                             Tab(text: 'বুকমার্ক'),
                           ],
@@ -108,5 +115,3 @@ class SideDrawer extends ConsumerWidget {
     );
   }
 }
-
-

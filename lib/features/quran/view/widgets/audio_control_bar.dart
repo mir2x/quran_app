@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Import screenutil
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 
@@ -22,36 +24,63 @@ class AudioControllerBar extends ConsumerWidget {
       elevation: 6,
       color: color,
       child: Container(
-        height: 60,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        // Scale height using .h
+        height: 60.h,
+        // Scale padding using .w
+        padding: EdgeInsets.symmetric(horizontal: 12.w),
         child: Row(
           children: [
             Expanded(
-              child: Text('$surah : $ayah',
-                  style: const TextStyle(color: Colors.white, fontSize: 16)),
+              child: Text(
+                // No change to text content
+                  '$surah : $ayah',
+                  style: TextStyle( // Remove const as font size is scaled
+                    color: Colors.white,
+                    // Scale font size using .sp
+                    fontSize: 16.sp,
+                  )
+              ),
             ),
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.skip_previous, color: Colors.white),
-                  tooltip: 'Previous Ayah',
+                  icon: Icon(
+                    Icons.skip_previous,
+                    color: Colors.white,
+                    // Scale icon size using .r (Optional)
+                    size: 24.r, // Example scaling
+                  ),
+                  tooltip: 'Previous Ayah', // Tooltip text remains
                   onPressed: service.playPrev,
                 ),
                 IconButton(
                   icon: Icon(
-                      isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: Colors.white),
-                  tooltip: isPlaying ? 'Pause' : 'Play',
+                    isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    // Scale icon size using .r (Optional)
+                    size: 24.r, // Example scaling
+                  ),
+                  tooltip: isPlaying ? 'Pause' : 'Play', // Tooltip text remains
                   onPressed: service.togglePlayPause,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.stop, color: Colors.white),
-                  tooltip: 'Stop',
+                  icon: Icon(
+                    Icons.stop,
+                    color: Colors.white,
+                    // Scale icon size using .r (Optional)
+                    size: 24.r, // Example scaling
+                  ),
+                  tooltip: 'Stop', // Tooltip text remains
                   onPressed: service.stop,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.skip_next, color: Colors.white),
-                  tooltip: 'Next Ayah',
+                  icon: Icon(
+                    Icons.skip_next,
+                    color: Colors.white,
+                    // Scale icon size using .r (Optional)
+                    size: 24.r, // Example scaling
+                  ),
+                  tooltip: 'Next Ayah', // Tooltip text remains
                   onPressed: service.playNext,
                 ),
               ],

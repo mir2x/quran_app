@@ -2,6 +2,9 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Import screenutil
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/custom_app_bar.dart';
@@ -35,10 +38,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   Orientation? _lastOrientation;
 
+  // Keep aspectRatio calculation as it's based on image dimensions
   double get _aspectRatio => widget.imageWidth / widget.imageHeight;
 
   static const Duration _animationDuration = Duration(milliseconds: 300);
-  static const double _bottomBarHeight = 64.0;
+  // Scale bottomBarHeight using .h
+  static const double _bottomBarHeight = 64.0; // This value is now scaled by .h where used
 
   @override
   void initState() {
@@ -80,7 +85,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
         if (targetPageIndex >= 0 && targetPageIndex < pageCount) {
           final currentOrientation = MediaQuery.of(context).orientation;
-          final width = MediaQuery.of(context).size.width;
+          // Use screenutil for width
+          final width = MediaQuery.of(context).size.width; // Keep this for itemH calculation based on actual screen width
 
           if (currentOrientation == Orientation.portrait &&
               _portraitController != null) {
@@ -91,6 +97,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             );
           } else if (currentOrientation == Orientation.landscape &&
               _landscapeController != null) {
+            // itemH calculation based on actual screen width and aspect ratio is correct
             final itemH = width / _aspectRatio;
             final offset = targetPageIndex * itemH;
 
@@ -121,7 +128,13 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       ),
       error: (e, s) => Scaffold(
         appBar: CustomAppBar(),
-        body: Center(child: Text('Error loading Quran data: ${e.toString()}\n$s')),
+        body: Center(
+          child: Text(
+            'Error loading Quran data: ${e.toString()}\n$s',
+            // Optional: Scale text in error message
+            style: TextStyle(fontSize: 14.sp),
+          ),
+        ),
       ),
       data: (allBoxes) {
         final totalPageCountAsync = ref.watch(totalPageCountProvider);
@@ -131,13 +144,21 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           ),
           error: (e, s) => Scaffold(
             appBar: CustomAppBar(),
-            body: Center(child: Text('Error loading page count: ${e.toString()}\n$s')),
+            body: Center(
+              child: Text(
+                'Error loading page count: ${e.toString()}\n$s',
+                // Optional: Scale text in error message
+                style: TextStyle(fontSize: 14.sp),
+              ),
+            ),
           ),
           data: (pageCount) {
             return OrientationBuilder(
               builder: (_, ori) {
+                // Keep width and itemH calculation based on actual screen size for layout
                 final width = MediaQuery.of(context).size.width;
                 final itemH = width / _aspectRatio;
+
                 if (ori != _lastOrientation) {
                   if (ori == Orientation.portrait) {
                     _portraitController?.dispose();
@@ -192,7 +213,10 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                       physics: const BouncingScrollPhysics(),
                       itemCount: pageCount, // Use the loaded pageCount
                       itemBuilder: (_, idx) => SizedBox(
+                        // Keep height based on actual screen width and aspect ratio
                         height: itemH,
+                        // Use screenutil for width if you want the SizedBox width to scale relative to design width
+                        // However, double.infinity is fine here as it just takes available space.
                         width: double.infinity,
                         child: QuranPage(
                           pageIndex: idx, // Pass 0-based index
@@ -219,6 +243,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   },
                   child: Scaffold(
                     key: _rootKey,
+                    // SideDrawer width is already handled inside SideDrawer itself using .w
+                    // Its vertical positioning needs to be adjusted to be between AppBar and BottomBar
                     drawer: const SideDrawer(),
                     onDrawerChanged: (isOpen) {
                       final drawer = ref.read(drawerOpenProvider.notifier);
@@ -253,6 +279,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                               curve: Curves.easeInOut,
                               child: IgnorePointer(
                                 ignoring: !barsVisible,
+                                // BottomBar height is handled internally, but elements inside can use .h
                                 child: BottomBar(
                                   drawerOpen: ref.watch(drawerOpenProvider),
                                   rootKey: _rootKey,
@@ -271,8 +298,9 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
                               final double safeAreaBottom = MediaQuery.of(context).padding.bottom;
 
+                              // Use scaled bottom bar height
                               final double dynamicBottom = barsVisible
-                                  ? _bottomBarHeight
+                                  ? _bottomBarHeight.h // Scale the static bottom bar height
                                   : safeAreaBottom;
 
                               return AnimatedPositioned(

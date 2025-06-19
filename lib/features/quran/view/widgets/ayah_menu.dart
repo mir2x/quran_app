@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Import for Clipboard
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Import screenutil
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'package:hugeicons/hugeicons.dart';
 import 'package:quran/quran.dart' as quran; // Import the quran package
 import 'package:share_plus/share_plus.dart'; // Import share_plus
@@ -17,7 +20,7 @@ class AyahMenu extends ConsumerWidget {
 
   final Rect anchorRect;
 
-  // Helper function to convert Latin numbers to Bengali numbers
+  // Helper function to convert Latin numbers to Bengali numbers (No changes needed here)
   String toBengaliNumber(int number) {
     const latinNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const bengaliNumbers = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -34,21 +37,24 @@ class AyahMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    const menuWidth = 300.0; // Increased width to accommodate more icons
-    const menuHeight = 60.0;
-    const verticalOffset = 10.0;
+    // ScreenUtil width calculation replaces MediaQuery
+    // final screenWidth = MediaQuery.of(context).size.width;
+    // Define menu dimensions using screenutil
+    final menuWidth = 300.w; // Scale width
+    final menuHeight = 60.h; // Scale height
+    final verticalOffset = 10.h; // Scale vertical offset
 
     final selectedAyahState = ref.watch(selectedAyahProvider);
     final bookmarkNotifier = ref.read(bookmarkProvider.notifier);
 
     // Calculate the position of the menu
     // Place it above the anchorRect, centered horizontally
-    final double menuLeft = (screenWidth - menuWidth) / 2;
+    // Use ScreenUtil for horizontal centering relative to screen width
+    final double menuLeft = (1.sw - menuWidth) / 2;
     // Ensure it doesn't go off the top of the screen
     final double menuTop = math.max(
       anchorRect.top - menuHeight - verticalOffset,
-      0.0,
+      0.0, // Use 0.0 as the minimum top position
     );
 
     // If no ayah is selected, maybe hide the menu entirely?
@@ -56,19 +62,15 @@ class AyahMenu extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // Get details of the currently selected ayah
+    // Get details of the currently selected ayah (No changes needed here)
     final selectedSura = selectedAyahState.suraNumber;
     final selectedAyah = selectedAyahState.ayahNumber;
     final currentPage = ref.watch(currentPageProvider) + 1; // 1-based page
 
-    // Watch the bookmark provider to react to changes in bookmarks
-    // Although we don't directly use bookmarksAsync.value here,
-    // watching it ensures this widget rebuilds when the list changes,
-    // which is necessary for isAyahBookmarked to reflect the latest state.
+    // Watch the bookmark provider (No changes needed here)
     final bookmarksAsync = ref.watch(bookmarkProvider);
 
-
-    // Determine if the selected ayah is currently bookmarked
+    // Determine if the selected ayah is currently bookmarked (No changes needed here)
     final bool isBookmarked = bookmarkNotifier.isAyahBookmarked(
       selectedSura,
       selectedAyah,
@@ -79,11 +81,12 @@ class AyahMenu extends ConsumerWidget {
       top: menuTop,
       child: Material(
         elevation: 3,
-        borderRadius: BorderRadius.circular(8),
+        // Use screenutil for border radius
+        borderRadius: BorderRadius.circular(8.r),
         color: const Color(0xFF294B39),
         child: SizedBox(
-          height: menuHeight,
-          width: menuWidth,
+          height: menuHeight, // Use scaled height
+          width: menuWidth, // Use scaled width
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Distribute icons evenly
             children: [
@@ -98,6 +101,8 @@ class AyahMenu extends ConsumerWidget {
                     color: isBookmarked
                         ? Colors.orangeAccent
                         : Colors.white, // Change color when bookmarked
+                    // Use screenutil for icon size (Optional, icons often scale well by default)
+                    size: 24.r, // Example scaling
                   ),
                   onPressed: () {
                     if (!context.mounted) return; // Check context validity
@@ -107,8 +112,12 @@ class AyahMenu extends ConsumerWidget {
                       final identifier = 'ayah-$selectedSura-$selectedAyah';
                       bookmarkNotifier.remove(identifier);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('আয়াতটি বুকমার্ক থেকে সরানো হয়েছে')), // Bengali removed message
+                        SnackBar(
+                            content: Text(
+                              'আয়াতটি বুকমার্ক থেকে সরানো হয়েছে',
+                              // Optional: Scale snackbar text
+                              style: TextStyle(fontSize: 14.sp),
+                            )), // Bengali removed message
                       );
                     } else {
                       // Add bookmark
@@ -133,8 +142,12 @@ class AyahMenu extends ConsumerWidget {
 
                       bookmarkNotifier.add(bookmark);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('আয়াতটি বুকমার্ক করা হয়েছে')), // Bengali added message
+                        SnackBar(
+                            content: Text(
+                              'আয়াতটি বুকমার্ক করা হয়েছে',
+                              // Optional: Scale snackbar text
+                              style: TextStyle(fontSize: 14.sp),
+                            )), // Bengali added message
                       );
                     }
                     // Hide the menu after bookmarking/unbookmarking
@@ -168,9 +181,11 @@ class AyahMenu extends ConsumerWidget {
                       if (!confirmed) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
                                 'অডিও ডাউনলোডের অনুমতি দেওয়া হয়নি।', // Bengali: Audio download permission denied.
+                                // Optional: Scale snackbar text
+                                style: TextStyle(fontSize: 14.sp),
                               ),
                             ),
                           );
@@ -203,9 +218,10 @@ class AyahMenu extends ConsumerWidget {
                         debugPrint('Error loading timings: $e');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
                                   'অডিও টাইমিং লোড করতে ব্যর্থ হয়েছে।'), // Bengali: Failed to load audio timings.
+                              // Optional: Scale snackbar text
                             ),
                           );
                         }
@@ -234,9 +250,11 @@ class AyahMenu extends ConsumerWidget {
                           .clear(); // Clear selected ayah hides the menu
                     }
                   },
-                  icon: const Icon(
+                  icon: Icon(
                     HugeIcons.solidRoundedPlay,
                     color: Colors.white,
+                    // Use screenutil for icon size (Optional)
+                    size: 24.r, // Example scaling
                   ),
                 ),
               ),
@@ -273,13 +291,21 @@ class AyahMenu extends ConsumerWidget {
 
                     // Show confirmation Snackbar in Bengali
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('আয়াতটি কপি করা হয়েছে')), // Bengali: Ayah copied
+                      SnackBar(
+                          content: Text(
+                            'আয়াতটি কপি করা হয়েছে',
+                            // Optional: Scale snackbar text
+                            style: TextStyle(fontSize: 14.sp),
+                          )), // Bengali: Ayah copied
                     );
 
                     // Hide the menu after copying
                     ref.read(selectedAyahProvider.notifier).clear();
                   },
-                  icon: const Icon(Icons.copy, color: Colors.white),
+                  icon: Icon(Icons.copy, color: Colors.white,
+                    // Use screenutil for icon size (Optional)
+                    size: 24.r, // Example scaling
+                  ),
                 ),
               ),
 
@@ -314,7 +340,10 @@ class AyahMenu extends ConsumerWidget {
                     // Hide the menu after sharing
                     ref.read(selectedAyahProvider.notifier).clear();
                   },
-                  icon: const Icon(Icons.share, color: Colors.white),
+                  icon: Icon(Icons.share, color: Colors.white,
+                    // Use screenutil for icon size (Optional)
+                    size: 24.r, // Example scaling
+                  ),
                 ),
               ),
 
@@ -326,7 +355,10 @@ class AyahMenu extends ConsumerWidget {
                     ref.read(drawerOpenProvider.notifier).close();
                     ref.read(selectedAyahProvider.notifier).clear();
                   },
-                  icon: const Icon(Icons.fullscreen, color: Colors.white),
+                  icon: Icon(Icons.fullscreen, color: Colors.white,
+                    // Use screenutil for icon size (Optional)
+                    size: 24.r, // Example scaling
+                  ),
                 ),
               ),
             ],
