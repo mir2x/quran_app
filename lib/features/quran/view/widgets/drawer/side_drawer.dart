@@ -75,7 +75,7 @@ class SideDrawer extends ConsumerWidget {
               // Use screenutil for the drawer width
               width: 250.w,
               child: Material(
-                elevation: 2,
+                elevation: 0,
                 clipBehavior: Clip.antiAlias,
                 child: DefaultTabController(
                   length: 3,
@@ -88,14 +88,16 @@ class SideDrawer extends ConsumerWidget {
                       // The TabBar height is usually determined by its content and theme,
                       // but text size and spacing within it can be scaled.
                       Container(
-                        color: const Color(0xFFB2FF59), // Light green
-                        child: TabBar( // Removed const as Tab(text:) uses .sp
+                        color:  const Color(0xFF1B5E20), // Light green
+                        child:  TabBar( // Removed const as Tab(text:) uses .sp
                           labelColor: Colors.white,
-                          unselectedLabelColor: Colors.black87,
+                          dividerColor: Colors.transparent,
+                          unselectedLabelColor: Colors.white,
                           indicator: const BoxDecoration( // Kept const as decoration values are const
-                            color: Color(0xFF1B5E20), // Full dark green for active tab
+                            color: const Color(0xFF144910) , // Full dark green for active tab
                             borderRadius: BorderRadius.zero,
                           ),
+                          indicatorWeight: 0,
                           indicatorSize: TabBarIndicatorSize.tab, // Fills the whole tab
                           tabs: [
                             Tab(text: 'সূরা'), // Text widget within Tab will be scaled if using .sp
