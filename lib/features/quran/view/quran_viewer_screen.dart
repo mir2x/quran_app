@@ -252,70 +252,72 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     },
                     body: GestureDetector(
                       onDoubleTap: barsVisibilityNotifier.toggle,
-                      child: Stack(
-                        children: [
-                          viewer,
-                          Positioned(
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            child: AnimatedOpacity(
-                              opacity: barsVisible ? 1.0 : 0.0,
-                              duration: _animationDuration,
-                              curve: Curves.easeInOut,
-                              child: IgnorePointer(
-                                ignoring: !barsVisible,
-                                child: CustomAppBar(),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: AnimatedOpacity(
-                              opacity: barsVisible ? 1.0 : 0.0,
-                              duration: _animationDuration,
-                              curve: Curves.easeInOut,
-                              child: IgnorePointer(
-                                ignoring: !barsVisible,
-                                // BottomBar height is handled internally, but elements inside can use .h
-                                child: BottomBar(
-                                  drawerOpen: ref.watch(drawerOpenProvider),
-                                  rootKey: _rootKey,
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          Consumer(
-                            builder: (context, ref, _) {
-                              final audio = ref.watch(quranAudioProvider);
-                              final isAudioPlaying = audio != null;
-                              if (!isAudioPlaying) {
-                                return const SizedBox.shrink(); // Hide when not playing
-                              }
-
-                              final double safeAreaBottom = MediaQuery.of(context).padding.bottom;
-
-                              // Use scaled bottom bar height
-                              final double dynamicBottom = barsVisible
-                                  ? _bottomBarHeight.h // Scale the static bottom bar height
-                                  : safeAreaBottom;
-
-                              return AnimatedPositioned(
+                      child: SafeArea(
+                        child: Stack(
+                          children: [
+                            viewer,
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: AnimatedOpacity(
+                                opacity: barsVisible ? 1.0 : 0.0,
                                 duration: _animationDuration,
                                 curve: Curves.easeInOut,
-                                left: 0,
-                                right: 0,
-                                bottom: dynamicBottom,
-                                child: AudioControllerBar(
-                                  color: Theme.of(context).primaryColor,
+                                child: IgnorePointer(
+                                  ignoring: !barsVisible,
+                                  child: CustomAppBar(),
                                 ),
-                              );
-                            },
-                          ),
-                        ],
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              child: AnimatedOpacity(
+                                opacity: barsVisible ? 1.0 : 0.0,
+                                duration: _animationDuration,
+                                curve: Curves.easeInOut,
+                                child: IgnorePointer(
+                                  ignoring: !barsVisible,
+                                  // BottomBar height is handled internally, but elements inside can use .h
+                                  child: BottomBar(
+                                    drawerOpen: ref.watch(drawerOpenProvider),
+                                    rootKey: _rootKey,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        
+                            Consumer(
+                              builder: (context, ref, _) {
+                                final audio = ref.watch(quranAudioProvider);
+                                final isAudioPlaying = audio != null;
+                                if (!isAudioPlaying) {
+                                  return const SizedBox.shrink(); // Hide when not playing
+                                }
+                        
+                                final double safeAreaBottom = MediaQuery.of(context).padding.bottom;
+                        
+                                // Use scaled bottom bar height
+                                final double dynamicBottom = barsVisible
+                                    ? _bottomBarHeight.h // Scale the static bottom bar height
+                                    : safeAreaBottom;
+                        
+                                return AnimatedPositioned(
+                                  duration: _animationDuration,
+                                  curve: Curves.easeInOut,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: dynamicBottom,
+                                  child: AudioControllerBar(
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

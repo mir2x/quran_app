@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
 import '../../model/selected_ayah_state.dart';
@@ -35,9 +33,6 @@ class QuranPage extends ConsumerWidget {
 
     final logicalPage = pageIndex + 1;
     final pageNumber  = logicalPage < kFirstPageNumber ? -1 : logicalPage;
-    // boxesForPageProvider already fetches boxes based on the *logical* page number,
-    // and the scaling logic below handles mapping these box coordinates
-    // to the screen coordinates. No changes needed here regarding page numbers.
     final boxes = pageNumber == -1 ? const <AyahBox>[] : ref.watch(boxesForPageProvider(pageNumber));
     final notifier = ref.read(selectedAyahProvider.notifier);
     final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.$imageExt');
@@ -58,10 +53,6 @@ class QuranPage extends ConsumerWidget {
       }
 
       if (!touchModeOn) {
-        // LogicX and logicY calculations remain based on the raw coordinates
-        // and the scale factors derived from the image dimensions and screen constraints.
-        // ScreenUtil is not applied directly here as these are calculations
-        // to find which *ayah box* was tapped based on the raw input.
         final logicX = d.localPosition.dx / scaleX;
         final logicY = d.localPosition.dy / scaleY;
         final tappedBoxes = currentPageBoxes.where((b) => b.contains(logicX, logicY)).toList();
@@ -80,15 +71,11 @@ class QuranPage extends ConsumerWidget {
       error:   (e, _) => Center(
         child: Text(
           e.toString(),
-          // Optional: Scale text in error message
           style: TextStyle(fontSize: 14.sp),
         ),
       ),
       data:    (_) => LayoutBuilder(
         builder: (_, constraints) {
-          // scaleX and scaleY calculations remain based on comparing
-          // layout constraints to image dimensions. This is the core of
-          // scaling the ayah box coordinates.
           final scaleX = constraints.maxWidth  / imageWidth;
           final scaleY = constraints.maxHeight / imageHeight;
 
@@ -105,9 +92,6 @@ class QuranPage extends ConsumerWidget {
 
             if (boxesForSelectedAyah.isNotEmpty) {
               highlightRectsOnThisPage = boxesForSelectedAyah.map((box) {
-                // Highlight rects are scaled using the calculated scaleX and scaleY
-                // which is the correct approach for mapping the box coordinates
-                // to the current screen size. ScreenUtil is not applied directly here.
                 return Rect.fromLTWH(
                   box.minX * scaleX,
                   box.minY * scaleY,
@@ -118,8 +102,6 @@ class QuranPage extends ConsumerWidget {
 
               try {
                 final firstBoxOnPageForSelectedAyah = boxesForSelectedAyah.reduce((a, b) => a.boxId < b.boxId ? a : b);
-
-                // Menu anchor rect is also scaled using scaleX and scaleY
                 menuAnchorRectOnThisPage = Rect.fromLTWH(
                   firstBoxOnPageForSelectedAyah.minX * scaleX,
                   firstBoxOnPageForSelectedAyah.minY * scaleY,
@@ -133,35 +115,26 @@ class QuranPage extends ConsumerWidget {
             }
           }
           return Stack(
-            fit: StackFit.expand, // Stack fills the available space
+            fit: StackFit.expand,
             children: [
-              // Image takes the available space, its aspect ratio is handled by the parent
               Image.file(
                 imgFile,
-                fit: BoxFit.fill, // Fills the available space, potentially distorting if aspect ratio is not maintained by parent
+                fit: BoxFit.fill,
               ),
-              // AyahHighlighter CustomPaint uses the scaled Rects, so no direct ScreenUtil needed here.
               CustomPaint(
                 painter: AyahHighlighter(highlightRectsOnThisPage),
               ),
-
-              // GestureDetector covers the image to detect taps.
-              // Its behavior and size are tied to the parent Stack's size.
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTapDown: (details) => onTapDown(details, scaleX, scaleY, boxes),
-
-                child: Container(), // An empty container makes the GestureDetector cover the area
+                child: Container(),
               ),
-
-              // AyahMenu positioning is handled by AyahMenu itself relative to the anchorRect.
-              // Any internal padding, font sizes, etc. within AyahMenu should use ScreenUtil.
               if (showMenuOnThisPage && menuAnchorRectOnThisPage != null)
                 AyahMenu(anchorRect: menuAnchorRectOnThisPage!),
             ],
           );
-        }, // <-- LayoutBuilder builder ends here
-      ), // <-- LayoutBuilder ends here
+        }, //
+      ), //
     );
   }
 }
