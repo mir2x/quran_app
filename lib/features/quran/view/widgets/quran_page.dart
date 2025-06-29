@@ -45,26 +45,33 @@ class QuranPage extends ConsumerWidget {
         selectedState.source == AyahSelectionSource.tap &&
         isSelectedAyahOnThisPage;
 
-    void onTapDown(TapDownDetails d, double scaleX, double scaleY, List<AyahBox> currentPageBoxes) {
+    void onTapDown(
+        TapDownDetails d,
+        double scaleX,
+        double scaleY,
+        List<AyahBox> currentPageBoxes,
+        ) {
+      final logicX = d.localPosition.dx / scaleX;
+      final logicY = d.localPosition.dy / scaleY;
+      final tappedBoxes = currentPageBoxes.where((b) => b.contains(logicX, logicY)).toList();
 
-      if (selectedState != null && selectedState.source == AyahSelectionSource.tap) {
-        notifier.clear();
-        return;
-      }
+      if (tappedBoxes.isNotEmpty) {
+        final tappedSura = tappedBoxes.first.suraNumber;
+        final tappedAyah = tappedBoxes.first.ayahNumber;
 
-      if (!touchModeOn) {
-        final logicX = d.localPosition.dx / scaleX;
-        final logicY = d.localPosition.dy / scaleY;
-        final tappedBoxes = currentPageBoxes.where((b) => b.contains(logicX, logicY)).toList();
-
-        if (tappedBoxes.isNotEmpty) {
-          final tappedSura = tappedBoxes.first.suraNumber;
-          final tappedAyah = tappedBoxes.first.ayahNumber;
-          notifier.selectByTap(tappedSura, tappedAyah);
+        if (selectedState != null &&
+            selectedState.source == AyahSelectionSource.tap &&
+            selectedState.suraNumber == tappedSura &&
+            selectedState.ayahNumber == tappedAyah) {
+          notifier.clear();
         } else {
+          notifier.selectByTap(tappedSura, tappedAyah);
         }
+      } else {
+        notifier.clear();
       }
     }
+
 
     return allBoxesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
