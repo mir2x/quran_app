@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // 1. Import Riverpod
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
+import '../../../sura/view/sura_page.dart';
+import '../../viewmodel/ayah_highlight_viewmodel.dart';
+
+
+
+class CustomAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const CustomAppBar({super.key});
 
   @override
-  build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AppBar(
       leading: Builder(
         builder: (ctx) => IconButton(
@@ -21,7 +27,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget{
       actions: [
         IconButton(icon: const Icon(Icons.search), onPressed: () {}),
         IconButton(icon: const Icon(Icons.nightlight_outlined), onPressed: () {}),
-        IconButton(icon: const Icon(Icons.g_translate), onPressed: () {}),
+        IconButton(
+          icon: const Icon(Icons.g_translate),
+          onPressed: () {
+            final int suraNumber = ref.watch(currentSuraProvider);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SurahPage(suraNumber: suraNumber),
+              ),
+            );
+          },
+        ),
       ],
     );
   }

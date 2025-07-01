@@ -199,9 +199,6 @@ Provider.family<List<AyahBox>, int>((ref, pageIndex) {
       .toList(growable: false);
 });
 
-// Add this enum somewhere accessible, e.g., in ayah_highlight_viewmodel.dart
-
-
 
 class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
   SelectedAyahNotifier() : super(null);

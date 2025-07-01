@@ -39,6 +39,7 @@ flutter:
   assets:
     - assets/image/
     - assets/image/front_page/
+    - assets/quran/
 
 
   fonts:
