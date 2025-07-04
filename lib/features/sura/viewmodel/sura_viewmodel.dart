@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../model/ayah.dart';
 import '../model/raw_ayah_data.dart';
+import '../model/word_by_word.dart';
 
 
 class QuranDataService {
@@ -12,20 +13,29 @@ class QuranDataService {
     return jsonList.map((json) => RawAyahData.fromJson(json)).toList();
   }
 
+  Future<List<WordByWord>> _loadAndParseWords(String assetPath) async {
+    final jsonString = await rootBundle.loadString(assetPath);
+    final List<dynamic> jsonList = jsonDecode(jsonString);
+    return jsonList.map((json) => WordByWord.fromJson(json)).toList();
+  }
+
   Future<List<Ayah>> loadSuraData(int suraNumber) async {
     final sources = {
       'arabic': 'assets/quran/arabic.json',
       'মুফতী তাকী উসমানী': 'assets/quran/bn_taqi.json',
       'মাওলানা মুহিউদ্দিন খান': 'assets/quran/bn_mohiuddin.json',
       'ইসলামিক ফাউন্ডেশন': 'assets/quran/bn_islamic_foundation.json',
+      'words': 'assets/quran/word.json',
     };
 
     final arabicData = await _loadAndParse(sources['arabic']!);
     final taqiData = await _loadAndParse(sources['মুফতী তাকী উসমানী']!);
     final mohiuddinData = await _loadAndParse(sources['মাওলানা মুহিউদ্দিন খান']!);
     final foundationData = await _loadAndParse(sources['ইসলামিক ফাউন্ডেশন']!);
+    final wordData = await _loadAndParseWords(sources['words']!);
 
     final suraArabic = arabicData.where((a) => a.sura == suraNumber).toList();
+    final suraWords = wordData.where((w) => w.sura == suraNumber).toList();
 
     final Map<int, Ayah> mergedAyahs = {};
 
@@ -35,6 +45,7 @@ class QuranDataService {
         ayah: ayahData.ayah,
         arabicText: ayahData.text,
         translations: [],
+        words: [],
       );
     }
 
@@ -65,8 +76,14 @@ class QuranDataService {
       }
     }
 
+    for (var word in suraWords) {
+      if (mergedAyahs.containsKey(word.ayah)) {
+        mergedAyahs[word.ayah]!.words.add(word);
+      }
+    }
+
     final result = mergedAyahs.values.toList();
-    result.sort((a, b) => a.ayah.compareTo(b.ayah)); // Ensure correct order
+    result.sort((a, b) => a.ayah.compareTo(b.ayah));
     return result;
   }
 }
@@ -83,7 +100,7 @@ final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => [
 ]);
 
 final showTranslationsProvider = StateProvider<bool>((ref) => true);
-
+final showWordByWordProvider = StateProvider<bool>((ref) => false);
 final autoScrollActiveProvider = StateProvider<bool>((ref) => false);
 final autoScrollSpeedProvider = StateProvider<double>((ref) => 1.0);
 final autoScrollControllerVisibleProvider = StateProvider<bool>((ref) => false);

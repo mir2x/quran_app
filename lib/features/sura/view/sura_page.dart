@@ -1,5 +1,3 @@
-// lib/features/sura/ui/pages/surah_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/features/sura/view/widgets/auto_scroll_controller.dart';
@@ -10,13 +8,10 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../core/services/auto_scroll_service.dart';
 import '../viewmodel/sura_viewmodel.dart';
-// ... other imports
+
 
 class SurahPage extends ConsumerStatefulWidget {
-  // 1. Add suraNumber as a required final field
   final int suraNumber;
-
-  // 2. Update the constructor
   const SurahPage({
     super.key,
     required this.suraNumber,
@@ -66,9 +61,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
             itemBuilder: (context, index) {
               return AyahCard(
                 ayah: ayahs[index],
-                suraName: suraName, // Pass the sura name
-                selectedTranslators: ref.watch(selectedTranslatorsProvider),
-                showTranslations: ref.watch(showTranslationsProvider),
+                suraName: suraName,
               );
             },
           );
@@ -121,17 +114,21 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
   void _onNavBarTapped(int index, BuildContext context, WidgetRef ref) {
     switch (index) {
-      case 0: // অনুবাদ
+      case 0:
         showDialog(
           context: context,
           builder: (context) => const TranslatorSelectionDialog(),
         );
         break;
-      case 3: // অটো স্ক্রল
+      case 1:
+        final currentState = ref.read(showWordByWordProvider);
+        ref.read(showWordByWordProvider.notifier).state = !currentState;
+        break;
+      case 3:
         ref.read(autoScrollControllerVisibleProvider.notifier).state = true;
         _autoScrollService.startAutoScroll();
         break;
-      case 4: // বিস্তারিত
+      case 4:
         showDetailsBottomSheet(context);
         break;
       default:

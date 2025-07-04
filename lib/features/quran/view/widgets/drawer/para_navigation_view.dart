@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // Import screenutil
-
-import '../../../../../core/theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
 class ParaNavigationView extends ConsumerWidget {
   const ParaNavigationView({super.key});
 
-  // Helper function to convert Latin numbers to Bengali numbers (Keep this)
   String toBengaliNumber(int number) {
-    const latinNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const bengaliNumbers = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     String numberStr = number.toString();
     String bengaliStr = '';

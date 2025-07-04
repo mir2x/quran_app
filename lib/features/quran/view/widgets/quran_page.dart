@@ -137,7 +137,7 @@ class QuranPage extends ConsumerWidget {
                 child: Container(),
               ),
               if (showMenuOnThisPage && menuAnchorRectOnThisPage != null)
-                AyahMenu(anchorRect: menuAnchorRectOnThisPage!),
+                AyahMenu(anchorRect: menuAnchorRectOnThisPage),
             ],
           );
         }, //

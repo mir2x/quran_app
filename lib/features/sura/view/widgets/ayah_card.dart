@@ -1,31 +1,35 @@
 // lib/features/sura/ui/widgets/ayah_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
 
 import '../../model/ayah.dart';
+import '../../model/word_by_word.dart';
+import '../../viewmodel/sura_viewmodel.dart';
 import 'ayah_action_bottom_sheet.dart';
 
 
 
 
-class AyahCard extends StatelessWidget {
+class AyahCard extends ConsumerWidget {
   final Ayah ayah;
   final String suraName;
-  final List<String> selectedTranslators;
-  final bool showTranslations;
 
   const AyahCard({
     super.key,
     required this.ayah,
     required this.suraName,
-    required this.selectedTranslators,
-    required this.showTranslations,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTranslators = ref.watch(selectedTranslatorsProvider);
+    final showTranslations = ref.watch(showTranslationsProvider);
+    final showWords = ref.watch(showWordByWordProvider);
+
     return GestureDetector(
       onTap: () => showAyahActionBottomSheet(context, ayah, suraName),
       child: Card(
@@ -39,9 +43,12 @@ class AyahCard extends StatelessWidget {
             children: [
               _buildCardHeader(),
               const SizedBox(height: 16),
-              _buildArabicText(),
-              if (showTranslations && selectedTranslators.isNotEmpty)
-                _buildTranslations(),
+              if (showWords)
+                _buildWordByWordView(ayah.words)
+              else
+                _buildArabicText(),
+              if (showTranslations && selectedTranslators.isNotEmpty && !showWords)
+                _buildTranslations(selectedTranslators),
             ],
           ),
         ),
@@ -84,6 +91,45 @@ class AyahCard extends StatelessWidget {
     );
   }
 
+  Widget _buildWordByWordView(List<WordByWord> words) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Wrap(
+        alignment: WrapAlignment.start,
+        runSpacing: 16.0,
+        spacing: 12.0,
+        children: words.map((word) {
+          return _buildWordPair(word);
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildWordPair(WordByWord word) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          word.arabic,
+          style: GoogleFonts.amiri(
+            fontSize: 28.sp,
+            color: Colors.black87,
+            height: 1.2.h,
+          ),
+        ),
+        SizedBox(height: 4.0.h),
+        Text(
+          word.bengali,
+          style: const TextStyle(
+            fontFamily: 'SolaimanLipi',
+            fontSize: 15,
+            color: Colors.green,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildArabicText() {
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -99,7 +145,7 @@ class AyahCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTranslations() {
+  Widget _buildTranslations(List<String> selectedTranslators) {
     final translationsToShow = ayah.translations
         .where((t) => selectedTranslators.contains(t.translatorName))
         .toList();

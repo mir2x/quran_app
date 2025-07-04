@@ -1,17 +1,12 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:hugeicons/hugeicons.dart';
-import 'package:quran/quran.dart' as quran; // Import the quran package
-import 'package:share_plus/share_plus.dart'; // Import share_plus
 import '../../../../core/services/fileChecker.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import '../../../../shared/downloader/download_dialog.dart';
 import '../../../../shared/downloader/download_permission_dialog.dart';
-import '../../viewmodel/bookmark_viewmodel.dart';
+
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
   final int currentSura; // This is the sura of the currently viewed page

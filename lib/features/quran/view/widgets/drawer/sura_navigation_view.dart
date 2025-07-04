@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // Import screenutil
-import 'package:quran/quran.dart' as quran; // Import the quran package for Arabic names if needed
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
 class SurahNavigationView extends ConsumerWidget {
   const SurahNavigationView({super.key});
 
-  // Helper function to convert Latin numbers to Bengali numbers
   String toBengaliNumber(int number) {
     const latinNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const bengaliNumbers = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -33,44 +31,40 @@ class SurahNavigationView extends ConsumerWidget {
     final allBoxesAsync = ref.watch(allBoxesProvider);
 
     if (allBoxesAsync.isLoading) {
-      return Center(child: CircularProgressIndicator()); // Remove const
+      return Center(child: CircularProgressIndicator());
     }
     if (allBoxesAsync.hasError) {
       return Center(child: Text(
         'Error loading Surah/Ayah data: ${allBoxesAsync.error}',
-        style: TextStyle(fontSize: 14.sp), // Scale text
-      )); // Remove const
+        style: TextStyle(fontSize: 14.sp),
+      ));
     }
 
-    // Data validation checks
     if (suraMapping.isEmpty || ayahCounts.length < 114 || suraNames.length < 114 || ayahPageMapping.isEmpty) {
       // Improved loading/data check message
       return Center(child: Text(
         'Loading or data incomplete. Please wait...',
-        style: TextStyle(fontSize: 14.sp), // Scale text
+        style: TextStyle(fontSize: 14.sp),
       ));
     }
 
     if (selectedSurah == null) {
-      // Pass necessary data to the build method
       return _buildSurahList(ref, suraMapping, ayahCounts, suraNames);
     } else {
-      // Pass necessary data to the build method
       return _buildAyahListForSurah(ref, selectedSurah, ayahCounts, suraNames, ayahPageMapping);
     }
   }
 
   Widget _buildSurahList(WidgetRef ref, Map<int, int> suraMapping, List<int> ayahCounts, List<String> suraNames) {
-    // Re-validate data within the build method for robustness
     if (suraNames.length < 114 || ayahCounts.length < 114 || suraMapping.isEmpty) {
       return Center(child: Text('Internal data incomplete for Surah list.'));
     }
 
 
-    return ListView.separated( // Use ListView.separated for dividers
-      padding: EdgeInsets.zero, // Remove default padding
+    return ListView.separated(
+      padding: EdgeInsets.zero,
       itemCount: 114,
-      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.white24), // Scaled divider
+      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.white24),
       itemBuilder: (context, index) {
         final suraNumber = index + 1;
         final startPage = suraMapping[suraNumber];
