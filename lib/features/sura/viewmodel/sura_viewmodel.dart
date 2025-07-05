@@ -94,10 +94,12 @@ final suraProvider = FutureProvider.family<List<Ayah>, int>((ref, suraNumber) as
   return dataService.loadSuraData(suraNumber);
 });
 
+//
+// final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => [
+//   'মুফতী তাকী উসমানী',
+// ]);
 
-final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => [
-  'মুফতী তাকী উসমানী',
-]);
+final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => []);
 
 final showTranslationsProvider = StateProvider<bool>((ref) => true);
 final showWordByWordProvider = StateProvider<bool>((ref) => false);

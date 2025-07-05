@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 import 'package:device_preview/device_preview.dart';
 
+import 'features/sura_list/view/sura_list_page.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
@@ -44,7 +46,7 @@ class QuranApp extends StatelessWidget {
             ),
           ),
           debugShowCheckedModeBanner: false,
-          home: const HomeScreen(),
+          home: const SuraListPage(),
         );
       },
     );
