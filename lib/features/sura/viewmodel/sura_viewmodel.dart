@@ -103,6 +103,3 @@ final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => []);
 
 final showTranslationsProvider = StateProvider<bool>((ref) => true);
 final showWordByWordProvider = StateProvider<bool>((ref) => false);
-final autoScrollActiveProvider = StateProvider<bool>((ref) => false);
-final autoScrollSpeedProvider = StateProvider<double>((ref) => 1.0);
-final autoScrollControllerVisibleProvider = StateProvider<bool>((ref) => false);
