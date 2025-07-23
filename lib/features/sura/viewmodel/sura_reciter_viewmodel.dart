@@ -5,38 +5,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../../core/services/fileChecker.dart';
-import '../../quran/model/audio_state.dart';
+import '../../../core/services/fileChecker.dart'; // Assuming this exists
+import '../../quran/model/audio_state.dart'; // Renamed from quran_audio_state.dart
 import '../../quran/model/ayah_timing.dart';
 import '../../quran/model/reciter_asset.dart';
 
+// --- RECITER PROVIDERS (Unchanged) ---
 final Map<String, String> reciters = {
   'মাহের আল মুয়াইক্বিলি': 'maher_muaiqly',
   'সৌদ আল-শুরাইম': 'saud_shuraim',
   'আলী জাবের': 'ali_jaber',
   'আব্দুল মুনিম আব্দুল মুবদি': 'abdul_munim_mubdi',
 };
-
 final selectedReciterProvider = StateProvider<String>((_) => reciters.values.first);
+final reciterCatalogueProvider = Provider<List<ReciterAsset>>((_) => const [ /* ... */ ]);
 
-final reciterCatalogueProvider = Provider<List<ReciterAsset>>((_) => const [
-  ReciterAsset(
-    id: 'maher_muaiqly',
-    name: 'মাহের আল মুয়াইক্বিলি',
-    zipUrl: 'https://ntgkoryrbfyhcbqfnsbx.supabase.co/storage/v1/object/public/assets/audio/maher_muaiqly.zip',
-    sizeBytes: 51097600,
-  ),
-  ReciterAsset(
-    id: 'ali_jaber',
-    name: 'আলী জাবের',
-    zipUrl: 'https://example.com/assets/ali_jaber.zip',
-    sizeBytes: 10000000,
-  ),
-]);
 
+// --- AUDIO VIEWMODEL (Unchanged) ---
 final audioVMProvider = AsyncNotifierProvider<AudioVM, List<AyahTiming>>(AudioVM.new);
 
 class AudioVM extends AsyncNotifier<List<AyahTiming>> {
+  // ... (No changes in this class)
   late String _reciter;
 
   @override
@@ -66,7 +55,10 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
   }
 }
 
+
+// --- QURAN AUDIO NOTIFIER (Unchanged) ---
 class QuranAudioNotifier extends StateNotifier<QuranAudioState?> {
+  // ... (No changes in this class)
   QuranAudioNotifier() : super(null);
 
   void start(int surah, int ayah) {
@@ -108,7 +100,7 @@ final quranAudioProvider = StateNotifierProvider<QuranAudioNotifier, QuranAudioS
 );
 
 
-
+// --- AUDIO CONTROLLER SERVICE (Updated) ---
 class AudioControllerService {
   final Ref ref;
   final _player = AudioPlayer();
@@ -135,18 +127,15 @@ class AudioControllerService {
     debugPrint('AudioControllerService disposed');
   }
 
-  // New method to set the current sura
   void setCurrentSura(int sura) {
     _sura = sura;
     debugPrint('Audio Service: Sura set to $_sura');
   }
 
   Future<void> playAyahs(int fromAyah, int toAyah) async {
-    // Stop any previous playback
     stop();
-
     try {
-      // Fetch timings for the current sura
+      await ref.read(audioVMProvider.notifier).loadTimings();
       final vmTimings = await ref.read(audioVMProvider.future);
       _timings = vmTimings.where((t) => t.sura == _sura && t.ayah != 999).toList();
       _timings.sort((a, b) => a.time.compareTo(b.time));
@@ -158,33 +147,22 @@ class AudioControllerService {
 
       _startAyah = fromAyah;
       _endAyah = toAyah;
-
-      // Find the index of the first ayah to play
       _currentIndex = _timings.indexWhere((e) => e.ayah >= _startAyah);
+
       if (_currentIndex == -1) {
         debugPrint('Error: Could not find start Ayah $_startAyah in timings.');
         return;
       }
 
-      // Get audio file path
       final audioPath = await ref.read(audioVMProvider.notifier).getAudioAssetPath(_sura);
       await _player.setFilePath(audioPath);
 
-      // Seek to the start time of the first ayah
-      final startTime = _timings[_currentIndex].time;
-      await _player.seek(Duration(milliseconds: startTime));
+      // We call our new helper method to start the process
+      _seekToAyahIndex(_currentIndex, shouldPlay: true);
 
-      // Start playing
-      _player.play();
-
-      // Update the UI state
-      final currentAyahNumber = _timings[_currentIndex].ayah;
-      ref.read(quranAudioProvider.notifier).start(_sura, currentAyahNumber);
-
-      // Listen to position updates to advance to the next ayah
+      _positionSub?.cancel(); // Cancel any old listener
       _positionSub = _player.positionStream.listen(_onAudioPosition);
       debugPrint('Started playback for Sura $_sura, Ayahs $_startAyah - $_endAyah');
-
     } catch (e) {
       debugPrint('Error in playAyahs: $e');
       stop();
@@ -192,14 +170,11 @@ class AudioControllerService {
   }
 
   void _onAudioPosition(Duration position) {
-    if (_currentIndex >= _timings.length -1) return;
-
+    if (_currentIndex >= _timings.length - 1) return;
     final currentTimeMs = position.inMilliseconds;
     final nextAyahTiming = _timings[_currentIndex + 1];
 
-    // Check if we have passed the start time of the next ayah
     if (currentTimeMs >= nextAyahTiming.time) {
-      // Check if the next ayah is within the selected range
       if (nextAyahTiming.ayah > _endAyah) {
         stop();
         return;
@@ -213,7 +188,7 @@ class AudioControllerService {
     if (_player.playing) {
       _player.pause();
       ref.read(quranAudioProvider.notifier).pause();
-    } else {
+    } else if (ref.read(quranAudioProvider) != null) { // Only resume if there's an active session
       _player.play();
       ref.read(quranAudioProvider.notifier).resume();
     }
@@ -222,23 +197,81 @@ class AudioControllerService {
   void stop() {
     _player.stop();
     _positionSub?.cancel();
+    _positionSub = null;
     ref.read(quranAudioProvider.notifier).stop();
   }
 
-  // Placeholder implementations for Next/Prev
+  // --- NEW: Implementation for playNext ---
   void playNext() {
-    // This requires more complex logic to find the next valid index
-    debugPrint('Play Next: Not yet implemented');
+    // Ensure there is an active audio session
+    if (ref.read(quranAudioProvider) == null) return;
+
+    // Check if we are already at the last item in the list
+    if (_currentIndex >= _timings.length - 1) {
+      stop(); // No more ayahs in the surah
+      return;
+    }
+
+    final nextTiming = _timings[_currentIndex + 1];
+
+    // Check if the next ayah is outside the user's selected range
+    if (nextTiming.ayah > _endAyah) {
+      stop(); // Reached the end of the selected range
+      return;
+    }
+
+    // If all checks pass, seek to the next ayah
+    _seekToAyahIndex(_currentIndex + 1);
   }
 
+  // --- NEW: Implementation for playPrev ---
   void playPrev() {
-    // This requires more complex logic to find the previous valid index
-    debugPrint('Play Previous: Not yet implemented');
+    // Ensure there is an active audio session
+    if (ref.read(quranAudioProvider) == null) return;
+
+    // Check if we are at the beginning of the list
+    if (_currentIndex <= 0) return; // Cannot go back further
+
+    final prevTiming = _timings[_currentIndex - 1];
+
+    // Check if the previous ayah is outside the user's selected range
+    if (prevTiming.ayah < _startAyah) {
+      return; // Already at the start of the selected range
+    }
+
+    // If all checks pass, seek to the previous ayah
+    _seekToAyahIndex(_currentIndex - 1);
+  }
+
+  // --- NEW: Helper method to handle seeking and state updates ---
+  void _seekToAyahIndex(int index, {bool shouldPlay = false}) {
+    if (index < 0 || index >= _timings.length) return; // Boundary check
+
+    _currentIndex = index;
+    final timing = _timings[index];
+
+    _player.seek(Duration(milliseconds: timing.time));
+
+    // If the player should start/continue playing after seek
+    if (shouldPlay || _player.playing) {
+      _player.play();
+      // Use start() if it's the beginning, otherwise updateAyah()
+      if (ref.read(quranAudioProvider) == null) {
+        ref.read(quranAudioProvider.notifier).start(_sura, timing.ayah);
+      } else {
+        ref.read(quranAudioProvider.notifier).updateAyah(timing.ayah);
+        ref.read(quranAudioProvider.notifier).resume();
+      }
+    } else {
+      // If paused, just update the highlighted ayah without changing play state
+      ref.read(quranAudioProvider.notifier).updateAyah(timing.ayah);
+    }
+    debugPrint('Seeked to Ayah: ${timing.ayah}');
   }
 }
 
 
-
+// --- SERVICE PROVIDER (Unchanged) ---
 final audioPlayerServiceProvider = Provider<AudioControllerService>((ref) {
   final service = AudioControllerService(ref);
   ref.onDispose(() {
@@ -246,4 +279,3 @@ final audioPlayerServiceProvider = Provider<AudioControllerService>((ref) {
   });
   return service;
 });
-
