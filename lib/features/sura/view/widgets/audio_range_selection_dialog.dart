@@ -1,6 +1,13 @@
 // features/sura/view/widgets/audio_range_selection_dialog.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/services/fileChecker.dart';
+import '../../../../shared/downloader/download_dialog.dart';
+import '../../../../shared/downloader/download_permission_dialog.dart';
+import '../../viewmodel/sura_reciter_viewmodel.dart';
+
 
 // Utility function to convert numbers to Bengali digits.
 String toBengaliDigit(int number) {
@@ -11,20 +18,21 @@ String toBengaliDigit(int number) {
 }
 
 
-class AudioRangeSelectionDialog extends StatefulWidget {
+class AudioRangeSelectionDialog extends ConsumerStatefulWidget {
   final int totalAyahs;
+  final int suraNumber;
 
   const AudioRangeSelectionDialog({
     super.key,
     required this.totalAyahs,
+    required this.suraNumber,
   });
 
   @override
-  State<AudioRangeSelectionDialog> createState() => _AudioRangeSelectionDialogState();
+  ConsumerState<AudioRangeSelectionDialog> createState() => _AudioRangeSelectionDialogState();
 }
 
-class _AudioRangeSelectionDialogState extends State<AudioRangeSelectionDialog> {
-  // State variables
+class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionDialog> {
   late int _selectedStartAyah;
   late int _selectedEndAyah;
   late FixedExtentScrollController _startController;
@@ -95,6 +103,67 @@ class _AudioRangeSelectionDialogState extends State<AudioRangeSelectionDialog> {
     );
   }
 
+  Widget _buildListenButton() {
+    return ElevatedButton(
+      onPressed: () async {
+        final reciterId = ref.read(selectedReciterProvider);
+
+        final downloaded = await isAssetDownloaded(reciterId);
+
+        if (!downloaded) {
+          final reciter = ref
+              .read(reciterCatalogueProvider)
+              .firstWhere((r) => r.id == reciterId);
+
+          final confirmed = await downloadPermissionDialog(
+            context,
+            "audio",
+            reciterName: reciter.name,
+          );
+
+          if (!confirmed) return;
+
+          if (!context.mounted) return;
+          await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) {
+            return DownloadDialog(
+              id: reciter.id,
+              zipUrl: reciter.zipUrl,
+              sizeBytes: reciter.sizeBytes,
+            );
+          },
+          );
+        }
+
+        if (!context.mounted) return;
+
+        final audioVM = ref.read(audioVMProvider);
+        if (audioVM.value == null || !audioVM.hasValue) {
+          await ref.read(audioVMProvider.notifier).loadTimings();
+        }
+        final audioService = ref.read(audioPlayerServiceProvider);
+        audioService.setCurrentSura(widget.suraNumber);
+        audioService.playAyahs(_selectedStartAyah, _selectedEndAyah);
+
+        // 3. Close the dialog
+        Navigator.of(context).pop();
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey.shade200,
+        foregroundColor: Colors.black,
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+      ),
+      child: const Text(
+        'অডিও শুনুন',
+        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
   Widget _buildPickerUI() {
     return Container(
       height: 180,
@@ -151,6 +220,8 @@ class _AudioRangeSelectionDialogState extends State<AudioRangeSelectionDialog> {
         ],
       ),
     );
+
+
   }
 
   Widget _buildPickerColumn({
@@ -257,24 +328,5 @@ class _AudioRangeSelectionDialogState extends State<AudioRangeSelectionDialog> {
     );
   }
 
-  Widget _buildListenButton() {
-    return ElevatedButton(
-      child: const Text(
-        'অডিও শুনুন',
-        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-      onPressed: () {
-        // Add your play logic here
-        print('Play pressed: Surah from $_selectedStartAyah to $_selectedEndAyah, repeating $_repeatCount times.');
-        Navigator.of(context).pop();
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey.shade200,
-        foregroundColor: Colors.black,
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-      ),
-    );
-  }
+
 }

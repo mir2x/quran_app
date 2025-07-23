@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,3 +108,7 @@ final showWordByWordProvider = StateProvider<bool>((ref) => false);
 final isAutoScrollingProvider = StateProvider<bool>((ref) => false);
 final scrollSpeedFactorProvider = StateProvider<double>((ref) => 1.0);
 final isAutoScrollPausedProvider = StateProvider<bool>((ref) => false);
+
+
+
+

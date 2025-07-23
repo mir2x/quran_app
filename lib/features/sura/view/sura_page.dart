@@ -282,7 +282,7 @@ class _SurahPageState extends ConsumerState<SurahPage> with TickerProviderStateM
         if (totalItems > 0) {
           showDialog(
             context: context,
-            builder: (context) => AudioRangeSelectionDialog(totalAyahs: totalItems),
+            builder: (context) => AudioRangeSelectionDialog(totalAyahs: totalItems, suraNumber: widget.suraNumber,),
           );
         }
         break;
