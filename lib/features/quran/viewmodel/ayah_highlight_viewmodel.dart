@@ -372,7 +372,6 @@ class QuranAudioNotifier extends StateNotifier<QuranAudioState?> {
   }
 
   void updateAyah(int ayah) {
-    // Only update the ayah number if it has changed
     if (state != null && state!.ayah != ayah) {
       state = state!.copyWith(ayah: ayah);
     }

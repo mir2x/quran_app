@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quran_app/features/sura/view/widgets/audio_range_selection_dialog.dart';
 import 'package:quran_app/features/sura/view/widgets/ayah_card.dart';
 import 'package:quran_app/features/sura/view/widgets/details_bottom_sheet.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
@@ -277,7 +278,13 @@ class _SurahPageState extends ConsumerState<SurahPage> with TickerProviderStateM
         final currentState = ref.read(showWordByWordProvider);
         ref.read(showWordByWordProvider.notifier).state = !currentState;
         break;
-      case 2: // অডিও শুনুন
+      case 2:
+        if (totalItems > 0) {
+          showDialog(
+            context: context,
+            builder: (context) => AudioRangeSelectionDialog(totalAyahs: totalItems),
+          );
+        }
         break;
       case 3: // অটো স্ক্রল
         if (totalItems > 0) {

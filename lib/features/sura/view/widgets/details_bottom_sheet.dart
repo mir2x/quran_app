@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quran_app/features/sura/view/widgets/reciter_selection_dialog.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
 import '../../model/grid_item_data.dart'; // Make sure this path is correct
 
@@ -54,7 +55,12 @@ class DetailsBottomSheet extends StatelessWidget {
                     builder: (context) => const TranslatorSelectionDialog(),
                   );
                 }),
-                GridItemData(icon: Icons.person_outline, label: 'কারী পরিবর্তন', onTap: () {}),
+                GridItemData(icon: Icons.person_outline, label: 'কারী পরিবর্তন', onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ReciterSelectionDialog(),
+                  );
+                }),
               ],
             ),
           ],

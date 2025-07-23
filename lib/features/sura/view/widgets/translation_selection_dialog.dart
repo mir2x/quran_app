@@ -14,7 +14,6 @@ class TranslatorSelectionDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(selectedTranslatorsProvider);
-
     return AlertDialog(
       title: const Text(
         'অনুবাদক নির্বাচন করুন',
