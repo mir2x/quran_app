@@ -26,6 +26,7 @@ dependencies:
   quran: ^1.3.3
   share_plus: ^11.0.0
   flutter_screenutil: ^5.9.3
+  scroll_to_index: ^3.0.1
 
 dev_dependencies:
   flutter_test:

@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:path_provider/path_provider.dart';
-
-// Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import '../../../../shared/downloader/download_dialog.dart';
 import '../../../../shared/downloader/download_permission_dialog.dart';
 import '../../../quran/view/quran_viewer_screen.dart';
+import '../../../sura_list/view/sura_list_page.dart';
 import '../../model/quran_edition.dart';
 import '../providers/home_providers.dart';
 
@@ -18,41 +16,59 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Remove MediaQuery width calculation
-    // final screenWidth = MediaQuery.of(context).size.width;
-    // final horizontalPadding = screenWidth * 0.05; // This will be replaced by .w
-    // const verticalPadding = 24.0; // This will be replaced by .h
-    // const gridSpacing = 16.0; // This will be replaced by .r
-
     final quranEditions = ref.watch(quranEditionProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
-          // Use screenutil for padding
           horizontal: 18.w,
-          // Assuming 5% of design width (e.g., 360 * 0.05 = 18)
           vertical: 24.h,
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: quranEditions.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                // Remove const as values are not const
                 crossAxisCount: 2,
-                // Use screenutil for spacing
                 crossAxisSpacing: 16.r,
                 mainAxisSpacing: 16.r,
-                childAspectRatio:
-                    0.65, // Keep ratio as it defines the item shape
+                childAspectRatio: 0.65,
               ),
               itemBuilder: (context, index) {
                 return _QuranEditionGridItem(edition: quranEditions[index]);
               },
+            ),
+            SizedBox(height: 24.h),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SuraListPage(),
+                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                side: BorderSide(
+                    color: Theme.of(context).primaryColor, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                foregroundColor: Theme.of(context).primaryColor,
+              ),
+              child: Text(
+                'তাফসীর',
+                style: TextStyle(
+                  fontFamily: 'SolaimanLipi',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.sp,
+                ),
+              ),
             ),
           ],
         ),
@@ -71,24 +87,13 @@ class _QuranEditionGridItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AspectRatio(
-      aspectRatio: 0.65, // Keep ratio
-
-      // Removed LayoutBuilder as we'll use Expanded/Flexible for height split
-      // child: LayoutBuilder(
-      //   builder: (context, constraints) {
-      //     final imageHeight = constraints.maxHeight * 0.8;
-      //     final titleHeight = constraints.maxHeight * 0.2;
+      aspectRatio: 0.65,
       child: Column(
-        // Use Column directly
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        // Ensure children fill width
         children: [
-          // Replaced SizedBox with Expanded for image part (approx 80%)
           Expanded(
-            flex: 4, // 4 parts out of 5 (4/5 = 80%)
-            // height: imageHeight, // Remove fixed/calculated height
+            flex: 4,
             child: InkWell(
-              // Use screenutil for border radius
               borderRadius: BorderRadius.circular(8.r),
               onTap: () async {
                 if (!edition.isDownloaded) {
@@ -135,23 +140,20 @@ class _QuranEditionGridItem extends ConsumerWidget {
                 alignment: Alignment.topCenter,
                 children: [
                   Container(
-                    width: double.infinity, // Takes available width
+                    width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      // Use screenutil for border radius
                       borderRadius: BorderRadius.circular(8.r),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.grey.withOpacity(0.2),
-                          // Use screenutil for shadow values
                           spreadRadius: 1.r,
                           blurRadius: 5.r,
-                          offset: Offset(0, 3.r), // Scaled offset
+                          offset: Offset(0, 3.r),
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      // Use screenutil for border radius
                       borderRadius: BorderRadius.circular(8.r),
                       child: Image.asset(
                         edition.coverImagePath,
@@ -161,33 +163,28 @@ class _QuranEditionGridItem extends ConsumerWidget {
                   ),
                   if (hasCheckmark)
                     Positioned(
-                      // Use screenutil for vertical offset
                       top: -15.h,
                       child: Icon(
                         HugeIcons.solidRoundedLocationCheck02,
-                        // Use screenutil for icon size
                         size: 36.r,
+                        color: Theme.of(context).primaryColor,
                       ),
                     ),
                 ],
               ),
             ),
           ),
-          // Replaced SizedBox with Expanded for title part (approx 20%)
           Expanded(
-            flex: 1, // 1 part out of 5
-            // height: titleHeight, // Remove fixed/calculated height
+            flex: 1,
             child: Center(
-              // Center the text vertically within the expanded space
               child: Text(
                 edition.title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  // Remove const as font size is scaled
-                  // Use screenutil for font size
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF333333),
+                  fontFamily: 'SolaimanLipi',
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -196,9 +193,6 @@ class _QuranEditionGridItem extends ConsumerWidget {
           ),
         ],
       ),
-      // Removed LayoutBuilder closing
-      //   },
-      // ),
     );
   }
 }
