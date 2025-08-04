@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/features/sura/view/widgets/reciter_selection_dialog.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
-import '../../model/grid_item_data.dart'; // Make sure this path is correct
+import '../../model/grid_item_data.dart';
 
 void showDetailsBottomSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
-    // isScrollControlled can be false now if you are sure content fits,
-    // but true doesn't hurt and gives a bit more flexibility if needed by the system.
     isScrollControlled: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
@@ -22,15 +20,12 @@ class DetailsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Wrap with SingleChildScrollView to allow the content to determine its height
-    // and then constrain the BottomSheet itself.
-    // This is a common pattern for bottom sheets with dynamic content height.
-    return SingleChildScrollView( // Added to correctly size the content
+    return SingleChildScrollView(
       child: Container(
-        padding: const EdgeInsets.only(bottom: 16), // Optional: Add some padding at the very bottom
+        padding: const EdgeInsets.only(bottom: 16),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // CRUCIAL: Column takes minimum vertical space
-          crossAxisAlignment: CrossAxisAlignment.stretch, // Make children stretch horizontally
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildDragHandle(),
             _DetailsSection(
@@ -43,7 +38,7 @@ class DetailsBottomSheet extends StatelessWidget {
             _DetailsSection(
               title: 'ভিউ',
               items: [
-                GridItemData(icon: Icons.format_size, label: 'ফন্ট বড়/ছোট', onTap: () {}),
+                GridItemData(icon: Icons.format_size, label: 'ফন্ট পরিবর্তন', onTap: () {}),
               ],
             ),
             _DetailsSection(
@@ -70,10 +65,10 @@ class DetailsBottomSheet extends StatelessWidget {
   }
 
   Widget _buildDragHandle() {
-    return Align( // Center the drag handle
+    return Align(
       alignment: Alignment.center,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8), // Minimal vertical margin
+        margin: const EdgeInsets.symmetric(vertical: 8),
         width: 40,
         height: 4,
         decoration: BoxDecoration(
@@ -95,53 +90,52 @@ class _DetailsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min, // CRUCIAL: Section takes minimum vertical space
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: double.infinity, // Title background spans width
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), // Reduced vertical padding
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           color: Colors.blue.shade50,
           child: Text(
             title,
             style: const TextStyle(
               fontFamily: 'SolaimanLipi',
-              fontSize: 14, // Further reduced font size for compactness
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         GridView.builder(
-          shrinkWrap: true, // IMPORTANT for GridView inside a Column
-          physics: const NeverScrollableScrollPhysics(), // IMPORTANT to disable GridView's own scrolling
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Adjusted padding
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            crossAxisSpacing: 3, // Reduced spacing
-            mainAxisSpacing: 4,  // Reduced spacing
-            childAspectRatio: 1.1, // Adjust for content (width/height), might need tuning
-            // e.g., 1.0 for square, >1 for wider, <1 for taller items
+            crossAxisSpacing: 3,
+            mainAxisSpacing: 4,
+            childAspectRatio: 1.1,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
             final item = items[index];
             return InkWell(
-              borderRadius: BorderRadius.circular(6), // Slightly smaller radius
+              borderRadius: BorderRadius.circular(6),
               onTap: item.onTap,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(item.icon, size: 28, color: Colors.green.shade700), // Further reduced icon size
-                  const SizedBox(height: 4), // Further reduced spacing
+                  Icon(item.icon, size: 28, color: Colors.green.shade700),
+                  const SizedBox(height: 4),
                   Text(
                     item.label,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'SolaimanLipi',
-                      fontSize: 12, // Further reduced font size
+                      fontSize: 12,
                       color: Colors.grey.shade800,
                     ),
-                    maxLines: 2, // Allow text to wrap if necessary
-                    overflow: TextOverflow.ellipsis, // Handle overflow
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

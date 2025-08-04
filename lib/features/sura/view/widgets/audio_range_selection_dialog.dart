@@ -62,7 +62,6 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
     setState(() {
       _isFullSura = value ?? false;
       if (_isFullSura) {
-        // If "Full Surah" is checked, select all ayahs
         _selectedStartAyah = 1;
         _selectedEndAyah = widget.totalAyahs;
         _startController.animateToItem(
@@ -83,7 +82,6 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      // Remove default padding
       titlePadding: EdgeInsets.zero,
       contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
       content: SingleChildScrollView(

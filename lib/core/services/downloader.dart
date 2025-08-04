@@ -8,7 +8,7 @@ Future<void> downloadAndExtract(
     final String url,
     void Function(int received, int total) onProgress,
     ) async {
-  final dirPath = await getLocalPath(id);         // Target dir: /.../reciter_name/
+  final dirPath = await getLocalPath(id);
   final zipPath = '$dirPath.zip';
 
   await Directory(dirPath).create(recursive: true);

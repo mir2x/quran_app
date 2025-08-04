@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
-
+import '../../../../core/services/fileChecker.dart';
+import '../../../../shared/downloader/download_dialog.dart';
+import '../../../../shared/downloader/download_permission_dialog.dart';
 import '../../model/ayah.dart';
+import '../../viewmodel/sura_reciter_viewmodel.dart';
 
 
 class AyahActionItem {
@@ -12,7 +16,10 @@ class AyahActionItem {
   AyahActionItem({required this.icon, required this.label, required this.onTap});
 }
 
-void showAyahActionBottomSheet(BuildContext context, Ayah ayah, String suraName) {
+void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, String suraName, WidgetRef ref) {
+  final int _selectedStartAyah = ayah.ayah;
+  final int _selectedEndAyah = ayah.ayah;
+
   showModalBottomSheet(
     context: context,
     shape: const RoundedRectangleBorder(
@@ -22,9 +29,50 @@ void showAyahActionBottomSheet(BuildContext context, Ayah ayah, String suraName)
       final List<AyahActionItem> actions = [
         // ... (Define actions as before)
         AyahActionItem(icon: Icons.bookmark_border, label: 'বুকমার্ক', onTap: () => print('Bookmark Ayah ${ayah.ayah}')),
-        AyahActionItem(icon: Icons.play_arrow, label: 'অডিও শুনুন', onTap: () => print('Play audio for Ayah ${ayah.ayah}')),
+        AyahActionItem(icon: Icons.play_arrow, label: 'অডিও শুনুন', onTap: () async {
+            final reciterId = ref.read(selectedReciterProvider);
+
+            final downloaded = await isAssetDownloaded(reciterId);
+
+            if (!downloaded) {
+              final reciter = ref
+                  .read(reciterCatalogueProvider)
+                  .firstWhere((r) => r.id == reciterId);
+
+              final confirmed = await downloadPermissionDialog(
+                context,
+                "audio",
+                reciterName: reciter.name,
+              );
+
+              if (!confirmed) return;
+
+              if (!context.mounted) return;
+              await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext dialogContext) {
+                return DownloadDialog(
+                  id: reciter.id,
+                  zipUrl: reciter.zipUrl,
+                  sizeBytes: reciter.sizeBytes,
+                );
+              },
+              );
+            }
+
+            if (!context.mounted) return;
+
+            final audioVM = ref.read(audioVMProvider);
+            if (audioVM.value == null || !audioVM.hasValue) {
+              await ref.read(audioVMProvider.notifier).loadTimings();
+            }
+            final audioService = ref.read(audioPlayerServiceProvider);
+            audioService.setCurrentSura(suraNumber);
+            audioService.playAyahs(_selectedStartAyah, _selectedEndAyah);
+
+        }),
         AyahActionItem(icon: Icons.menu_book, label: 'তাফসীর', onTap: () => print('Show Tafseer for Ayah ${ayah.ayah}')),
-        // ... add other actions
       ];
 
       return Container(

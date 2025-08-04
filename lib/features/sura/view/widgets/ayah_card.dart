@@ -9,12 +9,14 @@ import '../../viewmodel/sura_viewmodel.dart';
 import 'ayah_action_bottom_sheet.dart';
 
 class AyahCard extends ConsumerWidget {
+  final int suraNumber;
   final Ayah ayah;
   final String suraName;
-  final bool isHighlighted; // This flag controls the audio highlight
+  final bool isHighlighted;
 
   const AyahCard({
     super.key,
+    required this.suraNumber,
     required this.ayah,
     required this.suraName,
     this.isHighlighted = false,
@@ -35,7 +37,7 @@ class AyahCard extends ConsumerWidget {
     final cardElevation = isHighlighted ? 4.0 : 0.5;
 
     return GestureDetector(
-      onTap: () => showAyahActionBottomSheet(context, ayah, suraName),
+      onTap: () => showAyahActionBottomSheet(context, suraNumber, ayah, suraName, ref),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         elevation: cardElevation,

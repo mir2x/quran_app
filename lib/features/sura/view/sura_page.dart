@@ -153,11 +153,12 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                           quranAudioState.ayah == ayah.ayah;
 
                       return AutoScrollTag(
-                        key: ValueKey(index), // Use a value key
+                        key: ValueKey(index),
                         controller: _autoScrollController,
                         index: index,
                         highlightColor: Colors.amber.withOpacity(0.3),
                         child: AyahCard(
+                          suraNumber: widget.suraNumber,
                           ayah: ayah,
                           suraName: suraName,
                           isHighlighted: isHighlighted,
