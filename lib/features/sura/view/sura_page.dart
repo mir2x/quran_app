@@ -5,6 +5,7 @@ import 'package:quran_app/features/sura/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/sura/view/widgets/audio_range_selection_dialog.dart';
 import 'package:quran_app/features/sura/view/widgets/ayah_card.dart';
 import 'package:quran_app/features/sura/view/widgets/details_bottom_sheet.dart';
+import 'package:quran_app/features/sura/view/widgets/search_page.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 import '../viewmodel/sura_reciter_viewmodel.dart';
@@ -12,7 +13,8 @@ import '../viewmodel/sura_viewmodel.dart';
 
 class SurahPage extends ConsumerStatefulWidget {
   final int suraNumber;
-  const SurahPage({super.key, required this.suraNumber});
+  final int? initialScrollIndex;
+  const SurahPage({super.key, required this.suraNumber, this.initialScrollIndex});
 
   @override
   ConsumerState<SurahPage> createState() => _SurahPageState();
@@ -31,6 +33,16 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       viewportBoundaryGetter: () => Rect.fromLTRB(0, 0, 0, MediaQuery.of(context).padding.bottom),
       axis: Axis.vertical,
     );
+    if (widget.initialScrollIndex != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _autoScrollController.scrollToIndex(
+            widget.initialScrollIndex!,
+            preferPosition: AutoScrollPosition.middle,
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -186,7 +198,21 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
 
   PreferredSizeWidget _buildAppBar(BuildContext context, String title) {
-    return AppBar();
+    return AppBar(
+      title: Text(title, /* ... */),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SearchPage()),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildAutoScrollController(BuildContext context) {
