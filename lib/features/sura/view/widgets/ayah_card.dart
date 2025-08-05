@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
 import '../../model/ayah.dart';
 import '../../model/word_by_word.dart';
+import '../../viewmodel/font_settings_viewmodel.dart';
 import '../../viewmodel/sura_viewmodel.dart';
 import 'ayah_action_bottom_sheet.dart';
 
@@ -54,13 +55,13 @@ class AyahCard extends ConsumerWidget {
               _buildCardHeader(context),
               const SizedBox(height: 16),
               if (showWords)
-                _buildWordByWordView(ayah.words)
+                _buildWordByWordView(ayah.words, ref)
               else
-                _buildArabicText(),
+                _buildArabicText(ref),
               if (showTranslations &&
                   selectedTranslators.isNotEmpty &&
                   !showWords)
-                _buildTranslations(selectedTranslators),
+                _buildTranslations(selectedTranslators, ref),
             ],
           ),
         ),
@@ -105,7 +106,13 @@ class AyahCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildWordByWordView(List<WordByWord> words) {
+  Widget _buildWordByWordView(List<WordByWord> words, WidgetRef ref) {
+
+    final arabicFont = ref.watch(arabicFontProvider);
+    final arabicFontSize = ref.watch(arabicFontSizeProvider);
+    final bengaliFont = ref.watch(bengaliFontProvider);
+    final bengaliFontSize = ref.watch(bengaliFontSizeProvider);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Wrap(
@@ -118,18 +125,17 @@ class AyahCard extends ConsumerWidget {
             children: [
               Text(
                 word.arabic,
-                style: GoogleFonts.amiri(
-                  fontSize: 28.sp,
-                  color: Colors.black87,
-                  height: 1.2.h,
+                style: TextStyle(
+                  fontFamily: arabicFont,
+                  fontSize: arabicFontSize,
                 ),
               ),
               SizedBox(height: 4.0.h),
               Text(
                 word.bengali,
-                style: const TextStyle(
-                  fontFamily: 'SolaimanLipi',
-                  fontSize: 15,
+                style: TextStyle(
+                  fontFamily: bengaliFont,
+                  fontSize: bengaliFontSize,
                   color: Colors.green,
                 ),
               ),
@@ -140,13 +146,17 @@ class AyahCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildArabicText() {
+  Widget _buildArabicText(WidgetRef ref) {
+    final arabicFont = ref.watch(arabicFontProvider);
+    final arabicFontSize = ref.watch(arabicFontSizeProvider);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Text(
         ayah.arabicText,
-        style: GoogleFonts.amiri(
-          fontSize: 28,
+        style: TextStyle(
+          fontFamily: arabicFont,
+          fontSize: arabicFontSize,
           height: 1.5,
           color: Colors.black87,
         ),
@@ -155,7 +165,11 @@ class AyahCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildTranslations(List<String> selectedTranslators) {
+
+  Widget _buildTranslations(List<String> selectedTranslators, WidgetRef ref) {
+    final bengaliFont = ref.watch(bengaliFontProvider);
+    final bengaliFontSize = ref.watch(bengaliFontSizeProvider);
+
     final translationsToShow = ayah.translations
         .where((t) => selectedTranslators.contains(t.translatorName))
         .toList();
@@ -185,8 +199,8 @@ class AyahCard extends ConsumerWidget {
                 Text(
                   translation.text,
                   style: TextStyle(
-                    fontFamily: 'SolaimanLipi',
-                    fontSize: 16,
+                    fontFamily: bengaliFont,
+                    fontSize: bengaliFontSize,
                     height: 1.5,
                     color: Colors.grey.shade900,
                   ),

@@ -134,51 +134,53 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final isTimedScrolling = ref.watch(isAutoScrollingProvider);
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
 
-    return Scaffold(
-      appBar: _buildAppBar(context, suraName),
-      body: Column(
-        children: [
-          Expanded(
-            child: suraAsyncValue.when(
-              data: (ayahs) => Stack(
-                children: [
-                  ListView.builder(
-                    controller: _autoScrollController,
-                    itemCount: ayahs.length,
-                    padding: const EdgeInsets.only(bottom: 80.0, top: 8.0),
-                    itemBuilder: (context, index) {
-                      final ayah = ayahs[index];
-                      final isHighlighted = quranAudioState != null &&
-                          quranAudioState.surah == widget.suraNumber &&
-                          quranAudioState.ayah == ayah.ayah;
-
-                      return AutoScrollTag(
-                        key: ValueKey(index),
-                        controller: _autoScrollController,
-                        index: index,
-                        highlightColor: Colors.amber.withOpacity(0.3),
-                        child: AyahCard(
-                          suraNumber: widget.suraNumber,
-                          ayah: ayah,
-                          suraName: suraName,
-                          isHighlighted: isHighlighted,
-                        ),
-                      );
-                    },
-                  ),
-                  if (isTimedScrolling)
-                    _buildAutoScrollController(context),
-                ],
+    return SafeArea(
+      child: Scaffold(
+        appBar: _buildAppBar(context, suraName),
+        body: Column(
+          children: [
+            Expanded(
+              child: suraAsyncValue.when(
+                data: (ayahs) => Stack(
+                  children: [
+                    ListView.builder(
+                      controller: _autoScrollController,
+                      itemCount: ayahs.length,
+                      padding: const EdgeInsets.only(bottom: 80.0, top: 8.0),
+                      itemBuilder: (context, index) {
+                        final ayah = ayahs[index];
+                        final isHighlighted = quranAudioState != null &&
+                            quranAudioState.surah == widget.suraNumber &&
+                            quranAudioState.ayah == ayah.ayah;
+      
+                        return AutoScrollTag(
+                          key: ValueKey(index),
+                          controller: _autoScrollController,
+                          index: index,
+                          highlightColor: Colors.amber.withOpacity(0.3),
+                          child: AyahCard(
+                            suraNumber: widget.suraNumber,
+                            ayah: ayah,
+                            suraName: suraName,
+                            isHighlighted: isHighlighted,
+                          ),
+                        );
+                      },
+                    ),
+                    if (isTimedScrolling)
+                      _buildAutoScrollController(context),
+                  ],
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('Failed to load Sura ${widget.suraNumber}:\n$error')),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Failed to load Sura ${widget.suraNumber}:\n$error')),
             ),
-          ),
-          if (quranAudioState != null)
-            AudioControllerBar(color: Theme.of(context).primaryColor)
-        ],
+            if (quranAudioState != null)
+              AudioControllerBar(color: Theme.of(context).primaryColor)
+          ],
+        ),
+        bottomNavigationBar: showBottomNav ? _buildBottomNavBar(context) : null,
       ),
-      bottomNavigationBar: showBottomNav ? _buildBottomNavBar(context) : null,
     );
   }
 

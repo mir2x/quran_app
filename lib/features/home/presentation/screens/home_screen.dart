@@ -69,7 +69,9 @@ class HomeScreen extends ConsumerWidget {
                   fontSize: 16.sp,
                 ),
               ),
+
             ),
+            SizedBox(height: 24.h),
           ],
         ),
       ),

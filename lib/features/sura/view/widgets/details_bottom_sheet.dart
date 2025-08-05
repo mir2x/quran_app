@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quran_app/features/sura/view/widgets/reciter_selection_dialog.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
 import '../../model/grid_item_data.dart';
+import 'font_change_dialog.dart';
 
 void showDetailsBottomSheet(BuildContext context) {
   showModalBottomSheet(
@@ -38,7 +39,12 @@ class DetailsBottomSheet extends StatelessWidget {
             _DetailsSection(
               title: 'ভিউ',
               items: [
-                GridItemData(icon: Icons.format_size, label: 'ফন্ট পরিবর্তন', onTap: () {}),
+                GridItemData(icon: Icons.format_size, label: 'ফন্ট পরিবর্তন', onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const FontChangeDialog(),
+                  );
+                }),
               ],
             ),
             _DetailsSection(

@@ -46,5 +46,26 @@ flutter:
   fonts:
     - family: SolaimanLipi
       fonts:
-        - asset: fonts/solaimanlipi.ttf
+        - asset: fonts/Bangla Fonts/Solaimanlipi.ttf
+    - family: Kalpurush
+      fonts:
+        - asset: fonts/Bangla Fonts/Kalpurush.ttf
+    - family: Noto Sans Bengali
+      fonts:
+        - asset: fonts/Bangla Fonts/Noto Sans Bengali.ttf
+    - family: Siyam Rupali
+      fonts:
+        - asset: fonts/Bangla Fonts/Siyam Rupali.ttf
 
+    - family: Al Mushaf Quran
+      fonts:
+        - asset: fonts/Arabic Fonts/Al Mushaf Quran.ttf
+    - family: Al Qalam Kolkatta Quranic
+      fonts:
+        - asset: fonts/Arabic Fonts/Al Qalam Kolkatta Quranic.ttf
+    - family: Al Qalam Quran
+      fonts:
+        - asset: fonts/Arabic Fonts/Al Qalam Quran.ttf
+    - family: Al Qalam Quran Majeed
+      fonts:
+        - asset: fonts/Arabic Fonts/Al Qalam Quran Majeed.ttf
