@@ -1,240 +1,185 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:flutter/material.dart';
-import '../../features/quran/model/ayah_box.dart';
 import '../../features/quran/viewmodel/ayah_highlight_viewmodel.dart';
-import '../../features/quran/model/ayah_timing.dart';
 
-class AudioControllerService {
-  final Ref ref;
-  final _player = AudioPlayer();
-  List<AyahTiming> _timings = [];
-  List<AyahBox> _ayahBoxes = [];
-  int _currentIndex = 0;
-  int _startAyah = 1;
-  int _endAyah = 1;
-  int _sura = 1;
-  StreamSubscription<Duration>? _positionSub;
+class AudioPlayerService {
+  final AudioPlayer _player = AudioPlayer();
+  final Ref _ref;
+
+  int? _endAyahLimit;
   StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<int?>? _indexSub;
 
-  AudioControllerService(this.ref) {
-    _playerStateSub = _player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        stop();
+  AudioPlayerService(this._ref) {
+    debugPrint("✅ [AudioPlayerService] INITIALIZED");
+    // FIX: DO NOT set up listeners in the constructor.
+    // _setupStateListeners();
+  }
+
+  Future<bool> _isSuraDownloaded(String reciterId, int sura) async {
+    final pathService = _ref.read(audioPathServiceProvider);
+    final suraDir = await pathService.getSuraDirectory(reciterId, sura);
+    if (await suraDir.exists()) {
+      return suraDir.listSync().isNotEmpty;
+    }
+    return false;
+  }
+
+  Future<bool> playAyahs(int startAyah, int endAyah) async {
+    debugPrint("▶️ [playAyahs] CALLED for Sura ${_ref.read(selectedAudioSuraProvider)}, Ayahs $startAyah-$endAyah");
+    await stop();
+
+    _endAyahLimit = endAyah;
+    final reciterId = _ref.read(selectedReciterProvider);
+    final sura = _ref.read(selectedAudioSuraProvider);
+
+    if (!await _isSuraDownloaded(reciterId, sura)) {
+      debugPrint("  [playAyahs] Sura not downloaded. Starting download...");
+      final downloadManager = _ref.read(downloadManagerProvider);
+      final success = await downloadManager.downloadSura(reciterId: reciterId, sura: sura);
+      if (!success) {
+        debugPrint("  [playAyahs] ❌ Download FAILED.");
+        return false;
       }
-    });
-  }
-
-  void dispose() {
-    _positionSub?.cancel();
-    _playerStateSub?.cancel();
-    _player.dispose();
-    debugPrint('AudioControllerService disposed');
-  }
-
-  Future<void> playAyahs(int fromAyah, int toAyah) async {
-    stop();
-
-    final vmTimings = await ref.read(audioVMProvider.future);
-    _ayahBoxes = await ref.read(allBoxesProvider.future);
-
-    _timings = vmTimings.where((t) => t.sura == _sura && t.ayah != 999).toList();
-    _timings.sort((a, b) => a.time.compareTo(b.time));
-
-    _startAyah = fromAyah;
-    _endAyah = toAyah;
-
-    _currentIndex = _timings.indexWhere((e) => e.sura == _sura && e.ayah == _startAyah);
-
-    if (_currentIndex == -1) {
-      debugPrint('Error: Timing not found for Sura $_sura, Start Ayah $_startAyah');
-      return;
+      debugPrint("  [playAyahs] ✅ Download COMPLETED.");
     }
 
-    final actualStartAyahTiming = _timings[_currentIndex];
-    _startAyah = actualStartAyahTiming.ayah;
+    final pathService = _ref.read(audioPathServiceProvider);
+    final suraDir = await pathService.getSuraDirectory(reciterId, sura);
+    final files = suraDir.listSync()
+      ..sort((a,b) {
+        final numA = int.parse(a.path.split(Platform.pathSeparator).last.split('.').first);
+        final numB = int.parse(b.path.split(Platform.pathSeparator).last.split('.').first);
+        return numA.compareTo(numB);
+      });
 
-    final audioPath = await ref.read(audioVMProvider.notifier).getAudioAssetPath(_sura);
-
-    try {
-      await _player.setFilePath(audioPath);
-    } catch (e) {
-      debugPrint('Error loading audio asset: $audioPath, Error: $e');
-      return;
+    final audioSources = files.map((file) => AudioSource.uri(Uri.file(file.path))).toList();
+    if (audioSources.isEmpty) {
+      debugPrint("  [playAyahs] ❌ ERROR: No audio files found for Surah $sura");
+      return false;
     }
 
-    await _player.seek(Duration(milliseconds: actualStartAyahTiming.time));
+    final playlist = ConcatenatingAudioSource(children: audioSources);
 
+    // FIX: Set up new listeners for THIS session before playing.
+    _setupStateListeners();
+
+    _ref.read(quranAudioProvider.notifier).start(sura, startAyah);
+    debugPrint("  [playAyahs] Fired quranAudioProvider.start with $sura:$startAyah");
+    _highlightAndNavigate(sura, startAyah);
+
+    await _player.setAudioSource(playlist, initialIndex: startAyah - 1, initialPosition: Duration.zero);
+    debugPrint("  [playAyahs] Audio source set. Starting playback.");
     _player.play();
-    ref.read(quranAudioProvider.notifier).start(_sura, _startAyah);
 
-    _highlightAndNavigateToAyahBoxPage(_sura, _startAyah);
-
-    _positionSub?.cancel();
-    _positionSub = _player.positionStream.listen((position) {
-      _onAudioPosition(position);
-    });
-
-    debugPrint('Started playback for Sura $_sura, Ayahs $_startAyah - $_endAyah');
+    return true;
   }
 
-  void _onAudioPosition(Duration position) {
-    if (_currentIndex >= _timings.length) {
-      return;
-    }
+  void _setupStateListeners() {
+    // Cancel any old listeners just in case before creating new ones.
+    _indexSub?.cancel();
+    _playerStateSub?.cancel();
 
-    final currentTimeMs = position.inMilliseconds;
-
-    int nextIndexCandidate = _currentIndex + 1;
-    while (nextIndexCandidate < _timings.length &&
-        _timings[nextIndexCandidate].time <= currentTimeMs) {
-      nextIndexCandidate++;
-    }
-
-    if (nextIndexCandidate > _currentIndex + 1) {
-      final potentialNewAyahIndex = nextIndexCandidate - 1;
-      final potentialNewAyah = _timings[potentialNewAyahIndex].ayah;
-
-      final currentlyHighlightedAyah = ref.read(quranAudioProvider)?.ayah;
-
-      if (currentlyHighlightedAyah != potentialNewAyah) {
-        _currentIndex = potentialNewAyahIndex;
-        final currentTiming = _timings[_currentIndex];
-
-        if (currentTiming.ayah > _endAyah) {
-          debugPrint('Reached end ayah $_endAyah, stopping playback.');
+    _indexSub = _player.currentIndexStream.listen((index) {
+      debugPrint("📢 [Listener] currentIndexStream FIRED with index: $index");
+      final quranAudioState = _ref.read(quranAudioProvider);
+      if (index != null && quranAudioState != null) {
+        final currentAyah = index + 1;
+        if (_endAyahLimit != null && currentAyah > _endAyahLimit!) {
+          debugPrint("  [Listener] 🏁 Reached end ayah limit ($_endAyahLimit). Stopping playback.");
           stop();
           return;
         }
-
-        ref.read(quranAudioProvider.notifier).updateAyah(currentTiming.ayah);
-        _highlightAndNavigateToAyahBoxPage(_sura, currentTiming.ayah);
-        debugPrint('Processing Ayah ${currentTiming.ayah} at time ${position.inMilliseconds}ms');
+        _ref.read(quranAudioProvider.notifier).updateAyah(currentAyah);
+        _highlightAndNavigate(quranAudioState.surah, currentAyah);
+      } else {
+        debugPrint("  [Listener] ⚠️ SKIPPED: index or quranAudioState is null.");
       }
-    }
+    });
+
+    _playerStateSub = _player.playerStateStream.listen((state) {
+      final quranAudioState = _ref.read(quranAudioProvider);
+      if (quranAudioState == null) return;
+      if(state.playing) {
+        _ref.read(quranAudioProvider.notifier).resume();
+      } else {
+        if (state.processingState == ProcessingState.completed) {
+          stop();
+        } else {
+          _ref.read(quranAudioProvider.notifier).pause();
+        }
+      }
+    });
   }
 
-  void _highlightAndNavigateToAyahBoxPage(int sura, int ayah) {
-    final firstAyahBox = _ayahBoxes.firstWhereOrNull(
-          (box) => box.suraNumber == sura && box.ayahNumber == ayah,
-    );
+  void _highlightAndNavigate(int sura, int ayah) {
+    debugPrint("🎨 [_highlightAndNavigate] CALLED for Sura: $sura, Ayah: $ayah");
+    final allAyahBoxes = _ref.read(allBoxesProvider).valueOrNull;
 
-    if (firstAyahBox != null) {
-      final ayahPage = firstAyahBox.pageNumber;
+    if (allAyahBoxes == null) {
+      debugPrint("  [HN] ❌ ERROR: Ayah boxes data is NULL. Cannot highlight.");
+      return;
+    }
 
-      ref.read(selectedAyahProvider.notifier).selectByAudio(sura, ayah);
-
-      final currentPageIndex = ref.read(currentPageProvider);
-      final currentPageNumber = currentPageIndex + 1;
-
-      if (ayahPage != currentPageNumber) {
-        debugPrint('Audio Navigating: Sura $sura Ayah $ayah (Box Page $ayahPage) vs Current Page $currentPageNumber');
-        ref.read(navigateToPageCommandProvider.notifier).state = ayahPage;
+    final firstBoxForAyah = allAyahBoxes.firstWhereOrNull((box) => box.suraNumber == sura && box.ayahNumber == ayah);
+    if (firstBoxForAyah != null) {
+      debugPrint("  [HN] ✅ Found AyahBox for $sura:$ayah on Page ${firstBoxForAyah.pageNumber}. Setting selectedAyahProvider.");
+      _ref.read(selectedAyahProvider.notifier).selectByAudio(sura, ayah);
+      final targetPage = firstBoxForAyah.pageNumber;
+      final currentPage = _ref.read(currentPageProvider) + 1;
+      if (targetPage != currentPage) {
+        debugPrint("  [HN]  NAVIGATING from page $currentPage to $targetPage.");
+        _ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
       }
     } else {
-      debugPrint('Warning: First AyahBox not found for Sura $sura, Ayah $ayah. Cannot navigate.');
+      debugPrint("  [HN] ❌ WARNING: Could not find AyahBox for Sura $sura, Ayah: $ayah.");
     }
   }
 
-  void togglePlayPause() {
-    if (_player.playing) {
-      _player.pause();
-      ref.read(quranAudioProvider.notifier).pause();
-      debugPrint('Audio paused.');
-    } else {
-      ref.read(quranAudioProvider.notifier).resume();
-      _player.play();
-      debugPrint('Audio resumed.');
-    }
-  }
+  Future<void> stop() async {
+    debugPrint("⏹️ [stop] CALLED. Stopping player and clearing state.");
 
-  void stop() {
-    _player.stop();
-    _positionSub?.cancel();
-    _positionSub = null;
+    // FIX: Cancel listeners to prevent them from firing with stale data.
+    await _indexSub?.cancel();
+    await _playerStateSub?.cancel();
+    _indexSub = null;
+    _playerStateSub = null;
 
-    ref.read(quranAudioProvider.notifier).stop();
-    ref.read(selectedAyahProvider.notifier).clear();
-    debugPrint('Audio playback stopped.');
+    await _player.stop();
+    _ref.read(quranAudioProvider.notifier).stop();
+    _ref.read(selectedAyahProvider.notifier).clear();
+    _endAyahLimit = null;
   }
 
   void playNext() {
-    final currentAyah = ref.read(quranAudioProvider)?.ayah;
-    if (currentAyah == null) {
-      debugPrint('Cannot play next: No current ayah playing.');
-      return;
-    }
-
-    final nextIndex = _timings.indexWhere(
-            (t) => t.sura == _sura && t.ayah > currentAyah && t.ayah <= _endAyah,
-        _currentIndex + 1
-    );
-
-    if (nextIndex != -1) {
-      debugPrint('Playing next ayah: ${_timings[nextIndex].ayah}');
-      _seekToAyahIndex(nextIndex);
-    } else {
-      debugPrint('No more ayahs in the selected range to play next.');
+    final currentAyah = _ref.read(quranAudioProvider)?.ayah;
+    if (currentAyah != null && _endAyahLimit != null && currentAyah >= _endAyahLimit!) {
+      debugPrint("  [playNext] At end ayah limit. Stopping.");
       stop();
-    }
-  }
-
-  void playPrev() {
-    final currentAyah = ref.read(quranAudioProvider)?.ayah;
-    if (currentAyah == null || currentAyah <= _startAyah) {
-      debugPrint('Cannot play previous: Already at or before start ayah.');
-      if (currentAyah != null && currentAyah > _startAyah) {
-        final startIndex = _timings.indexWhere((t) => t.sura == _sura && t.ayah == _startAyah);
-        if (startIndex != -1) {
-          debugPrint('Seeking to start ayah: $_startAyah');
-          _seekToAyahIndex(startIndex);
-        }
-      }
       return;
     }
-
-    int prevIndex = -1;
-    for(int i = _currentIndex - 1; i >= 0; i--) {
-      if (_timings[i].sura == _sura && _timings[i].ayah < currentAyah && _timings[i].ayah >= _startAyah) {
-        prevIndex = i;
-        break;
-      }
-    }
-
-    if (prevIndex != -1) {
-      debugPrint('Playing previous ayah: ${_timings[prevIndex].ayah}');
-      _seekToAyahIndex(prevIndex);
-    } else {
-      debugPrint('Could not find previous ayah within the selected range.');
-    }
+    _player.seekToNext();
   }
 
-  void _seekToAyahIndex(int index) {
-    if (index < 0 || index >= _timings.length) {
-      debugPrint('Seek failed: Invalid timing index $index');
-      return;
-    }
+  void togglePlayPause() => _player.playing ? _player.pause() : _player.play();
+  void playPrev() => _player.seekToPrevious();
 
-    final t = _timings[index];
-    _currentIndex = index;
-
-    _player.seek(Duration(milliseconds: t.time));
-
-    ref.read(quranAudioProvider.notifier).updateAyah(t.ayah);
-    _highlightAndNavigateToAyahBoxPage(_sura, t.ayah);
-
-    if (!_player.playing && ref.read(quranAudioProvider)?.isPlaying == true) {
-      _player.play();
-    }
-    debugPrint('Seeked to Sura ${t.sura}, Ayah ${t.ayah}');
-  }
-
-  void setCurrentSura(int sura) {
-    _sura = sura;
-    debugPrint('Current sura set to $_sura');
+  void dispose() {
+    debugPrint('AudioPlayerService disposed');
+    _indexSub?.cancel();
+    _playerStateSub?.cancel();
+    _player.dispose();
   }
 }
+
+final audioPlayerServiceProvider = Provider.autoDispose<AudioPlayerService>((ref) {
+  final service = AudioPlayerService(ref);
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 extension FirstWhereOrNullExtension<E> on Iterable<E> {
   E? firstWhereOrNull(bool Function(E element) test) {

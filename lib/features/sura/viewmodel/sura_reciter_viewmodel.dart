@@ -55,10 +55,7 @@ class AudioVM extends AsyncNotifier<List<AyahTiming>> {
   }
 }
 
-
-// --- QURAN AUDIO NOTIFIER (Unchanged) ---
 class QuranAudioNotifier extends StateNotifier<QuranAudioState?> {
-  // ... (No changes in this class)
   QuranAudioNotifier() : super(null);
 
   void start(int surah, int ayah) {
@@ -134,13 +131,12 @@ class AudioControllerService {
 
   Future<void> playAyahs(int fromAyah, int toAyah) async {
     print('playAyahs called with fromAyah: $fromAyah, toAyah: $toAyah for Sura $_sura');
-    stop(); // Ensure any previous playback is stopped
+    stop();
     try {
-      // Ensure timings are loaded
+
       await ref.read(audioVMProvider.notifier).loadTimings();
       final vmTimings = await ref.read(audioVMProvider.future);
 
-      // Filter timings for the current sura, exclude 999, and sort by time
       _timings = vmTimings
           .where((t) => t.sura == _sura && t.ayah != 999)
           .toList();
@@ -155,7 +151,6 @@ class AudioControllerService {
       _startAyah = fromAyah;
       _endAyah = toAyah;
 
-      // Find the index of the first ayah within the range [_startAyah, _endAyah]
       _currentIndex = _timings.indexWhere((e) => e.ayah >= _startAyah && e.ayah <= _endAyah);
 
       if (_currentIndex == -1) {
@@ -197,32 +192,24 @@ class AudioControllerService {
   }
 
   void _onAudioPosition(Duration position) {
-    // Ensure _timings and _currentIndex are valid
     if (_timings.isEmpty || _currentIndex < 0 || _currentIndex >= _timings.length) {
-      // print('Debug: _onAudioPosition called with invalid state.');
       return;
     }
 
     final currentTimeMs = position.inMilliseconds;
-    // print('Debug: Current playback position: $position');
-
-    // Check if we need to advance to the next ayah
     if (_currentIndex < _timings.length - 1) {
       final nextAyahTiming = _timings[_currentIndex + 1];
       if (currentTimeMs >= nextAyahTiming.time) {
         print('Debug: Advancing to next ayah. Current index: $_currentIndex, Next Ayah: ${nextAyahTiming.ayah}');
-        // Check if the next ayah is within the desired end range
         if (nextAyahTiming.ayah > _endAyah) {
           print('Debug: Next ayah ${nextAyahTiming.ayah} is beyond the end ayah $_endAyah. Stopping playback.');
-          stop(); // Reached the end of the selected range
+          stop();
           return;
         }
         _currentIndex++;
         ref.read(quranAudioProvider.notifier).updateAyah(nextAyahTiming.ayah);
       }
     } else {
-      // If we are at the last ayah in the _timings list and it's playing, stop.
-      // This case might occur if _endAyah is the last ayah in the surah.
       if (_player.playing && _currentIndex == _timings.length - 1) {
         print('Debug: Reached the last loaded ayah. Stopping playback.');
         stop();
@@ -235,7 +222,7 @@ class AudioControllerService {
       _player.pause();
       ref.read(quranAudioProvider.notifier).pause();
       print('Toggled to Pause');
-    } else if (ref.read(quranAudioProvider) != null) { // Only resume if there's an active session
+    } else if (ref.read(quranAudioProvider) != null) {
       _player.play();
       ref.read(quranAudioProvider.notifier).resume();
       print('Toggled to Play');
@@ -251,70 +238,59 @@ class AudioControllerService {
     _positionSub?.cancel();
     _positionSub = null;
     ref.read(quranAudioProvider.notifier).stop();
-    _timings.clear(); // Clear timings to force reload if needed
-    _currentIndex = -1; // Reset index
+    _timings.clear();
+    _currentIndex = -1;
     print('Playback stopped and state reset.');
   }
 
   void playNext() {
     print('playNext called.');
-    // Ensure there is an active audio session and valid state
     if (ref.read(quranAudioProvider) == null || _currentIndex < 0) {
       print('Cannot playNext: No active audio session or invalid _currentIndex.');
       return;
     }
 
-    // Check if we are already at the last possible ayah in our loaded list
     if (_currentIndex >= _timings.length - 1) {
       print('Cannot playNext: Already at the last loaded ayah ($_currentIndex). Stopping.');
-      stop(); // No more ayahs in the loaded list
+      stop();
       return;
     }
 
-    // Get the timing for the next ayah
     final nextTiming = _timings[_currentIndex + 1];
 
-    // Check if the next ayah is outside the user's selected range [_startAyah, _endAyah]
     if (nextTiming.ayah > _endAyah) {
       print('Cannot playNext: Next ayah ${nextTiming.ayah} is beyond the end ayah $_endAyah. Stopping.');
-      stop(); // Reached the end of the selected range
+      stop();
       return;
     }
 
-    // If all checks pass, advance to the next ayah
     _seekToAyahIndex(_currentIndex + 1);
     print('Called _seekToAyahIndex for next ayah.');
   }
 
   void playPrev() {
     print('playPrev called.');
-    // Ensure there is an active audio session and valid state
     if (ref.read(quranAudioProvider) == null || _currentIndex <= 0) {
       print('Cannot playPrev: No active audio session or _currentIndex is 0 or less.');
       return;
     }
 
-    // Get the timing for the previous ayah
     final prevTiming = _timings[_currentIndex - 1];
 
-    // Check if the previous ayah is outside the user's selected range [_startAyah, _endAyah]
-    // This condition is important to ensure we don't go backward beyond the start ayah.
     if (prevTiming.ayah < _startAyah) {
       print('Cannot playPrev: Previous ayah ${prevTiming.ayah} is before the start ayah $_startAyah. Doing nothing.');
-      return; // Already at or before the start of the selected range
+      return;
     }
 
-    // If all checks pass, move to the previous ayah
     _seekToAyahIndex(_currentIndex - 1);
     print('Called _seekToAyahIndex for previous ayah.');
   }
 
-  // Helper method to handle seeking and state updates
   void _seekToAyahIndex(int index, {bool shouldPlay = false}) {
     print('_seekToAyahIndex called for index: $index');
     if (index < 0 || index >= _timings.length) {
       print('Error: _seekToAyahIndex called with invalid index $index. Max index is ${_timings.length - 1}.');
-      return; // Boundary check
+      return;
     }
 
     _currentIndex = index;
@@ -323,7 +299,7 @@ class AudioControllerService {
 
     _player.seek(Duration(milliseconds: timing.time));
 
-    // Update audio state and play/pause based on shouldPlay flag
+    
     final ayahForState = timing.ayah; // The ayah number to report in the state
     final quranStateNotifier = ref.read(quranAudioProvider.notifier);
 

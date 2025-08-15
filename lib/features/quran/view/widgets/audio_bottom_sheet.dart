@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../../../core/services/fileChecker.dart';
+
+// The only import you need now for your providers
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
-import '../../../../shared/downloader/download_dialog.dart';
-import '../../../../shared/downloader/download_permission_dialog.dart';
 
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
-  final int currentSura; // This is the sura of the currently viewed page
+  final int currentSura;
 
   const AudioBottomSheet({super.key, required this.currentSura});
 
@@ -21,116 +20,131 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
   @override
   void initState() {
     super.initState();
-    // Set the initial value of the selected audio sura provider
-    // based on the sura of the page currently being viewed.
-    Future.microtask(() {
+       Future.microtask(() {
       ref.read(selectedAudioSuraProvider.notifier).state = widget.currentSura;
     });
   }
 
+  void _showDownloadDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return PopScope( // Prevent accidental dismissal during download
+          canPop: false,
+          child: Consumer(
+            builder: (context, ref, _) {
+              final progress = ref.watch(downloadProgressProvider);
+              final textStyle = TextStyle(fontSize: 16.sp);
+
+              // If an error occurs, show an error dialog
+              if (progress.error != null) {
+                return AlertDialog(
+                  title: const Text('Download Error'),
+                  content: Text(progress.error!, style: textStyle),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        ref.read(downloadProgressProvider.notifier).reset();
+                        Navigator.of(dialogContext).pop(); // Close only this dialog
+                      },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              }
+
+              // Determine the text and indicator state
+              final bool isDownloading = progress.totalCount > 0;
+              final String progressText = isDownloading
+                  ? 'Downloading...\n${progress.downloadedCount} / ${progress.totalCount}'
+                  : 'Preparing audio...';
+
+              return AlertDialog(
+                content: Row(
+                  children: [
+                    // Show a determinate progress bar when downloading, otherwise an indeterminate one
+                    CircularProgressIndicator(value: isDownloading ? progress.percentage : null),
+                    SizedBox(width: 20.w),
+                    Text(progressText, style: textStyle),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Watch the new selected audio sura provider
+    // --- This section for managing dropdown states is unchanged ---
     final selectedAudioSura = ref.watch(selectedAudioSuraProvider);
-
     final selectedReciter = ref.watch(selectedReciterProvider);
     final startAyah = ref.watch(selectedStartAyahProvider);
     final endAyah = ref.watch(selectedEndAyahProvider);
-
-    // Watch the ayah counts and sura names providers
     final ayahCounts = ref.watch(ayahCountsProvider);
-    final suraNames = ref.watch(
-      suraNamesProvider,
-    ); // Assuming this provider exists
+    final suraNames = ref.watch(suraNamesProvider);
 
-    // Calculate last ayah based on the *selected audio sura*
     final lastAyah = ayahCounts[selectedAudioSura - 1];
     final ayahOptions = List.generate(lastAyah, (i) => i + 1);
-
-    // Generate Surah options (1 to 114)
-    final suraOptions = List.generate(114, (i) => i + 1);
-    // Map Surah numbers to names for display
-    final suraNameOptions = suraOptions.map((suraNum) {
-      // Safely access sura name, handle potential index out of bounds defensively
-      if (suraNum > 0 && suraNum <= suraNames.length) {
-        return suraNames[suraNum - 1]; // Get name from 0-indexed list
-      }
-      return 'Surah $suraNum'; // Fallback if name not found
-    }).toList();
+    final suraNameOptions = suraNames;
 
     return Container(
       color: const Color(0xFF294B39),
-      // Scale padding using screenutil
       padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 24.h),
       child: SingleChildScrollView(
-        // <<< WRAP THE COLUMN WITH SingleChildScrollView
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          // Keep min so it doesn't take infinite height when scrollable
           children: [
-            // Add the Surah Selection Dropdown
+            // --- The dropdown widgets are unchanged ---
             _labeledDropdown<String>(
-              // Use String for display (Surah name)
               label: "সূরা",
               icon: HugeIcons.bulkRoundedBook01After,
-              // Choose an appropriate icon
-              // The value needs to be the *name* of the selected sura
               value: suraNames[selectedAudioSura - 1],
-              // Get name of the currently selected audio sura
               items: suraNameOptions,
-              // List of sura names
               onChanged: (val) {
                 if (val != null) {
-                  // Find the sura number corresponding to the selected name
                   final newSuraIndex = suraNames.indexOf(val);
                   if (newSuraIndex != -1) {
                     final newSuraNumber = newSuraIndex + 1;
-                    // Update the selected audio sura provider state
-                    ref.read(selectedAudioSuraProvider.notifier).state =
-                        newSuraNumber;
-
-                    // When sura changes, reset ayah selection to ayah 1
+                    ref.read(selectedAudioSuraProvider.notifier).state = newSuraNumber;
+                    // Reset ayah selection when surah changes
                     ref.read(selectedStartAyahProvider.notifier).state = 1;
                     ref.read(selectedEndAyahProvider.notifier).state = 1;
                   }
                 }
               },
             ),
-            // Scale height using .h
             SizedBox(height: 12.h),
-
-            _labeledDropdown(
+            _labeledDropdown<String>(
               label: "ক্বারী",
               icon: HugeIcons.solidStandardMuslim,
-              value: reciters.entries
-                  .firstWhere((e) => e.value == selectedReciter)
-                  .key,
+              value: reciters.entries.firstWhere((e) => e.value == selectedReciter).key,
               items: reciters.keys.toList(),
               onChanged: (val) {
                 if (val != null) {
-                  ref.read(selectedReciterProvider.notifier).state =
-                  reciters[val]!;
+                  ref.read(selectedReciterProvider.notifier).state = reciters[val]!;
                 }
               },
             ),
-            // Scale height using .h
             SizedBox(height: 12.h),
             _labeledDropdown<int>(
               label: "শুরু আয়াত",
               icon: HugeIcons.solidRoundedSquareArrowLeft03,
-              value: startAyah,
+              value: startAyah.clamp(1, lastAyah), // Clamp for safety
               items: ayahOptions,
               onChanged: (val) {
                 if (val != null) {
                   ref.read(selectedStartAyahProvider.notifier).state = val;
-                }
-                final currentEndAyah = ref.read(selectedEndAyahProvider);
-                if (val != null && val > currentEndAyah) {
-                  ref.read(selectedEndAyahProvider.notifier).state = val;
+                  final currentEndAyah = ref.read(selectedEndAyahProvider);
+                  if (val > currentEndAyah) {
+                    ref.read(selectedEndAyahProvider.notifier).state = val;
+                  }
                 }
               },
             ),
-            // Scale height using .h
             SizedBox(height: 12.h),
             _labeledDropdown<int>(
               label: "শেষ আয়াত",
@@ -143,121 +157,39 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 }
               },
             ),
-            // Scale height using .h
             SizedBox(height: 20.h),
             SizedBox(
               width: double.infinity,
-              // Scale height of the button itself if needed,
-              // but the padding/text size within the button are scaled below.
-              // height: 50.h, // Example
               child: ElevatedButton.icon(
-                icon: Icon(
-                  HugeIcons.solidRoundedPlay,
-                  // Scale icon size (Optional)
-                  size: 24.r,
-                ),
-                label: Text(
-                  'Play',
-                  // Scale text within the button
-                  style: TextStyle(fontSize: 16.sp),
-                ),
+                icon: Icon(HugeIcons.solidRoundedPlay, size: 24.r),
+                label: Text('Play', style: TextStyle(fontSize: 16.sp)),
+
+                // --- REPLACEMENT `onPressed` LOGIC ---
                 onPressed: () async {
-                  final reciterId = ref.read(selectedReciterProvider);
+                  // 1. Show a loading/download dialog immediately.
+                  _showDownloadDialog(context);
 
-                  final downloaded = await isAssetDownloaded(reciterId);
-
-                  if (!downloaded) {
-                    final reciter = ref
-                        .read(reciterCatalogueProvider)
-                        .firstWhere((r) => r.id == reciterId);
-
-                    final confirmed = await downloadPermissionDialog(
-                      context,
-                      "audio",
-                      reciterName: reciter.name,
-                    );
-
-                    if (!confirmed) return;
-
-                    if (!context.mounted) return;
-                    await showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (BuildContext dialogContext) {
-                        return DownloadDialog(
-                          id: reciter.id,
-                          zipUrl: reciter.zipUrl,
-                          sizeBytes: reciter.sizeBytes,
-                        );
-                      },
-                    );
-                  }
-
-                  if (!context.mounted) return;
-
-                  final audioVM = ref.read(audioVMProvider);
-                  if (audioVM.value == null || !audioVM.hasValue) {
-                    await ref.read(audioVMProvider.notifier).loadTimings();
-                  }
-
-                  final playbackSura = ref.read(selectedAudioSuraProvider);
+                  // 2. Get the audio service and the user's selections.
+                  final service = ref.read(audioPlayerServiceProvider);
                   final from = ref.read(selectedStartAyahProvider);
                   final to = ref.read(selectedEndAyahProvider);
-                  final service = ref.read(audioPlayerServiceProvider);
 
-                  service.setCurrentSura(playbackSura);
+                  // 3. This single call now handles checking, downloading, and playing.
+                  final bool playbackStarted = await service.playAyahs(from, to);
 
-                  int currentSuraLastAyah = 0;
-                  if (playbackSura > 0 && playbackSura <= ayahCounts.length) {
-                    currentSuraLastAyah = ayahCounts[playbackSura - 1];
-                  } else {
-                    debugPrint(
-                      'Warning: Selected audio sura $playbackSura is out of bounds for ayahCounts',
-                    );
+                  // 4. Important: Check if the widget is still in the tree before popping.
+                  if (!context.mounted) return;
 
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Invalid Surah selected for playback.',
-                            // Optional: Scale snackbar text
-                            style: TextStyle(fontSize: 14.sp),
-                          ),
-                        ),
-                      );
-                    }
-                    return;
+                  // 5. Pop the download/loading dialog.
+                  Navigator.of(context).pop();
+
+                  // 6. If playback started successfully, also close the bottom sheet.
+                  if (playbackStarted) {
+                    Navigator.of(context).pop();
                   }
-
-                  final safeFrom = from.clamp(1, currentSuraLastAyah);
-                  final safeTo = to.clamp(safeFrom, currentSuraLastAyah);
-
-                  // Check if timing data is available for the selected surah and range
-                  final timings = ref.read(audioVMProvider).value;
-                  if (timings == null || timings.isEmpty) {
-                    debugPrint('Error: Audio timings not loaded.');
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Audio timings not loaded. Please try again.',
-                            // Optional: Scale snackbar text
-                            style: TextStyle(fontSize: 14.sp),
-                          ),
-                        ),
-                      );
-                    }
-                    return;
-                  }
-
-                  await service.playAyahs(safeFrom, safeTo);
-
-                  // Check context again before popping
-                  if (context.mounted) Navigator.pop(context);
                 },
               ),
             ),
-            // Scale height using .h
             SizedBox(height: 44.h),
           ],
         ),
@@ -265,6 +197,7 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
     );
   }
 
+  // --- The _labeledDropdown helper method is unchanged ---
   Widget _labeledDropdown<T>({
     required String label,
     required IconData icon,
@@ -273,35 +206,25 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
     required void Function(T?) onChanged,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center, // Align items vertically
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(
-          icon,
-          color: Colors.white,
-          // Scale icon size
-          size: 20.r,
-        ),
-        // Scale width using .w
+        Icon(icon, color: Colors.white, size: 20.r),
         SizedBox(width: 8.w),
         Text(
           "$label:",
-          style: TextStyle( // Remove const
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
-            // Scale font size
-            fontSize: 16.sp, // Example size
+            fontSize: 16.sp,
           ),
         ),
-        // Scale width using .w
         SizedBox(width: 12.w),
         Expanded(
           child: Container(
-            // Scale padding using .w and .h
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h), // Added vertical padding for dropdown height
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
             decoration: BoxDecoration(
               color: const Color(0xFF294B39),
               border: Border.all(color: Colors.white24),
-              // Scale border radius using .r
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: DropdownButtonHideUnderline(
@@ -310,21 +233,14 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                 value: value,
                 dropdownColor: const Color(0xFF294B39),
                 iconEnabledColor: Colors.white,
-                style: TextStyle(color: Colors.white,
-                  // Scale font size of dropdown items
-                  fontSize: 16.sp, // Example size
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 16.sp),
                 items: items.map((e) {
-                  String itemText = e.toString();
                   return DropdownMenuItem<T>(
                     value: e,
                     child: Text(
-                      itemText, // Use the potentially formatted text
+                      e.toString(),
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white,
-                        // Scale font size of dropdown items (redundant if style is set on DropdownButton, but good practice)
-                        fontSize: 16.sp, // Example size
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 16.sp),
                     ),
                   );
                 }).toList(),
