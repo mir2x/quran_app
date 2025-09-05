@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
-
-// The only import you need now for your providers
-import '../../../sura/viewmodel/sura_reciter_viewmodel.dart';
 import '../../viewmodel/audio_providers.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
-import '../../viewmodel/download_providers.dart';
+import '../../viewmodel/reciter_providers.dart';
 
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
@@ -30,7 +27,6 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // --- This section for managing dropdown states is unchanged ---
     final selectedAudioSura = ref.watch(selectedAudioSuraProvider);
     final selectedReciter = ref.watch(selectedReciterProvider);
     final startAyah = ref.watch(selectedStartAyahProvider);

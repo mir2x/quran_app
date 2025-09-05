@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:quran_app/features/quran/viewmodel/reciter_providers.dart';
 import 'package:quran_app/shared/extensions.dart';
-import '../../sura/viewmodel/sura_reciter_viewmodel.dart';
 import '../model/audio_state.dart';
 import '../model/sura_audio_data.dart';
+import '../view/widgets/download_dialog.dart';
 import 'ayah_highlight_viewmodel.dart';
 import 'download_providers.dart';
 
@@ -48,10 +49,13 @@ class AudioFileManager {
 
   Future<String> getLocalPathForAyah(String reciterId, int sura, int ayah) async {
     final suraDir = await getSuraDirectory(reciterId, sura);
+    // Ensure the directory exists before returning the path, though download manager should create it.
+    if (!await suraDir.exists()) {
+      await suraDir.create(recursive: true);
+    }
     return '${suraDir.path}/$ayah.mp3';
   }
 
-  // New method to check if a single ayah is downloaded
   Future<bool> isAyahDownloaded(String reciterId, int sura, int ayah) async {
     final path = await getLocalPathForAyah(reciterId, sura, ayah);
     return File(path).exists();
@@ -75,18 +79,17 @@ final selectedStartAyahProvider = StateProvider<int>((_) => 1);
 final selectedEndAyahProvider = StateProvider<int>((_) => 1);
 
 class QuranAudioPlayer {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player; // Initialize player here
   final Ref _ref;
 
   int? _endAyahLimit;
   StreamSubscription<PlayerState>? _playerStateSub;
   StreamSubscription<int?>? _indexSub;
 
-  QuranAudioPlayer(this._ref) {
-    debugPrint("✅ [AudioPlayerService] INITIALIZED");
+  QuranAudioPlayer(this._ref) : _player = AudioPlayer() { // Player initialized in constructor
+    debugPrint("✅ [QuranAudioPlayer] INITIALIZED");
   }
 
-  // Helper to determine which ayahs need downloading
   Future<List<int>> _getAyahsToDownload(String reciterId, int sura, int startAyah, int endAyah) async {
     final audioFileManager = _ref.read(audioFileManagerProvider);
     final List<int> ayahsNeeded = [];
@@ -100,7 +103,7 @@ class QuranAudioPlayer {
 
   Future<bool> playAyahs(int startAyah, int endAyah, BuildContext context) async {
     debugPrint("▶️ [playAyahs] CALLED for Sura ${_ref.read(selectedAudioSuraProvider)}, Ayahs $startAyah-$endAyah");
-    await stop(); // Stop any currently playing audio
+    await stop(); // Stop any currently playing audio and clear state, but *not* dispose the player
 
     _endAyahLimit = endAyah;
     final reciterId = _ref.read(selectedReciterProvider);
@@ -111,7 +114,6 @@ class QuranAudioPlayer {
     final ayahsToDownload = await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
 
     if (ayahsToDownload.isNotEmpty) {
-      // If there are ayahs to download, ask the user
       final bool confirmDownload = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -132,16 +134,15 @@ class QuranAudioPlayer {
             ],
           );
         },
-      ) ?? false; // Default to false if dialog is dismissed
+      ) ?? false;
 
       if (!confirmDownload) {
         debugPrint("  [playAyahs] Download declined by user.");
         return false;
       }
 
-      // User confirmed, now show the download progress dialog and start download
       if (!context.mounted) return false;
-      _showDownloadDialog(context); // Pass context here
+      showDownloadDialog(context);
 
       final success = await downloadManager.downloadAyahs(
         reciterId: reciterId,
@@ -150,7 +151,7 @@ class QuranAudioPlayer {
       );
 
       if (!context.mounted) return false;
-      Navigator.of(context).pop(); // Pop the download progress dialog
+      Navigator.of(context).pop();
 
       if (!success) {
         debugPrint("  [playAyahs] ❌ Download FAILED.");
@@ -161,16 +162,12 @@ class QuranAudioPlayer {
       debugPrint("  [playAyahs] All required ayahs are already downloaded. Playing directly.");
     }
 
-    // Now, load all available ayahs for the selected range into the playlist
     final List<AudioSource> audioSources = [];
     for (int i = startAyah; i <= endAyah; i++) {
       final localPath = await audioFileManager.getLocalPathForAyah(reciterId, sura, i);
-      // Only add to playlist if the file actually exists
       if (await File(localPath).exists()) {
         audioSources.add(AudioSource.uri(Uri.file(localPath)));
       } else {
-        // This case should ideally not happen if download was successful,
-        // but good to have a fallback/warning.
         debugPrint("  [playAyahs] WARNING: Ayah $i was expected but not found locally.");
       }
     }
@@ -182,14 +179,14 @@ class QuranAudioPlayer {
 
     final playlist = ConcatenatingAudioSource(children: audioSources);
 
+    // Setup listeners *before* setting audio source, so they are ready
     _setupStateListeners();
 
+    // Set initial state for the notifier and highlight the first ayah
     _ref.read(quranAudioProvider.notifier).start(sura, startAyah);
     debugPrint("  [playAyahs] Fired quranAudioProvider.start with $sura:$startAyah");
-    _highlightAndNavigate(sura, startAyah);
+    _highlightAndNavigate(sura, startAyah); // Initial highlight
 
-    // Initial index needs to be adjusted because the playlist only contains ayahs from startAyah to endAyah
-    // and its 0-indexed. So startAyah-startAyah = 0.
     await _player.setAudioSource(playlist, initialIndex: 0, initialPosition: Duration.zero);
     debugPrint("  [playAyahs] Audio source set. Starting playback.");
     _player.play();
@@ -198,6 +195,7 @@ class QuranAudioPlayer {
   }
 
   void _setupStateListeners() {
+    // Cancel existing subscriptions if any, to avoid duplicate listeners
     _indexSub?.cancel();
     _playerStateSub?.cancel();
 
@@ -205,9 +203,6 @@ class QuranAudioPlayer {
       debugPrint("📢 [Listener] currentIndexStream FIRED with index: $index");
       final quranAudioState = _ref.read(quranAudioProvider);
       if (index != null && quranAudioState != null) {
-        // The current index here refers to the index within the *currently playing playlist*,
-        // which starts from `startAyah`. So, we need to add `_ref.read(selectedStartAyahProvider)`
-        // to get the actual ayah number.
         final actualStartAyah = _ref.read(selectedStartAyahProvider);
         final currentAyah = actualStartAyah + index;
 
@@ -219,18 +214,23 @@ class QuranAudioPlayer {
         _ref.read(quranAudioProvider.notifier).updateAyah(currentAyah);
         _highlightAndNavigate(quranAudioState.surah, currentAyah);
       } else {
-        debugPrint("  [Listener] ⚠️ SKIPPED: index or quranAudioState is null.");
+        // This might fire with null initially or during state transitions.
+        debugPrint("  [Listener] ⚠️ SKIPPED: index or quranAudioState is null (player not ready or stopped).");
       }
     });
 
     _playerStateSub = _player.playerStateStream.listen((state) {
       final quranAudioState = _ref.read(quranAudioProvider);
       if (quranAudioState == null) return;
+
+      debugPrint("🎵 [Listener] playerStateStream FIRED: Playing=${state.playing}, ProcessingState=${state.processingState}");
+
       if(state.playing) {
         _ref.read(quranAudioProvider.notifier).resume();
       } else {
         if (state.processingState == ProcessingState.completed) {
-          stop();
+          debugPrint("  [Listener] Player completed playback. Stopping.");
+          stop(); // Stop when the playlist finishes
         } else {
           _ref.read(quranAudioProvider.notifier).pause();
         }
@@ -258,20 +258,21 @@ class QuranAudioPlayer {
         _ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
       }
     } else {
-      debugPrint("  [HN] ❌ WARNING: Could not find AyahBox for Sura $sura, Ayah: $ayah.");
+      debugPrint("  [HN] ❌ WARNING: Could not find AyahBox for Sura $sura, Ayah: $ayah. Ensure ayah box data is correct.");
     }
   }
 
   Future<void> stop() async {
     debugPrint("⏹️ [stop] CALLED. Stopping player and clearing state.");
+    // Only cancel subscriptions, do NOT dispose the player here
     await _indexSub?.cancel();
     await _playerStateSub?.cancel();
     _indexSub = null;
     _playerStateSub = null;
 
-    await _player.stop();
-    _ref.read(quranAudioProvider.notifier).stop();
-    _ref.read(selectedAyahProvider.notifier).clear();
+    await _player.stop(); // Stop the audio playback
+    _ref.read(quranAudioProvider.notifier).stop(); // Clear audio state
+    _ref.read(selectedAyahProvider.notifier).clear(); // Clear ayah highlight
     _endAyahLimit = null;
   }
 
@@ -280,107 +281,48 @@ class QuranAudioPlayer {
     final startAyah = _ref.read(selectedStartAyahProvider);
 
     if (currentAyahInPlaylistIndex == null) {
-      debugPrint("  [playNext] No current ayah in playlist.");
+      debugPrint("  [playNext] No current ayah in playlist. Cannot seek next.");
       return;
     }
 
-    final currentAyahActual = startAyah + currentAyahInPlaylistIndex;
-
-    if (_endAyahLimit != null && currentAyahActual >= _endAyahLimit!) {
+    final currentActualAyah = startAyah + currentAyahInPlaylistIndex;
+    if (_endAyahLimit != null && currentActualAyah >= _endAyahLimit!) {
       debugPrint("  [playNext] At end ayah limit ($_endAyahLimit). Stopping.");
       stop();
       return;
     }
 
-    // Only seek to next if there are more items in the playlist
     if (currentAyahInPlaylistIndex < (_player.sequence?.length ?? 0) - 1) {
       _player.seekToNext();
     } else {
-      // If it's the last item in the current playlist
       debugPrint("  [playNext] Reached end of current playlist. Stopping.");
       stop();
     }
   }
 
-
   void togglePlayPause() => _player.playing ? _player.pause() : _player.play();
 
   void playPrev() {
     final currentAyahInPlaylistIndex = _player.currentIndex;
-    final startAyah = _ref.read(selectedStartAyahProvider);
-
-    if (currentAyahInPlaylistIndex == null || currentAyahInPlaylistIndex <= 0) {
-      // Cannot go to previous if at the very beginning of the playlist
-      debugPrint("  [playPrev] At the start of the playlist or no current ayah.");
+    if (currentAyahInPlaylistIndex == null || currentAyahInPlaylistIndex == 0) {
+      debugPrint("  [playPrev] At the start of the playlist or no current ayah. Cannot seek previous.");
       return;
     }
-
-    // Just_Audio's seekToPrevious handles the index correctly within the current playlist
     _player.seekToPrevious();
   }
 
-
+  // This dispose method will only be called when the provider itself is disposed
+  // by Riverpod (e.g., if it's autoDispose and nothing is listening, or if explicitly done).
   void dispose() {
-    debugPrint('AudioPlayerService disposed');
+    debugPrint('🗑️ [QuranAudioPlayer] DISPOSED');
     _indexSub?.cancel();
     _playerStateSub?.cancel();
-    _player.dispose();
+    _player.dispose(); // Dispose the actual audio player instance here
   }
 }
 
-final  quranAudioPlayerProvider = Provider.autoDispose<QuranAudioPlayer>((ref) {
+final  quranAudioPlayerProvider = Provider<QuranAudioPlayer>((ref) {
   final service = QuranAudioPlayer(ref);
   ref.onDispose(service.dispose);
   return service;
 });
-
-// Original _showDownloadDialog (moved to be accessible)
-void _showDownloadDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext dialogContext) {
-      return PopScope(
-        canPop: false,
-        child: Consumer(
-          builder: (context, ref, _) {
-            final progress = ref.watch(downloadProgressProvider);
-            // Use a consistent text style
-            final textStyle = Theme.of(context).textTheme.titleMedium;
-
-            if (progress.error != null) {
-              return AlertDialog(
-                title: const Text('Download Error'),
-                content: Text(progress.error!, style: textStyle),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      ref.read(downloadProgressProvider.notifier).reset();
-                      Navigator.of(dialogContext).pop();
-                    },
-                    child: const Text('OK'),
-                  ),
-                ],
-              );
-            }
-
-            final bool isDownloading = progress.totalCount > 0;
-            final String progressText = isDownloading
-                ? 'Downloading...\n${progress.downloadedCount} / ${progress.totalCount}'
-                : 'Preparing audio...';
-
-            return AlertDialog(
-              content: Row(
-                children: [
-                  CircularProgressIndicator(value: isDownloading ? progress.percentage : null),
-                  SizedBox(width: 20), // Use fixed size instead of .w if not using responsive design setup
-                  Text(progressText, style: textStyle),
-                ],
-              ),
-            );
-          },
-        ),
-      );
-    },
-  );
-}
