@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../model/bookmark.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import '../../viewmodel/bookmark_viewmodel.dart';
+import '../../viewmodel/reciter_providers.dart';
 import 'audio_bottom_sheet.dart';
 import '../../../../../core/theme.dart';
 

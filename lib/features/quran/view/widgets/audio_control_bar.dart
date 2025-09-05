@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-import '../../viewmodel/ayah_highlight_viewmodel.dart';
-
+import '../../viewmodel/audio_providers.dart';
 
 class AudioControllerBar extends ConsumerWidget {
   final Color color;
@@ -15,7 +12,7 @@ class AudioControllerBar extends ConsumerWidget {
     final quranState = ref.watch(quranAudioProvider);
     if (quranState == null) return const SizedBox.shrink();
 
-    final service = ref.read(audioPlayerServiceProvider);
+    final service = ref.read(quranAudioPlayerProvider);
     final surah = quranState.surah;
     final ayah = quranState.ayah;
     final isPlaying = quranState.isPlaying;

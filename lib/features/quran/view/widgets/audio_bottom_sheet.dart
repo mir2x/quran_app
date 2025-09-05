@@ -4,7 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 // The only import you need now for your providers
+import '../../../sura/viewmodel/sura_reciter_viewmodel.dart';
+import '../../viewmodel/audio_providers.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
+import '../../viewmodel/download_providers.dart';
 
 
 class AudioBottomSheet extends ConsumerStatefulWidget {
@@ -23,58 +26,6 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
        Future.microtask(() {
       ref.read(selectedAudioSuraProvider.notifier).state = widget.currentSura;
     });
-  }
-
-  void _showDownloadDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return PopScope( // Prevent accidental dismissal during download
-          canPop: false,
-          child: Consumer(
-            builder: (context, ref, _) {
-              final progress = ref.watch(downloadProgressProvider);
-              final textStyle = TextStyle(fontSize: 16.sp);
-
-              // If an error occurs, show an error dialog
-              if (progress.error != null) {
-                return AlertDialog(
-                  title: const Text('Download Error'),
-                  content: Text(progress.error!, style: textStyle),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        ref.read(downloadProgressProvider.notifier).reset();
-                        Navigator.of(dialogContext).pop(); // Close only this dialog
-                      },
-                      child: const Text('OK'),
-                    ),
-                  ],
-                );
-              }
-
-              // Determine the text and indicator state
-              final bool isDownloading = progress.totalCount > 0;
-              final String progressText = isDownloading
-                  ? 'Downloading...\n${progress.downloadedCount} / ${progress.totalCount}'
-                  : 'Preparing audio...';
-
-              return AlertDialog(
-                content: Row(
-                  children: [
-                    // Show a determinate progress bar when downloading, otherwise an indeterminate one
-                    CircularProgressIndicator(value: isDownloading ? progress.percentage : null),
-                    SizedBox(width: 20.w),
-                    Text(progressText, style: textStyle),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -163,27 +114,12 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
               child: ElevatedButton.icon(
                 icon: Icon(HugeIcons.solidRoundedPlay, size: 24.r),
                 label: Text('Play', style: TextStyle(fontSize: 16.sp)),
-
-                // --- REPLACEMENT `onPressed` LOGIC ---
                 onPressed: () async {
-                  // 1. Show a loading/download dialog immediately.
-                  _showDownloadDialog(context);
-
-                  // 2. Get the audio service and the user's selections.
-                  final service = ref.read(audioPlayerServiceProvider);
+                  final service = ref.read(quranAudioPlayerProvider);
                   final from = ref.read(selectedStartAyahProvider);
                   final to = ref.read(selectedEndAyahProvider);
-
-                  // 3. This single call now handles checking, downloading, and playing.
-                  final bool playbackStarted = await service.playAyahs(from, to);
-
-                  // 4. Important: Check if the widget is still in the tree before popping.
+                  final bool playbackStarted = await service.playAyahs(from, to, context);
                   if (!context.mounted) return;
-
-                  // 5. Pop the download/loading dialog.
-                  Navigator.of(context).pop();
-
-                  // 6. If playback started successfully, also close the bottom sheet.
                   if (playbackStarted) {
                     Navigator.of(context).pop();
                   }

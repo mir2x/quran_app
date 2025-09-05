@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:share_plus/share_plus.dart';
 import '../../model/bookmark.dart';
+import '../../viewmodel/audio_providers.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import '../../viewmodel/bookmark_viewmodel.dart';
 

@@ -10,6 +10,7 @@ import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/custom_app_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/drawer/side_drawer.dart';
 import '../model/selected_ayah_state.dart';
+import '../viewmodel/audio_providers.dart';
 import 'widgets/quran_page.dart';
 import '../viewmodel/ayah_highlight_viewmodel.dart';
 

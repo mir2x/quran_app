@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../quran/viewmodel/ayah_highlight_viewmodel.dart';
+import '../../../quran/viewmodel/reciter_providers.dart';
 
 class ReciterSelectionDialog extends ConsumerWidget {
   const ReciterSelectionDialog({super.key});
