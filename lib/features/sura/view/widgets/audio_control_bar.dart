@@ -9,10 +9,10 @@ class AudioControllerBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final quranState = ref.watch(quranAudioProvider);
+    final quranState = ref.watch(suraAudioProvider);
     if (quranState == null) return const SizedBox.shrink();
 
-    final service = ref.read(audioPlayerServiceProvider);
+    final service = ref.read(suraAudioPlayerProvider);
     final surah = quranState.surah;
     final ayah = quranState.ayah;
     final isPlaying = quranState.isPlaying;

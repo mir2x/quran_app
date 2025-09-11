@@ -8,6 +8,7 @@ import 'package:quran_app/features/sura/view/widgets/details_bottom_sheet.dart';
 import 'package:quran_app/features/sura/view/widgets/search_page.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
+import '../model/sura_audio_state.dart';
 import '../viewmodel/sura_reciter_viewmodel.dart';
 import '../viewmodel/sura_viewmodel.dart';
 
@@ -51,7 +52,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     _autoScrollController.dispose();
     super.dispose();
   }
-
 
   void _startAutoScroll() {
     if (_timedScrollTimer?.isActive == true || _totalItems == 0) return;
@@ -130,9 +130,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final suraAsyncValue = ref.watch(suraProvider(widget.suraNumber));
     _totalItems = suraAsyncValue.asData?.value.length ?? 0;
 
-    ref.listen(quranAudioProvider, (previous, next) {
+    ref.listen<SuraAudioState?>(suraAudioProvider, (previous, next) {
       if (next != null && next.isPlaying) {
-        final ayahIndex = next.ayah - 1;
+        final ayahIndex = next.ayah;
         _autoScrollController.scrollToIndex(
           ayahIndex,
           preferPosition: AutoScrollPosition.middle,
@@ -142,7 +142,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     });
 
     final suraName = "সূরা ${widget.suraNumber}";
-    final quranAudioState = ref.watch(quranAudioProvider);
+    final quranAudioState = ref.watch(suraAudioProvider);
     final isTimedScrolling = ref.watch(isAutoScrollingProvider);
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
 
@@ -284,7 +284,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         break;
       case 3:
         if (_totalItems > 0) {
-          ref.read(audioPlayerServiceProvider).stop();
+          ref.read(suraAudioPlayerProvider).stop();
           if (ref.read(isAutoScrollingProvider)) {
             _stopAutoScroll();
           } else {

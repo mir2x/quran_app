@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/fileChecker.dart';
 import '../../../../shared/downloader/download_dialog.dart';
 import '../../../../shared/downloader/download_permission_dialog.dart';
+import '../../../quran/viewmodel/reciter_providers.dart';
 import '../../viewmodel/sura_reciter_viewmodel.dart';
 
 
@@ -104,49 +105,17 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
   Widget _buildListenButton() {
     return ElevatedButton(
       onPressed: () async {
-        final reciterId = ref.read(selectedReciterProvider);
-
-        final downloaded = await isAssetDownloaded(reciterId);
-
-        if (!downloaded) {
-          final reciter = ref
-              .read(reciterCatalogueProvider)
-              .firstWhere((r) => r.id == reciterId);
-
-          final confirmed = await downloadPermissionDialog(
-            context,
-            "audio",
-            reciterName: reciter.name,
-          );
-
-          if (!confirmed) return;
-
-          if (!context.mounted) return;
-          await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext dialogContext) {
-            return DownloadDialog(
-              id: reciter.id,
-              zipUrl: reciter.zipUrl,
-              sizeBytes: reciter.sizeBytes,
-            );
-          },
-          );
-        }
-
+        final audioPlayer = ref.read(suraAudioPlayerProvider);
+        ref.read(selectedAudioSuraProvider.notifier).state = widget.suraNumber;
+        ref.read(selectedStartAyahProvider.notifier).state = _selectedStartAyah;
+        ref.read(selectedEndAyahProvider.notifier).state = _selectedEndAyah;
         if (!context.mounted) return;
-
-        final audioVM = ref.read(audioVMProvider);
-        if (audioVM.value == null || !audioVM.hasValue) {
-          await ref.read(audioVMProvider.notifier).loadTimings();
-        }
-        final audioService = ref.read(audioPlayerServiceProvider);
-        audioService.setCurrentSura(widget.suraNumber);
-        audioService.playAyahs(_selectedStartAyah, _selectedEndAyah);
-
-        // 3. Close the dialog
         Navigator.of(context).pop();
+        await audioPlayer.playAyahs(
+          _selectedStartAyah,
+          _selectedEndAyah,
+          context,
+        );
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.grey.shade200,
@@ -156,7 +125,7 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       child: const Text(
-        'অডিও শুনুন',
+        'অডিও শুনু`ন',
         style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );

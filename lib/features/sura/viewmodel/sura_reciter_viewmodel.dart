@@ -1,334 +1,243 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
-import '../../../core/services/fileChecker.dart'; // Assuming this exists
-import '../../quran/model/audio_state.dart'; // Renamed from quran_audio_state.dart
-import '../../quran/model/ayah_timing.dart';
-import '../../quran/model/reciter_asset.dart';
+import 'package:quran_app/features/quran/viewmodel/reciter_providers.dart';
+import '../../quran/view/widgets/download_dialog.dart';
+import '../../quran/viewmodel/audio_providers.dart';
+import '../../quran/viewmodel/download_providers.dart';
+import '../model/sura_audio_state.dart';
 
-// --- RECITER PROVIDERS (Unchanged) ---
-final Map<String, String> reciters = {
-  'মাহের আল মুয়াইক্বিলি': 'maher_muaiqly',
-  'সৌদ আল-শুরাইম': 'saud_shuraim',
-  'আলী জাবের': 'ali_jaber',
-  'আব্দুল মুনিম আব্দুল মুবদি': 'abdul_munim_mubdi',
-};
-final selectedReciterProvider = StateProvider<String>((_) => reciters.values.first);
-final reciterCatalogueProvider = Provider<List<ReciterAsset>>((_) => const [ /* ... */ ]);
-
-
-// --- AUDIO VIEWMODEL (Unchanged) ---
-final audioVMProvider = AsyncNotifierProvider<AudioVM, List<AyahTiming>>(AudioVM.new);
-
-class AudioVM extends AsyncNotifier<List<AyahTiming>> {
-  // ... (No changes in this class)
-  late String _reciter;
-
-  @override
-  Future<List<AyahTiming>> build() async {
-    _reciter = ref.watch(selectedReciterProvider);
-    return [];
-  }
-
-  Future<void> loadTimings() async {
-    _reciter = ref.read(selectedReciterProvider);
-    final timings = await _loadTimingFromLocal(_reciter);
-    state = AsyncData(timings);
-  }
-
-  Future<List<AyahTiming>> _loadTimingFromLocal(String reciter) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$reciter/timings.json');
-    final jsonStr = await file.readAsString();
-    final decoded = jsonDecode(jsonStr) as List;
-    return decoded.map((e) => AyahTiming.fromJson(e)).toList(growable: false);
-  }
-
-  Future<String> getAudioAssetPath(int sura) async {
-    final padded = sura.toString().padLeft(3, '0');
-    final path = await getLocalPath(_reciter);
-    return '$path/$padded.mp3';
-  }
+class SuraAudioNotifier extends StateNotifier<SuraAudioState?> {
+  SuraAudioNotifier() : super(null);
+  void start(int surah, int ayah) => state = SuraAudioState(surah: surah, ayah: ayah, isPlaying: true);
+  void updateAyah(int ayah) { if (state != null && state!.ayah != ayah) state = state!.copyWith(ayah: ayah); }
+  void pause() { if (state != null) state = state!.copyWith(isPlaying: false); }
+  void resume() { if (state != null) state = state!.copyWith(isPlaying: true); }
+  void stop() => state = null;
 }
 
-class QuranAudioNotifier extends StateNotifier<QuranAudioState?> {
-  QuranAudioNotifier() : super(null);
+final suraAudioProvider = StateNotifierProvider<SuraAudioNotifier, SuraAudioState?>((ref) => SuraAudioNotifier());
 
-  void start(int surah, int ayah) {
-    state = QuranAudioState(surah: surah, ayah: ayah, isPlaying: true);
-    debugPrint("Audio state started: Sura $surah, Ayah $ayah");
-  }
+final selectedAudioSuraProvider = StateProvider<int>((_) => 1);
+final selectedStartAyahProvider = StateProvider<int>((_) => 1);
+final selectedEndAyahProvider = StateProvider<int>((_) => 1);
 
-  void updateAyah(int ayah) {
-    if (state != null && state!.ayah != ayah) {
-      state = state!.copyWith(ayah: ayah);
-      debugPrint("Audio state updated: Ayah $ayah");
-    }
-  }
+class SuraAudioPlayer {
+  final AudioPlayer _player;
+  final Ref _ref;
 
-  void pause() {
-    if (state != null && state!.isPlaying) {
-      state = state!.copyWith(isPlaying: false);
-      debugPrint("Audio state paused");
-    }
-  }
-
-  void resume() {
-    if (state != null && !state!.isPlaying) {
-      state = state!.copyWith(isPlaying: true);
-      debugPrint("Audio state resumed");
-    }
-  }
-
-  void stop() {
-    if (state != null) {
-      state = null;
-      debugPrint("Audio state stopped");
-    }
-  }
-}
-
-final quranAudioProvider = StateNotifierProvider<QuranAudioNotifier, QuranAudioState?>(
-      (ref) => QuranAudioNotifier(),
-);
-
-
-// --- AUDIO CONTROLLER SERVICE (Updated) ---
-class AudioControllerService {
-  final Ref ref;
-  final _player = AudioPlayer();
-  List<AyahTiming> _timings = [];
-  int _currentIndex = 0;
-  int _startAyah = 1;
-  int _endAyah = 1;
-  int _sura = 1;
-  StreamSubscription<Duration>? _positionSub;
+  int? _endAyahLimit;
   StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<int?>? _indexSub;
 
-  AudioControllerService(this.ref) {
+  SuraAudioPlayer(this._ref) : _player = AudioPlayer() {
+    debugPrint("✅ [QuranAudioPlayer] INITIALIZED");
+  }
+
+  Future<List<int>> _getAyahsToDownload(String reciterId, int sura, int startAyah, int endAyah) async {
+    final audioFileManager = _ref.read(audioFileManagerProvider);
+    final List<int> ayahsNeeded = [];
+    for (int i = startAyah; i <= endAyah; i++) {
+      if (!await audioFileManager.isAyahDownloaded(reciterId, sura, i)) {
+        ayahsNeeded.add(i);
+      }
+    }
+    return ayahsNeeded;
+  }
+
+  Future<bool> playAyahs(int startAyah, int endAyah, BuildContext context) async {
+    debugPrint("▶️ [playAyahs] CALLED for Sura ${_ref.read(selectedAudioSuraProvider)}, Ayahs $startAyah-$endAyah");
+    await stop();
+
+    _endAyahLimit = endAyah;
+    final reciterId = _ref.read(selectedReciterProvider);
+    final sura = _ref.read(selectedAudioSuraProvider);
+    final downloadManager = _ref.read(downloadManagerProvider);
+    final audioFileManager = _ref.read(audioFileManagerProvider);
+
+    final ayahsToDownload = await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
+
+    if (ayahsToDownload.isNotEmpty) {
+      final bool confirmDownload = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return AlertDialog(
+            title: const Text('Download Audio'),
+            content: Text(
+                'Audio for Ayahs ${ayahsToDownload.first} - ${ayahsToDownload.last} of Surah $sura is not downloaded. Do you want to download it?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Yes'),
+              ),
+            ],
+          );
+        },
+      ) ?? false;
+
+      if (!confirmDownload) {
+        debugPrint("  [playAyahs] Download declined by user.");
+        return false;
+      }
+
+      if (!context.mounted) return false;
+      showDownloadDialog(context);
+
+      final success = await downloadManager.downloadAyahs(
+        reciterId: reciterId,
+        sura: sura,
+        ayahsToDownload: ayahsToDownload,
+      );
+
+      if (!context.mounted) return false;
+      Navigator.of(context).pop();
+
+      if (!success) {
+        debugPrint("  [playAyahs] ❌ Download FAILED.");
+        return false;
+      }
+      debugPrint("  [playAyahs] ✅ Download COMPLETED for required ayahs.");
+    } else {
+      debugPrint("  [playAyahs] All required ayahs are already downloaded. Playing directly.");
+    }
+
+    final List<AudioSource> audioSources = [];
+    for (int i = startAyah; i <= endAyah; i++) {
+      final localPath = await audioFileManager.getLocalPathForAyah(reciterId, sura, i);
+      if (await File(localPath).exists()) {
+        audioSources.add(AudioSource.uri(Uri.file(localPath)));
+      } else {
+        debugPrint("  [playAyahs] WARNING: Ayah $i was expected but not found locally.");
+      }
+    }
+
+    if (audioSources.isEmpty) {
+      debugPrint("  [playAyahs] ❌ ERROR: No audio files found for the selected range $startAyah-$endAyah");
+      return false;
+    }
+
+    final playlist = ConcatenatingAudioSource(children: audioSources);
+
+    _setupStateListeners();
+
+    _ref.read(suraAudioProvider.notifier).start(sura, startAyah);
+    debugPrint("  [playAyahs] Fired suraAudioProvider.start with $sura:$startAyah");
+
+    await _player.setAudioSource(playlist, initialIndex: 0, initialPosition: Duration.zero);
+    debugPrint("  [playAyahs] Audio source set. Starting playback.");
+    _player.play();
+
+    return true;
+  }
+
+  void _setupStateListeners() {
+    _indexSub?.cancel();
+    _playerStateSub?.cancel();
+
+    _indexSub = _player.currentIndexStream.listen((index) {
+      debugPrint("📢 [Listener] currentIndexStream FIRED with index: $index");
+      final suraAudioState = _ref.read(suraAudioProvider);
+      if (index != null && suraAudioState != null) {
+        final actualStartAyah = _ref.read(selectedStartAyahProvider);
+        final currentAyah = actualStartAyah + index;
+
+        if (_endAyahLimit != null && currentAyah > _endAyahLimit!) {
+          debugPrint("  [Listener] 🏁 Reached end ayah limit ($_endAyahLimit). Stopping playback.");
+          stop();
+          return;
+        }
+        _ref.read(suraAudioProvider.notifier).updateAyah(currentAyah);
+      } else {
+        debugPrint("  [Listener] ⚠️ SKIPPED: index or suraAudioState is null (player not ready or stopped).");
+      }
+    });
+
     _playerStateSub = _player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        stop();
+      final suraAudioState = _ref.read(suraAudioProvider);
+      if (suraAudioState == null) return;
+
+      debugPrint("🎵 [Listener] playerStateStream FIRED: Playing=${state.playing}, ProcessingState=${state.processingState}");
+
+      if(state.playing) {
+        _ref.read(suraAudioProvider.notifier).resume();
+      } else {
+        if (state.processingState == ProcessingState.completed) {
+          debugPrint("  [Listener] Player completed playback. Stopping.");
+          stop();
+        } else {
+          _ref.read(suraAudioProvider.notifier).pause();
+        }
       }
     });
   }
 
-  void dispose() {
-    _positionSub?.cancel();
-    _playerStateSub?.cancel();
-    _player.dispose();
-    debugPrint('AudioControllerService disposed');
-  }
+  // Removed: _highlightAndNavigate method completely
 
-  void setCurrentSura(int sura) {
-    _sura = sura;
-    debugPrint('Audio Service: Sura set to $_sura');
-  }
+  Future<void> stop() async {
+    debugPrint("⏹️ [stop] CALLED. Stopping player and clearing state.");
+    await _indexSub?.cancel();
+    await _playerStateSub?.cancel();
+    _indexSub = null;
+    _playerStateSub = null;
 
-  Future<void> playAyahs(int fromAyah, int toAyah) async {
-    print('playAyahs called with fromAyah: $fromAyah, toAyah: $toAyah for Sura $_sura');
-    stop();
-    try {
-
-      await ref.read(audioVMProvider.notifier).loadTimings();
-      final vmTimings = await ref.read(audioVMProvider.future);
-
-      _timings = vmTimings
-          .where((t) => t.sura == _sura && t.ayah != 999)
-          .toList();
-      _timings.sort((a, b) => a.time.compareTo(b.time));
-
-      if (_timings.isEmpty) {
-        print('Error: No timings found for Sura $_sura');
-        return;
-      }
-      print('Timings loaded for Sura $_sura: ${_timings.length} entries.');
-
-      _startAyah = fromAyah;
-      _endAyah = toAyah;
-
-      _currentIndex = _timings.indexWhere((e) => e.ayah >= _startAyah && e.ayah <= _endAyah);
-
-      if (_currentIndex == -1) {
-        print('Error: Could not find any ayah within range $_startAyah - $_endAyah in timings for Sura $_sura.');
-        // Optionally, find the first available ayah if the start is not found but within the sura
-        _currentIndex = _timings.indexWhere((e) => e.ayah >= _startAyah);
-        if (_currentIndex == -1) {
-          print('Error: Also could not find start Ayah $_startAyah in timings at all.');
-          return;
-        }
-        print('Adjusted _currentIndex to $_currentIndex (Ayah ${_timings[_currentIndex].ayah}) as start ayah not found.');
-        // Re-check if the adjusted index is within the end range
-        if (_timings[_currentIndex].ayah > _endAyah) {
-          print('Error: Adjusted start ayah ${_timings[_currentIndex].ayah} is beyond the end ayah $_endAyah.');
-          return;
-        }
-      }
-
-      print('Initial _currentIndex set to $_currentIndex (Ayah ${_timings[_currentIndex].ayah})');
-
-      // Get the audio file path
-      final audioPath = await ref.read(audioVMProvider.notifier).getAudioAssetPath(_sura);
-      await _player.setFilePath(audioPath);
-      print('Audio file set to: $audioPath');
-
-      // Seek to the determined starting ayah and start playback
-      _seekToAyahIndex(_currentIndex, shouldPlay: true);
-
-      // Start listening to position changes
-      _positionSub?.cancel(); // Cancel any old listener
-      _positionSub = _player.positionStream.listen(_onAudioPosition);
-      print('Playback initiated for Sura $_sura, Ayahs $_startAyah - $_endAyah.');
-
-    } catch (e, stacktrace) {
-      print('Error in playAyahs: $e');
-      print('Stacktrace: $stacktrace');
-      stop();
-    }
-  }
-
-  void _onAudioPosition(Duration position) {
-    if (_timings.isEmpty || _currentIndex < 0 || _currentIndex >= _timings.length) {
-      return;
-    }
-
-    final currentTimeMs = position.inMilliseconds;
-    if (_currentIndex < _timings.length - 1) {
-      final nextAyahTiming = _timings[_currentIndex + 1];
-      if (currentTimeMs >= nextAyahTiming.time) {
-        print('Debug: Advancing to next ayah. Current index: $_currentIndex, Next Ayah: ${nextAyahTiming.ayah}');
-        if (nextAyahTiming.ayah > _endAyah) {
-          print('Debug: Next ayah ${nextAyahTiming.ayah} is beyond the end ayah $_endAyah. Stopping playback.');
-          stop();
-          return;
-        }
-        _currentIndex++;
-        ref.read(quranAudioProvider.notifier).updateAyah(nextAyahTiming.ayah);
-      }
-    } else {
-      if (_player.playing && _currentIndex == _timings.length - 1) {
-        print('Debug: Reached the last loaded ayah. Stopping playback.');
-        stop();
-      }
-    }
-  }
-
-  void togglePlayPause() {
-    if (_player.playing) {
-      _player.pause();
-      ref.read(quranAudioProvider.notifier).pause();
-      print('Toggled to Pause');
-    } else if (ref.read(quranAudioProvider) != null) {
-      _player.play();
-      ref.read(quranAudioProvider.notifier).resume();
-      print('Toggled to Play');
-    } else {
-      print('Cannot resume: No active audio session.');
-    }
-  }
-
-  void stop() {
-    if (_player.playing) {
-      _player.stop();
-    }
-    _positionSub?.cancel();
-    _positionSub = null;
-    ref.read(quranAudioProvider.notifier).stop();
-    _timings.clear();
-    _currentIndex = -1;
-    print('Playback stopped and state reset.');
+    await _player.stop();
+    _ref.read(suraAudioProvider.notifier).stop();
+    // Removed: _ref.read(selectedAyahProvider.notifier).clear(); // No longer highlighting
+    _endAyahLimit = null;
   }
 
   void playNext() {
-    print('playNext called.');
-    if (ref.read(quranAudioProvider) == null || _currentIndex < 0) {
-      print('Cannot playNext: No active audio session or invalid _currentIndex.');
+    final currentAyahInPlaylistIndex = _player.currentIndex;
+    final startAyah = _ref.read(selectedStartAyahProvider);
+
+    if (currentAyahInPlaylistIndex == null) {
+      debugPrint("  [playNext] No current ayah in playlist. Cannot seek next.");
       return;
     }
 
-    if (_currentIndex >= _timings.length - 1) {
-      print('Cannot playNext: Already at the last loaded ayah ($_currentIndex). Stopping.');
+    final currentActualAyah = startAyah + currentAyahInPlaylistIndex;
+    if (_endAyahLimit != null && currentActualAyah >= _endAyahLimit!) {
+      debugPrint("  [playNext] At end ayah limit ($_endAyahLimit). Stopping.");
       stop();
       return;
     }
 
-    final nextTiming = _timings[_currentIndex + 1];
-
-    if (nextTiming.ayah > _endAyah) {
-      print('Cannot playNext: Next ayah ${nextTiming.ayah} is beyond the end ayah $_endAyah. Stopping.');
+    if (currentAyahInPlaylistIndex < (_player.sequence?.length ?? 0) - 1) {
+      _player.seekToNext();
+    } else {
+      debugPrint("  [playNext] Reached end of current playlist. Stopping.");
       stop();
-      return;
     }
-
-    _seekToAyahIndex(_currentIndex + 1);
-    print('Called _seekToAyahIndex for next ayah.');
   }
+
+  void togglePlayPause() => _player.playing ? _player.pause() : _player.play();
 
   void playPrev() {
-    print('playPrev called.');
-    if (ref.read(quranAudioProvider) == null || _currentIndex <= 0) {
-      print('Cannot playPrev: No active audio session or _currentIndex is 0 or less.');
+    final currentAyahInPlaylistIndex = _player.currentIndex;
+    if (currentAyahInPlaylistIndex == null || currentAyahInPlaylistIndex == 0) {
+      debugPrint("  [playPrev] At the start of the playlist or no current ayah. Cannot seek previous.");
       return;
     }
-
-    final prevTiming = _timings[_currentIndex - 1];
-
-    if (prevTiming.ayah < _startAyah) {
-      print('Cannot playPrev: Previous ayah ${prevTiming.ayah} is before the start ayah $_startAyah. Doing nothing.');
-      return;
-    }
-
-    _seekToAyahIndex(_currentIndex - 1);
-    print('Called _seekToAyahIndex for previous ayah.');
+    _player.seekToPrevious();
   }
 
-  void _seekToAyahIndex(int index, {bool shouldPlay = false}) {
-    print('_seekToAyahIndex called for index: $index');
-    if (index < 0 || index >= _timings.length) {
-      print('Error: _seekToAyahIndex called with invalid index $index. Max index is ${_timings.length - 1}.');
-      return;
-    }
-
-    _currentIndex = index;
-    final timing = _timings[index];
-    print('Seeking to Ayah: ${timing.ayah} (Index: $_currentIndex) at time ${timing.time}ms');
-
-    _player.seek(Duration(milliseconds: timing.time));
-
-    
-    final ayahForState = timing.ayah; // The ayah number to report in the state
-    final quranStateNotifier = ref.read(quranAudioProvider.notifier);
-
-    if (shouldPlay) {
-      _player.play();
-      if (ref.read(quranAudioProvider) == null) {
-        quranStateNotifier.start(_sura, ayahForState);
-      } else {
-        quranStateNotifier.updateAyah(ayahForState);
-        quranStateNotifier.resume(); // Ensure it's playing
-      }
-      print('Seeked and started playing Ayah: $ayahForState');
-    } else {
-      // If not explicitly told to play, just update the Ayah in the state
-      // This is useful for navigation (prev/next) when the player might already be playing
-      if (ref.read(quranAudioProvider) != null) {
-        quranStateNotifier.updateAyah(ayahForState);
-      }
-      print('Seeked to Ayah: $ayahForState (Player state not forced to play)');
-    }
+  void dispose() {
+    debugPrint('🗑️ [QuranAudioPlayer] DISPOSED');
+    _indexSub?.cancel();
+    _playerStateSub?.cancel();
+    _player.dispose();
   }
 }
 
-
-// --- SERVICE PROVIDER (Unchanged) ---
-final audioPlayerServiceProvider = Provider<AudioControllerService>((ref) {
-  final service = AudioControllerService(ref);
-  ref.onDispose(() {
-    service.dispose();
-  });
+final suraAudioPlayerProvider = Provider<SuraAudioPlayer>((ref) {
+  final service = SuraAudioPlayer(ref);
+  ref.onDispose(service.dispose);
   return service;
 });
