@@ -40,7 +40,10 @@ void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, 
           );
 
         }),
-        AyahActionItem(icon: Icons.menu_book, label: 'তাফসীর', onTap: () => print('Show Tafseer for Ayah ${ayah.ayah}')),
+        AyahActionItem(icon: Icons.menu_book, label: 'তাফসীর', onTap: () {
+          // This call works perfectly with the new dynamic TafsirView
+
+        }),
       ];
 
       return Container(

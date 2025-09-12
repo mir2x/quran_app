@@ -1,4 +1,4 @@
-import 'package:quran_app/core/services/fileChecker.dart';
+import '../../downloader/viewmodel/download_providers.dart';
 
 class QuranEdition {
   final String id;

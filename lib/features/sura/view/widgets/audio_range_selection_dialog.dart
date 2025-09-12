@@ -1,16 +1,7 @@
-// features/sura/view/widgets/audio_range_selection_dialog.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../../core/services/fileChecker.dart';
-import '../../../../shared/downloader/download_dialog.dart';
-import '../../../../shared/downloader/download_permission_dialog.dart';
-import '../../../quran/viewmodel/reciter_providers.dart';
 import '../../viewmodel/sura_reciter_viewmodel.dart';
 
-
-// Utility function to convert numbers to Bengali digits.
 String toBengaliDigit(int number) {
   const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return number.toString().split('').map((digit) {
