@@ -6,6 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../shared/downloader/download_dialog.dart';
 import '../../../../shared/downloader/download_permission_dialog.dart';
+import '../../../downloader/view/show_download_dialog.dart';
+import '../../../downloader/view/show_download_permission_dialog.dart';
+import '../../../downloader/viewmodel/download_providers.dart';
 import '../../../quran/view/quran_viewer_screen.dart';
 import '../../../sura_list/view/sura_list_page.dart';
 import '../../model/quran_edition.dart';
@@ -99,42 +102,49 @@ class _QuranEditionGridItem extends ConsumerWidget {
               borderRadius: BorderRadius.circular(8.r),
               onTap: () async {
                 if (!edition.isDownloaded) {
-                  final confirmed = await downloadPermissionDialog(
+                  // This block for starting a download is correct. No changes needed here.
+                  final confirmed = await showDownloadPermissionDialog(
                     context,
-                    "edition",
-                    editionName: edition.title,
+                    assetName: edition.title,
+                    sizeInfo: "(${(edition.sizeBytes / 1048576).toStringAsFixed(1)} MB)",
                   );
-                  if (!confirmed) return;
+                  if (!confirmed || !context.mounted) return;
 
-                  await showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) => DownloadDialog(
-                      id: edition.id,
-                      zipUrl: edition.url,
-                      sizeBytes: edition.sizeBytes,
-                    ),
+                  final mushafDownloadTask = ZipDownloadTask(
+                    id: edition.id,
+                    displayName: edition.title,
+                    zipUrl: edition.url,
                   );
-                  ref
-                      .read(quranEditionProvider.notifier)
-                      .markAsDownloaded(edition.id);
-                }
 
-                final dir = await getApplicationDocumentsDirectory();
-                final editionDir = Directory('${dir.path}/${edition.id}');
+                  showDownloadDialog(context); // Using the new unified dialog
+                  ref.read(downloadManagerProvider).startDownload(mushafDownloadTask);
+                } else {
+                  // --- This block for navigating is now fixed ---
+                  // 1. Get the local directory path for the downloaded edition.
+                  // This requires an `async` call.
+                  final dirPath = await getLocalPath(edition.id); // From your fileChecker.dart
+                  final editionDirectory = Directory(dirPath);
 
-                if (context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => QuranViewerScreen(
-                        editionDir: editionDir,
-                        imageWidth: edition.imageWidth,
-                        imageHeight: edition.imageHeight,
-                        imageExt: edition.imageExt,
+                  // 2. A safety check to ensure the files actually exist before navigating.
+                  if (await editionDirectory.exists() && context.mounted) {
+                    // 3. Navigate with all the correct parameters from the `edition` object.
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => QuranViewerScreen(
+                          editionDir: editionDirectory,
+                          imageWidth: edition.imageWidth,
+                          imageHeight: edition.imageHeight,
+                          imageExt: edition.imageExt,
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } else if (context.mounted) {
+                    // Show an error if files are missing, prompting a re-download.
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Error: Mushaf files not found. Please try downloading again.')),
+                    );
+                  }
                 }
               },
               child: Stack(

@@ -14,8 +14,8 @@ class AyahActionItem {
 }
 
 void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, String suraName, WidgetRef ref) {
-  final int _selectedStartAyah = ayah.ayah;
-  final int _selectedEndAyah = ayah.ayah;
+  final int selectedStartAyah = ayah.ayah;
+  final int selectedEndAyah = ayah.ayah;
 
   showModalBottomSheet(
     context: context,
@@ -29,13 +29,13 @@ void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, 
         AyahActionItem(icon: Icons.play_arrow, label: 'অডিও শুনুন', onTap: () async {
           final audioPlayer = ref.read(suraAudioPlayerProvider);
           ref.read(selectedAudioSuraProvider.notifier).state = suraNumber;
-          ref.read(selectedStartAyahProvider.notifier).state = _selectedStartAyah;
-          ref.read(selectedEndAyahProvider.notifier).state = _selectedEndAyah;
+          ref.read(selectedStartAyahProvider.notifier).state = selectedStartAyah;
+          ref.read(selectedEndAyahProvider.notifier).state = selectedEndAyah;
           if (!context.mounted) return;
           Navigator.of(context).pop();
           await audioPlayer.playAyahs(
-            _selectedStartAyah,
-            _selectedEndAyah,
+            selectedStartAyah,
+            selectedEndAyah,
             context,
           );
 

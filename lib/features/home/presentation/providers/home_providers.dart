@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../model/quran_edition.dart';
+// We don't need to import fileChecker here because the model handles it.
 
 Future<List<QuranEdition>> getQuranEditionData() async {
   final editions = [
@@ -33,16 +34,6 @@ Future<List<QuranEdition>> getQuranEditionData() async {
       'height': 1057,
       'ext': 'png',
     },
-    // {
-    //   'id': 'saudi_hafezi',
-    //   'title': 'হাফিজি কুরআন\n(সৌদি প্রিন্ট)',
-    //   'cover': 'assets/image/front_page/hafezi-saudi.jpg',
-    //   'url' : '',
-    //   'sizeBytes': 100,
-    //   'width': 1455,
-    //   'height': 2125,
-    //   'ext': 'jpg',
-    // },
     {
       'id': 'madani',
       'title': 'মাদানী কুরআন\n(উসমানী প্রিন্ট)',
@@ -75,29 +66,31 @@ Future<List<QuranEdition>> getQuranEditionData() async {
     },
   ];
 
+  // This one-liner is now perfect. It will call `QuranEdition.fromMap` for each item,
+  // which in turn calls `isAssetDownloaded` for each one.
   return Future.wait(editions.map(QuranEdition.fromMap));
 }
 
 class QuranEditionNotifier extends StateNotifier<List<QuranEdition>> {
   QuranEditionNotifier() : super([]) {
-    loadEditions(); // Ensure editions are loaded when the provider is initialized
+    // Load the initial data when the provider is first created.
+    // This will correctly set the initial downloaded status for all items.
+    refreshDownloadStatus();
   }
 
-  Future<void> loadEditions() async {
-    final data = await getQuranEditionData(); // Load editions
-    print(data);
-    state = data;  // Update the state with the loaded editions
-  }
-
-  void markAsDownloaded(String id) {
-    state = [
-      for (final e in state)
-        if (e.id == id) e.copyWith(isDownloaded: true) else e
-    ];
+  /// Re-fetches all edition data and re-checks the download status for each one.
+  /// This is the method the DownloadManager will call.
+  Future<void> refreshDownloadStatus() async {
+    // Simply re-run the original async loading function.
+    // This re-builds the entire list by calling fromMap on every item,
+    // which re-checks SharedPreferences.
+    final data = await getQuranEditionData();
+    // Update the state with the freshly-checked list.
+    state = data;
   }
 }
 
-
 final quranEditionProvider =
-StateNotifierProvider<QuranEditionNotifier, List<QuranEdition>>(
-        (ref) => QuranEditionNotifier());
+StateNotifierProvider<QuranEditionNotifier, List<QuranEdition>>((ref) {
+  return QuranEditionNotifier();
+});

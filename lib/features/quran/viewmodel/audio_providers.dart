@@ -7,11 +7,13 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:quran_app/features/quran/viewmodel/reciter_providers.dart';
 import 'package:quran_app/shared/extensions.dart';
+import '../../downloader/view/show_download_dialog.dart';
+import '../../downloader/view/show_download_permission_dialog.dart';
+import '../../downloader/viewmodel/download_providers.dart';
 import '../model/audio_state.dart';
 import '../model/sura_audio_data.dart';
-import '../view/widgets/download_dialog.dart';
 import 'ayah_highlight_viewmodel.dart';
-import 'download_providers.dart';
+
 
 class AudioDataSource {
   final Dio _dio = Dio();
@@ -102,93 +104,81 @@ class QuranAudioPlayer {
   }
 
   Future<bool> playAyahs(int startAyah, int endAyah, BuildContext context) async {
-    debugPrint("▶️ [playAyahs] CALLED for Sura ${_ref.read(selectedAudioSuraProvider)}, Ayahs $startAyah-$endAyah");
-    await stop(); // Stop any currently playing audio and clear state, but *not* dispose the player
+    await stop();
 
     _endAyahLimit = endAyah;
     final reciterId = _ref.read(selectedReciterProvider);
     final sura = _ref.read(selectedAudioSuraProvider);
-    final downloadManager = _ref.read(downloadManagerProvider);
     final audioFileManager = _ref.read(audioFileManagerProvider);
 
     final ayahsToDownload = await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
 
+    // If ayahs are missing, trigger the unified download flow.
     if (ayahsToDownload.isNotEmpty) {
-      final bool confirmDownload = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            title: const Text('Download Audio'),
-            content: Text(
-                'Audio for Ayahs ${ayahsToDownload.first} - ${ayahsToDownload.last} of Surah $sura is not downloaded. Do you want to download it?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('No'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Yes'),
-              ),
-            ],
-          );
-        },
-      ) ?? false;
+      final confirmed = await showDownloadPermissionDialog(
+        context,
+        assetName: 'Audio for Surah $sura (${ayahsToDownload.first}-${ayahsToDownload.last})',
+      );
+      if (!confirmed || !context.mounted) return false;
 
-      if (!confirmDownload) {
-        debugPrint("  [playAyahs] Download declined by user.");
+      // 1. Fetch the audio URLs needed for the download task.
+      final suraAudioData = await _ref.read(audioDataSourceProvider).getSuraAudioUrls(reciterId, sura);
+      if (suraAudioData == null) {
+        // Optionally show an error to the user here.
+        debugPrint("Could not fetch audio URLs to start download.");
         return false;
       }
 
-      if (!context.mounted) return false;
-      showDownloadDialog(context);
+      // 2. Prepare the map of URLs to local file paths for the task.
+      final Map<String, String> urlToPathMap = {};
+      for (int ayahNum in ayahsToDownload) {
+        if (ayahNum > 0 && ayahNum <= suraAudioData.urls.length) {
+          final remoteUrl = suraAudioData.urls[ayahNum - 1];
+          final localPath = await audioFileManager.getLocalPathForAyah(reciterId, sura, ayahNum);
+          urlToPathMap[remoteUrl] = localPath;
+        }
+      }
 
-      final success = await downloadManager.downloadAyahs(
-        reciterId: reciterId,
-        sura: sura,
-        ayahsToDownload: ayahsToDownload,
+      // 3. Create the specific download task.
+      final audioDownloadTask = MultiFileDownloadTask(
+        id: 'reciter_${reciterId}_sura_$sura',
+        displayName: 'Downloading Audio for Surah $sura',
+        urlToPathMap: urlToPathMap,
       );
 
-      if (!context.mounted) return false;
-      Navigator.of(context).pop();
+      // 4. Show the unified dialog and start the download.
+      showDownloadDialog(context);
+      final success = await _ref.read(downloadManagerProvider).startDownload(audioDownloadTask);
 
+      // 5. If the download failed or was cancelled, stop here.
       if (!success) {
-        debugPrint("  [playAyahs] ❌ Download FAILED.");
+        debugPrint("Download failed or was cancelled. Aborting playback.");
         return false;
       }
-      debugPrint("  [playAyahs] ✅ Download COMPLETED for required ayahs.");
-    } else {
-      debugPrint("  [playAyahs] All required ayahs are already downloaded. Playing directly.");
     }
 
+    // --- Playback logic (unchanged) ---
     final List<AudioSource> audioSources = [];
     for (int i = startAyah; i <= endAyah; i++) {
       final localPath = await audioFileManager.getLocalPathForAyah(reciterId, sura, i);
       if (await File(localPath).exists()) {
         audioSources.add(AudioSource.uri(Uri.file(localPath)));
       } else {
-        debugPrint("  [playAyahs] WARNING: Ayah $i was expected but not found locally.");
+        debugPrint("WARNING: Ayah $i was expected but not found locally after download check.");
       }
     }
 
     if (audioSources.isEmpty) {
-      debugPrint("  [playAyahs] ❌ ERROR: No audio files found for the selected range $startAyah-$endAyah");
+      debugPrint("ERROR: No audio files found for the selected range $startAyah-$endAyah");
       return false;
     }
 
-    final playlist = ConcatenatingAudioSource(children: audioSources);
-
-    // Setup listeners *before* setting audio source, so they are ready
     _setupStateListeners();
-
-    // Set initial state for the notifier and highlight the first ayah
     _ref.read(quranAudioProvider.notifier).start(sura, startAyah);
-    debugPrint("  [playAyahs] Fired quranAudioProvider.start with $sura:$startAyah");
-    _highlightAndNavigate(sura, startAyah); // Initial highlight
+    _highlightAndNavigate(sura, startAyah);
 
+    final playlist = ConcatenatingAudioSource(children: audioSources);
     await _player.setAudioSource(playlist, initialIndex: 0, initialPosition: Duration.zero);
-    debugPrint("  [playAyahs] Audio source set. Starting playback.");
     _player.play();
 
     return true;
@@ -292,7 +282,7 @@ class QuranAudioPlayer {
       return;
     }
 
-    if (currentAyahInPlaylistIndex < (_player.sequence?.length ?? 0) - 1) {
+    if (currentAyahInPlaylistIndex < (_player.sequence.length ?? 0) - 1) {
       _player.seekToNext();
     } else {
       debugPrint("  [playNext] Reached end of current playlist. Stopping.");
