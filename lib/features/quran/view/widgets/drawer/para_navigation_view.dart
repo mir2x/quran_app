@@ -3,8 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
-class ParaNavigationView extends ConsumerWidget {
+// --- State Provider Modification ---
+// It now defaults to 1, ensuring a para is always selected.
+// We also remove autoDispose so the user's manual selection is remembered
+// during a single app session if they close and reopen the drawer.
+final selectedNavigationParaProvider = StateProvider<int>((_) => 1);
+
+
+class ParaNavigationView extends ConsumerStatefulWidget {
   const ParaNavigationView({super.key});
+
+  @override
+  ConsumerState<ParaNavigationView> createState() => _ParaNavigationViewState();
+}
+
+class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
+  // Flag to ensure our "smart select" logic runs only once when the drawer opens.
+  bool _isInitialParaSet = false;
 
   String toBengaliNumber(int number) {
     const bengaliNumbers = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -18,205 +33,144 @@ class ParaNavigationView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedPara = ref.watch(selectedNavigationParaProvider);
-    final paraPageRanges = ref.watch(paraPageRangesProvider);
-
+  Widget build(BuildContext context) {
     final allBoxesAsync = ref.watch(allBoxesProvider);
     final totalPageCountAsync = ref.watch(totalPageCountProvider);
 
     if (allBoxesAsync.isLoading || totalPageCountAsync.isLoading) {
-      return Center(child: CircularProgressIndicator()); // Remove const
+      return const Center(child: CircularProgressIndicator());
     }
-    if (allBoxesAsync.hasError) {
-      return Center(child: Text(
-        'Error loading Para data: ${allBoxesAsync.error}',
-        style: TextStyle(fontSize: 14.sp), // Scale text
-      )); // Remove const
-    }
-    if (totalPageCountAsync.hasError) {
-      return Center(child: Text(
-        'Error loading Page Count: ${totalPageCountAsync.error}',
-        style: TextStyle(fontSize: 14.sp), // Scale text
-      )); // Remove const
+    if (allBoxesAsync.hasError || totalPageCountAsync.hasError) {
+      return Center(child: Text('Error loading Para data', style: TextStyle(fontSize: 14.sp)));
     }
 
-    // Check if necessary mapping data is available after loading
-    if (paraPageRanges.isEmpty && !allBoxesAsync.hasError && !totalPageCountAsync.hasError) {
-      return Center(child: Text(
-        'Para page data not generated.',
-        style: TextStyle(fontSize: 14.sp), // Scale text
-      )); // Remove const
-    }
+    final paraPageRanges = ref.watch(paraPageRangesProvider);
 
-    // Now build the UI based on selectedPara state
-    if (selectedPara == null) {
-      // Show list of all Paras - Pass ref to helper method
-      return _buildParaList(ref, paraPageRanges);
-    } else {
-      // Show list of pages for the selected Para - Pass ref to helper method
-      return _buildParaPageList(ref, selectedPara, paraPageRanges);
+    // --- SMART STATE RETENTION LOGIC ---
+    // This runs after the data is loaded but only once per drawer opening.
+    if (!_isInitialParaSet && paraPageRanges.isNotEmpty) {
+      // Find which Para corresponds to the currently viewed page.
+      final currentPage = ref.read(currentPageProvider) + 1; // Quran pages are 1-based
+      int currentPara = 1; // Default to 1
+      for (final entry in paraPageRanges.entries) {
+        if (entry.value.contains(currentPage)) {
+          currentPara = entry.key;
+          break;
+        }
+      }
+
+      // Safely update the provider state after the build is complete.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(selectedNavigationParaProvider.notifier).state = currentPara;
+        }
+      });
+      _isInitialParaSet = true;
     }
+    // --- END OF SMART LOGIC ---
+
+    return Column(
+      children: [
+        _buildHeader(context),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1, // Equal width
+                child: _buildParaList(ref, paraPageRanges),
+              ),
+              const VerticalDivider(width: 1, thickness: 1),
+              Expanded(
+                flex: 1, // Equal width
+                child: _buildRightPane(ref, paraPageRanges),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  // --- Helper methods updated to use ScreenUtil and new color scheme ---
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      color: Colors.green.shade800,
+      padding: EdgeInsets.symmetric(vertical: 12.h),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 1, // Equal width
+            child: Text('পারা', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp, fontFamily: 'SolaimanLipi')),
+          ),
+          Expanded(
+            flex: 1, // Equal width
+            child: Text('পাতা', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp, fontFamily: 'SolaimanLipi')),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildParaList(WidgetRef ref, Map<int, List<int>> paraPageRanges) {
-    // Check if data is missing (redundant if parent build handles, but safe)
-    if (paraPageRanges.isEmpty) {
-      return Center(child: Text(
-        'Para data incomplete.',
-        style: TextStyle(fontSize: 14.sp), // Scale text
-      )); // Remove const
-    }
+    final selectedPara = ref.watch(selectedNavigationParaProvider);
 
-    return ListView.separated( // Use ListView.separated for dividers
-      padding: EdgeInsets.zero, // Remove default padding
-      itemCount: 30, // There are 30 Paras
-      // Use a light grey or subtle green for dividers on white background
-      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300), // Scaled divider
+    return ListView.separated(
+      padding: EdgeInsets.zero,
+      itemCount: 30,
+      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
       itemBuilder: (context, index) {
         final paraNumber = index + 1;
-        final pageNumbers = paraPageRanges[paraNumber]; // Get the list of pages
-
-        // Display the first page number and the count of pages if available
-        final String subtitleText;
-        if (pageNumbers != null && pageNumbers.isNotEmpty) {
-          final firstPage = toBengaliNumber(pageNumbers.first);
-          final lastPage = toBengaliNumber(pageNumbers.last);
-          final pageCount = toBengaliNumber(pageNumbers.length);
-          subtitleText = 'পৃষ্ঠা $firstPage - $lastPage ($pageCount পৃষ্ঠা)'; // Formatted with Bengali numbers
-        } else {
-          subtitleText = 'পৃষ্ঠা তথ্য পাওয়া যায়নি';
-        }
+        final isSelected = paraNumber == selectedPara;
 
         return ListTile(
-          // Use a custom leading widget for the Bengali number
-          leading: Padding( // Add padding to align with Surah list leading
-            padding: EdgeInsets.only(right: 8.w), // Scaled right padding
+          tileColor: isSelected ? Theme.of(context).primaryColor : null,
+          title: Center(
             child: Text(
-              '${toBengaliNumber(paraNumber)}.', // Bengali number with dot
+              toBengaliNumber(paraNumber),
               style: TextStyle(
-                fontSize: 14.sp, // Scale font size
-                fontWeight: FontWeight.bold,
-                // Use your primary green or a dark green for the number
-                color: Theme.of(context).primaryColor, // Example: using primary color
+                fontSize: 16.sp,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? Colors.white : Colors.black87,
               ),
             ),
           ),
-          title: Text(
-            'পারা ${toBengaliNumber(paraNumber)}', // Use Bengali number in title as well
-            style: TextStyle(
-              fontSize: 12.sp, // Scale font size
-              // Use your primary green or a dark green for the Para label
-              color: Theme.of(context).primaryColor, // Example: using primary color
-            ),
-          ),
-          subtitle: Text(
-            subtitleText,
-            style: TextStyle(
-              fontSize: 12.sp, // Scale font size
-              // Use a darker grey or a less saturated green for the subtitle
-              color: Colors.grey.shade700, // Example: dark grey
-            ),
-          ),
-          // Add some horizontal padding to the content
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w), // Scaled horizontal padding
           onTap: () {
-            // Select this para to show its pages
-            if (pageNumbers != null && pageNumbers.isNotEmpty) {
-              ref.read(selectedNavigationParaProvider.notifier).state = paraNumber;
-              // Optionally clear ayah highlight when switching navigation lists
-              ref.read(selectedAyahProvider.notifier).clear();
-            } else {
-              // Optionally show a message if no page data for this para
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(
-                      'পৃষ্ঠা তথ্য পাওয়া যায়নি ${toBengaliNumber(paraNumber)}',
-                      style: TextStyle(fontSize: 14.sp), // Scale text
-                    )),
-              );
-            }
+            ref.read(selectedNavigationParaProvider.notifier).state = paraNumber;
+            ref.read(selectedAyahProvider.notifier).clear();
           },
         );
       },
     );
   }
 
-  Widget _buildParaPageList(WidgetRef ref, int paraNumber, Map<int, List<int>> paraPageRanges) {
-    // Validate paraNumber and get the page list
-    final pageNumbers = paraPageRanges[paraNumber];
+  Widget _buildRightPane(WidgetRef ref, Map<int, List<int>> paraPageRanges) {
+    final selectedPara = ref.watch(selectedNavigationParaProvider);
+    final pageNumbers = paraPageRanges[selectedPara];
 
     if (pageNumbers == null || pageNumbers.isEmpty) {
-      return Center(child: Text(
-        'Page data not found for this Para.',
-        style: TextStyle(fontSize: 14.sp), // Scale text
-      )); // Remove const
+      // This case should rarely happen now that a default is set.
+      return Center(child: Text('পৃষ্ঠা তথ্য পাওয়া যায়নি', style: TextStyle(fontSize: 14.sp)));
     }
 
-    final paraName = "পারা ${toBengaliNumber(paraNumber)}"; // Placeholder with Bengali number
-
-    return Column(
-      children: [
-        // Add a "Back" button at the top
-        ListTile(
-          leading: Icon(Icons.arrow_back, color: const Color(0xFF144910), size: 24.r), // Scale icon size, use primary color
-          title: Text(
-            paraName, // Title is the Para number with Bengali label
-            style: TextStyle(
-              fontSize: 18.sp, // Scale font size, slightly larger for header
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600, // Slightly lighter dark grey for the header text
+    return ListView.separated(
+      padding: EdgeInsets.zero,
+      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
+      itemCount: pageNumbers.length,
+      itemBuilder: (context, index) {
+        final pageNumber = pageNumbers[index];
+        return ListTile(
+          title: Center(
+            child: Text(
+              toBengaliNumber(pageNumber),
+              style: TextStyle(fontSize: 14.sp, color: Colors.black87),
             ),
           ),
-          // Add some horizontal padding to the content
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w), // Scaled horizontal padding
           onTap: () {
-            // Go back to the list of all paras
-            ref.read(selectedNavigationParaProvider.notifier).state = null;
-            // Optionally clear ayah highlight when going back to list
+            ref.read(navigateToPageCommandProvider.notifier).state = pageNumber;
             ref.read(selectedAyahProvider.notifier).clear();
+            Navigator.of(context).pop();
           },
-        ),
-        // Use a light grey or subtle green for the divider
-        Divider(height: 1.h, color: Colors.grey.shade300), // Scaled divider
-
-        Expanded(
-          child: ListView.separated( // Use ListView.separated for dividers
-            padding: EdgeInsets.zero, // Remove default padding
-            // Use a light grey or subtle green for dividers
-            separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300), // Scaled divider
-            itemCount: pageNumbers.length,
-            itemBuilder: (context, index) {
-              final pageNumber = pageNumbers[index]; // Get the actual page number
-
-              return ListTile(
-                title: Text(
-                  'পৃষ্ঠা ${toBengaliNumber(pageNumber)}', // Format with Bengali number
-                  style: TextStyle(
-                    fontSize: 12.sp, // Scale font size
-                    // Use your primary green or a dark green for the page label
-                    color: Theme.of(context).primaryColor, // Example: using primary color
-                  ),
-                ),
-                // No trailing for Ayah list in Para pages view
-                // onTap action navigates to the page
-                contentPadding: EdgeInsets.symmetric(horizontal: 16.w), // Scaled horizontal padding
-                onTap: () {
-                  // Navigate to the selected page number (1-based)
-                  ref.read(navigateToPageCommandProvider.notifier).state = pageNumber;
-                  // No ayah highlighting needed here, just page navigation.
-                  // Clear any existing ayah highlight if desired when navigating by page
-                  ref.read(selectedAyahProvider.notifier).clear();
-                  // Close the drawer after navigation
-                  Navigator.of(context).pop();
-                },
-              );
-            },
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

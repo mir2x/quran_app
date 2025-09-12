@@ -84,8 +84,6 @@ class _QuranEditionGridItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final double imageAspectRatio = edition.imageWidth / edition.imageHeight;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
