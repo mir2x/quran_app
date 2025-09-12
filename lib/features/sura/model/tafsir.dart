@@ -1,11 +1,18 @@
 class TafsirSource {
+  final String id;
   final String title;
-  final String sourceId;
-  final String content;
+  final String url;
+  final int sizeBytes;
+
+  final bool isDownloaded;
+  final String? content;
 
   TafsirSource({
+    required this.id,
     required this.title,
-    required this.sourceId,
-    this.content = "তাফসীর পাওয়া যায়নি।",
+    required this.url,
+    required this.sizeBytes,
+    this.isDownloaded = false,
+    this.content,
   });
 }

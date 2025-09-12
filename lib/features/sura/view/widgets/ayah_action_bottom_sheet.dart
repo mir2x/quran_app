@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
+import 'package:quran_app/features/sura/view/widgets/tafsir_view.dart';
 import '../../model/ayah.dart';
 import '../../viewmodel/sura_reciter_viewmodel.dart';
-
 
 class AyahActionItem {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  AyahActionItem({required this.icon, required this.label, required this.onTap});
+  AyahActionItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 }
 
-void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, String suraName, WidgetRef ref) {
+void showAyahActionBottomSheet(
+    BuildContext context,
+    int suraNumber,
+    Ayah ayah,
+    String suraName,
+    WidgetRef ref,
+    ) {
   final int selectedStartAyah = ayah.ayah;
   final int selectedEndAyah = ayah.ayah;
 
@@ -22,28 +32,45 @@ void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, 
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
     ),
-    builder: (BuildContext bc) {
+    builder: (BuildContext bottomSheetContext) { // Renamed to avoid confusion
       final List<AyahActionItem> actions = [
-        // ... (Define actions as before)
-        AyahActionItem(icon: Icons.bookmark_border, label: 'বুকমার্ক', onTap: () => print('Bookmark Ayah ${ayah.ayah}')),
-        AyahActionItem(icon: Icons.play_arrow, label: 'অডিও শুনুন', onTap: () async {
-          final audioPlayer = ref.read(suraAudioPlayerProvider);
-          ref.read(selectedAudioSuraProvider.notifier).state = suraNumber;
-          ref.read(selectedStartAyahProvider.notifier).state = selectedStartAyah;
-          ref.read(selectedEndAyahProvider.notifier).state = selectedEndAyah;
-          if (!context.mounted) return;
-          Navigator.of(context).pop();
-          await audioPlayer.playAyahs(
-            selectedStartAyah,
-            selectedEndAyah,
-            context,
-          );
+        AyahActionItem(
+          icon: Icons.bookmark_border,
+          label: 'বুকমার্ক',
+          onTap: () {
+            print('Bookmark Ayah ${ayah.ayah}');
+            // This action now handles its own pop.
+            Navigator.pop(bottomSheetContext);
+          },
+        ),
+        AyahActionItem(
+          icon: Icons.play_arrow,
+          label: 'অডিও শুনুন',
+          onTap: () async {
+            // This action's logic is already correct.
+            final audioPlayer = ref.read(suraAudioPlayerProvider);
+            ref.read(selectedAudioSuraProvider.notifier).state = suraNumber;
+            ref.read(selectedStartAyahProvider.notifier).state = selectedStartAyah;
+            ref.read(selectedEndAyahProvider.notifier).state = selectedEndAyah;
 
-        }),
-        AyahActionItem(icon: Icons.menu_book, label: 'তাফসীর', onTap: () {
-          // This call works perfectly with the new dynamic TafsirView
+            Navigator.pop(bottomSheetContext); // Pop this sheet
 
-        }),
+            await audioPlayer.playAyahs(
+              selectedStartAyah,
+              selectedEndAyah,
+              context, // Use the main page context
+            );
+          },
+        ),
+        AyahActionItem(
+          icon: Icons.menu_book,
+          label: 'তাফসীর',
+          onTap: () {
+            // This action's logic is also already correct.
+            Navigator.pop(bottomSheetContext); // Pop this sheet
+            showTafsirBottomSheet(context, suraName, ayah); // Show the new one
+          },
+        ),
       ];
 
       return Container(
@@ -74,10 +101,10 @@ void showAyahActionBottomSheet(BuildContext context, int suraNumber, Ayah ayah, 
                 final item = actions[index];
                 return InkWell(
                   borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    item.onTap();
-                    Navigator.pop(bc);
-                  },
+                  // --- THE FIX ---
+                  // The InkWell's onTap now *only* calls the item's specific onTap.
+                  // It is no longer responsible for popping the navigator.
+                  onTap: item.onTap,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
