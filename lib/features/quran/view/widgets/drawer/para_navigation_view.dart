@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
-// --- State Provider Modification ---
-// It now defaults to 1, ensuring a para is always selected.
-// We also remove autoDispose so the user's manual selection is remembered
-// during a single app session if they close and reopen the drawer.
 final selectedNavigationParaProvider = StateProvider<int>((_) => 1);
-
+final selectedNavigationPageProvider = StateProvider<int?>((_) => null);
 
 class ParaNavigationView extends ConsumerStatefulWidget {
   const ParaNavigationView({super.key});
@@ -18,8 +15,9 @@ class ParaNavigationView extends ConsumerStatefulWidget {
 }
 
 class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
-  // Flag to ensure our "smart select" logic runs only once when the drawer opens.
-  bool _isInitialParaSet = false;
+  final ItemScrollController _paraScrollController = ItemScrollController();
+  final ItemScrollController _pageScrollController = ItemScrollController();
+  bool _isInitialStateSet = false;
 
   String toBengaliNumber(int number) {
     const bengaliNumbers = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -45,13 +43,10 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
     }
 
     final paraPageRanges = ref.watch(paraPageRangesProvider);
+    final currentPage = ref.read(currentPageProvider) + 1;
 
-    // --- SMART STATE RETENTION LOGIC ---
-    // This runs after the data is loaded but only once per drawer opening.
-    if (!_isInitialParaSet && paraPageRanges.isNotEmpty) {
-      // Find which Para corresponds to the currently viewed page.
-      final currentPage = ref.read(currentPageProvider) + 1; // Quran pages are 1-based
-      int currentPara = 1; // Default to 1
+    if (!_isInitialStateSet && paraPageRanges.isNotEmpty) {
+      int currentPara = 1;
       for (final entry in paraPageRanges.entries) {
         if (entry.value.contains(currentPage)) {
           currentPara = entry.key;
@@ -59,15 +54,22 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
         }
       }
 
-      // Safely update the provider state after the build is complete.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           ref.read(selectedNavigationParaProvider.notifier).state = currentPara;
+          ref.read(selectedNavigationPageProvider.notifier).state = currentPage;
+
+          _paraScrollController.jumpTo(index: currentPara - 1);
+
+          final pageList = paraPageRanges[currentPara] ?? [];
+          final pageIndex = pageList.indexOf(currentPage);
+          if (pageIndex != -1) {
+            _pageScrollController.jumpTo(index: pageIndex);
+          }
         }
       });
-      _isInitialParaSet = true;
+      _isInitialStateSet = true;
     }
-    // --- END OF SMART LOGIC ---
 
     return Column(
       children: [
@@ -77,12 +79,12 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
             children: [
               Expanded(
                 flex: 1, // Equal width
-                child: _buildParaList(ref, paraPageRanges),
+                  child: _buildParaList(ref),
               ),
               const VerticalDivider(width: 1, thickness: 1),
               Expanded(
                 flex: 1, // Equal width
-                child: _buildRightPane(ref, paraPageRanges),
+                child: _buildRightPane(ref, paraPageRanges, currentPage),
               ),
             ],
           ),
@@ -93,7 +95,7 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      color: Colors.green.shade800,
+      color: Theme.of(context).primaryColor,
       padding: EdgeInsets.symmetric(vertical: 12.h),
       child: Row(
         children: [
@@ -110,10 +112,12 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
     );
   }
 
-  Widget _buildParaList(WidgetRef ref, Map<int, List<int>> paraPageRanges) {
+  Widget _buildParaList(WidgetRef ref) {
     final selectedPara = ref.watch(selectedNavigationParaProvider);
+    final currentPage = ref.read(currentPageProvider) + 1;
 
-    return ListView.separated(
+    return ScrollablePositionedList.separated(
+      itemScrollController: _paraScrollController,
       padding: EdgeInsets.zero,
       itemCount: 30,
       separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
@@ -135,6 +139,8 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
           ),
           onTap: () {
             ref.read(selectedNavigationParaProvider.notifier).state = paraNumber;
+            // When a new para is tapped, also update the selected page to the current reading page
+            ref.read(selectedNavigationPageProvider.notifier).state = currentPage;
             ref.read(selectedAyahProvider.notifier).clear();
           },
         );
@@ -142,26 +148,47 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
     );
   }
 
-  Widget _buildRightPane(WidgetRef ref, Map<int, List<int>> paraPageRanges) {
+
+  Widget _buildRightPane(WidgetRef ref, Map<int, List<int>> paraPageRanges, int currentPage) {
     final selectedPara = ref.watch(selectedNavigationParaProvider);
+    final selectedPage = ref.watch(selectedNavigationPageProvider);
     final pageNumbers = paraPageRanges[selectedPara];
 
     if (pageNumbers == null || pageNumbers.isEmpty) {
-      // This case should rarely happen now that a default is set.
       return Center(child: Text('পৃষ্ঠা তথ্য পাওয়া যায়নি', style: TextStyle(fontSize: 14.sp)));
     }
 
-    return ListView.separated(
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _pageScrollController.isAttached) {
+        final pageIndex = pageNumbers.indexOf(currentPage);
+        if (pageIndex != -1) {
+          _pageScrollController.jumpTo(index: pageIndex);
+        }
+      }
+    });
+
+    return ScrollablePositionedList.separated(
+      itemScrollController: _pageScrollController,
       padding: EdgeInsets.zero,
       separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
       itemCount: pageNumbers.length,
       itemBuilder: (context, index) {
         final pageNumber = pageNumbers[index];
+        final isSelected = pageNumber == selectedPage;
+
+        // --- THIS ListTile IS NOW CORRECTED ---
         return ListTile(
+          // Use the same solid primary color as the Para list for the background.
+          tileColor: isSelected ? Theme.of(context).primaryColor : null,
           title: Center(
             child: Text(
               toBengaliNumber(pageNumber),
-              style: TextStyle(fontSize: 14.sp, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 14.sp,
+                // Use the same white color for the text when selected.
+                color: isSelected ? Colors.white : Colors.black87,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ),
           onTap: () {
@@ -170,6 +197,7 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
             Navigator.of(context).pop();
           },
         );
+        // --- END OF CORRECTION ---
       },
     );
   }
