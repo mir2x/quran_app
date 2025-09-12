@@ -244,8 +244,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   },
                   child: Scaffold(
                     key: _rootKey,
-                    // SideDrawer width is already handled inside SideDrawer itself using .w
-                    // Its vertical positioning needs to be adjusted to be between AppBar and BottomBar
                     drawer: const SideDrawer(),
                     onDrawerChanged: (isOpen) {
                       final drawer = ref.read(drawerOpenProvider.notifier);

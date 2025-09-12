@@ -101,7 +101,7 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      color: Colors.green.shade800,
+      color: Theme.of(context).primaryColor,
       padding: EdgeInsets.symmetric(vertical: 12.h),
       child: Row(
         children: [
