@@ -128,6 +128,7 @@ class AyahCard extends ConsumerWidget {
                 style: TextStyle(
                   fontFamily: arabicFont,
                   fontSize: arabicFontSize,
+                  letterSpacing: 0,
                 ),
                 // --- THE POLISH ---
                 // Ensures perfect right-alignment, even for single words.
@@ -163,6 +164,7 @@ class AyahCard extends ConsumerWidget {
         fontSize: arabicFontSize,
         height: 1.8, // Increased for better readability
         color: Colors.black87,
+        letterSpacing: 0,
       ),
       // --- THE FIX ---
       // These two properties work together to ensure perfect RTL rendering.

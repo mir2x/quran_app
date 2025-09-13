@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
+// The providers and the StatefulWidget structure remain the same.
 final selectedNavigationParaProvider = StateProvider<int>((_) => 1);
 final selectedNavigationPageProvider = StateProvider<int?>((_) => null);
 
@@ -15,6 +16,7 @@ class ParaNavigationView extends ConsumerStatefulWidget {
 }
 
 class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
+  // All state and initial logic remains the same.
   final ItemScrollController _paraScrollController = ItemScrollController();
   final ItemScrollController _pageScrollController = ItemScrollController();
   bool _isInitialStateSet = false;
@@ -32,6 +34,7 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
 
   @override
   Widget build(BuildContext context) {
+    // This entire build method remains the same.
     final allBoxesAsync = ref.watch(allBoxesProvider);
     final totalPageCountAsync = ref.watch(totalPageCountProvider);
 
@@ -58,9 +61,7 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
         if (mounted) {
           ref.read(selectedNavigationParaProvider.notifier).state = currentPara;
           ref.read(selectedNavigationPageProvider.notifier).state = currentPage;
-
           _paraScrollController.jumpTo(index: currentPara - 1);
-
           final pageList = paraPageRanges[currentPara] ?? [];
           final pageIndex = pageList.indexOf(currentPage);
           if (pageIndex != -1) {
@@ -77,15 +78,9 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
         Expanded(
           child: Row(
             children: [
-              Expanded(
-                flex: 1, // Equal width
-                  child: _buildParaList(ref),
-              ),
+              Expanded(flex: 1, child: _buildParaList(ref)),
               const VerticalDivider(width: 1, thickness: 1),
-              Expanded(
-                flex: 1, // Equal width
-                child: _buildRightPane(ref, paraPageRanges, currentPage),
-              ),
+              Expanded(flex: 1, child: _buildRightPane(ref, paraPageRanges, currentPage)),
             ],
           ),
         ),
@@ -94,17 +89,18 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    // This header logic remains the same.
     return Container(
       color: Theme.of(context).primaryColor,
       padding: EdgeInsets.symmetric(vertical: 12.h),
       child: Row(
         children: [
           Expanded(
-            flex: 1, // Equal width
+            flex: 1,
             child: Text('পারা', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp, fontFamily: 'SolaimanLipi')),
           ),
           Expanded(
-            flex: 1, // Equal width
+            flex: 1,
             child: Text('পাতা', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp, fontFamily: 'SolaimanLipi')),
           ),
         ],
@@ -113,6 +109,7 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
   }
 
   Widget _buildParaList(WidgetRef ref) {
+    // This para list logic remains the same.
     final selectedPara = ref.watch(selectedNavigationParaProvider);
     final currentPage = ref.read(currentPageProvider) + 1;
 
@@ -139,7 +136,6 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
           ),
           onTap: () {
             ref.read(selectedNavigationParaProvider.notifier).state = paraNumber;
-            // When a new para is tapped, also update the selected page to the current reading page
             ref.read(selectedNavigationPageProvider.notifier).state = currentPage;
             ref.read(selectedAyahProvider.notifier).clear();
           },
@@ -148,7 +144,7 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
     );
   }
 
-
+  // --- THIS IS THE ONLY METHOD THAT CHANGES ---
   Widget _buildRightPane(WidgetRef ref, Map<int, List<int>> paraPageRanges, int currentPage) {
     final selectedPara = ref.watch(selectedNavigationParaProvider);
     final selectedPage = ref.watch(selectedNavigationPageProvider);
@@ -173,31 +169,35 @@ class _ParaNavigationViewState extends ConsumerState<ParaNavigationView> {
       separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
       itemCount: pageNumbers.length,
       itemBuilder: (context, index) {
-        final pageNumber = pageNumbers[index];
-        final isSelected = pageNumber == selectedPage;
+        // 1. Get the REAL page number for the onTap logic.
+        final actualPageNumber = pageNumbers[index];
 
-        // --- THIS ListTile IS NOW CORRECTED ---
+        // 2. The page number to DISPLAY is simply the index + 1.
+        final displayPageNumber = index + 1;
+
+        // 3. The selection check still uses the REAL page number.
+        final isSelected = actualPageNumber == selectedPage;
+
         return ListTile(
-          // Use the same solid primary color as the Para list for the background.
           tileColor: isSelected ? Theme.of(context).primaryColor : null,
           title: Center(
             child: Text(
-              toBengaliNumber(pageNumber),
+              // 4. We show the DISPLAY page number here.
+              toBengaliNumber(displayPageNumber),
               style: TextStyle(
                 fontSize: 14.sp,
-                // Use the same white color for the text when selected.
                 color: isSelected ? Colors.white : Colors.black87,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
           onTap: () {
-            ref.read(navigateToPageCommandProvider.notifier).state = pageNumber;
+            // 5. But when tapped, we navigate to the REAL page number.
+            ref.read(navigateToPageCommandProvider.notifier).state = actualPageNumber;
             ref.read(selectedAyahProvider.notifier).clear();
             Navigator.of(context).pop();
           },
         );
-        // --- END OF CORRECTION ---
       },
     );
   }
