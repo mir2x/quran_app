@@ -129,6 +129,10 @@ class AyahCard extends ConsumerWidget {
                   fontFamily: arabicFont,
                   fontSize: arabicFontSize,
                 ),
+                // --- THE POLISH ---
+                // Ensures perfect right-alignment, even for single words.
+                textAlign: TextAlign.right,
+                textDirection: TextDirection.rtl,
               ),
               SizedBox(height: 4.0.h),
               Text(
@@ -138,6 +142,8 @@ class AyahCard extends ConsumerWidget {
                   fontSize: bengaliFontSize,
                   color: Colors.green,
                 ),
+                // It's good practice to set direction for all text, even LTR.
+                textDirection: TextDirection.ltr,
               ),
             ],
           );
@@ -150,18 +156,18 @@ class AyahCard extends ConsumerWidget {
     final arabicFont = ref.watch(arabicFontProvider);
     final arabicFontSize = ref.watch(arabicFontSizeProvider);
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Text(
-        ayah.arabicText,
-        style: TextStyle(
-          fontFamily: arabicFont,
-          fontSize: arabicFontSize,
-          height: 1.5,
-          color: Colors.black87,
-        ),
-        textAlign: TextAlign.right,
+    return Text(
+      ayah.arabicText,
+      style: TextStyle(
+        fontFamily: arabicFont,
+        fontSize: arabicFontSize,
+        height: 1.8, // Increased for better readability
+        color: Colors.black87,
       ),
+      // --- THE FIX ---
+      // These two properties work together to ensure perfect RTL rendering.
+      textAlign: TextAlign.right,
+      textDirection: TextDirection.rtl,
     );
   }
 
