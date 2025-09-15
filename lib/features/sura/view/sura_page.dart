@@ -23,9 +23,9 @@ class SurahPage extends ConsumerStatefulWidget {
 
 class _SurahPageState extends ConsumerState<SurahPage> {
   late AutoScrollController _autoScrollController;
-
   Timer? _timedScrollTimer;
   int _totalItems = 0;
+  bool _showScrollToTopButton = false;
 
   @override
   void initState() {
@@ -34,6 +34,13 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       viewportBoundaryGetter: () => Rect.fromLTRB(0, 0, 0, MediaQuery.of(context).padding.bottom),
       axis: Axis.vertical,
     );
+    _autoScrollController.addListener(() {
+      if (mounted) {
+        setState(() {
+          _showScrollToTopButton = _autoScrollController.offset > 400;
+        });
+      }
+    });
     if (widget.initialScrollIndex != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -125,6 +132,15 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     }
   }
 
+  void _scrollToTop() {
+    _autoScrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
   @override
   Widget build(BuildContext context) {
     final suraAsyncValue = ref.watch(suraProvider(widget.suraNumber));
@@ -153,35 +169,59 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           children: [
             Expanded(
               child: suraAsyncValue.when(
-                data: (ayahs) => Stack(
-                  children: [
-                    ListView.builder(
-                      controller: _autoScrollController,
-                      itemCount: ayahs.length,
-                      padding: const EdgeInsets.only(bottom: 80.0, top: 8.0),
-                      itemBuilder: (context, index) {
-                        final ayah = ayahs[index];
-                        final isHighlighted = quranAudioState != null &&
-                            quranAudioState.surah == widget.suraNumber &&
-                            quranAudioState.ayah == ayah.ayah;
-      
-                        return AutoScrollTag(
-                          key: ValueKey(index),
+                data: (ayahs) => ScrollbarTheme(
+                  data: ScrollbarThemeData(
+                    // Style for when the scrollbar is being dragged
+                      thumbColor: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.dragged)) {
+                          return Colors.green; // Active color
+                        }
+                        // Style for all other states (hovering, default, etc.)
+                        return Colors.grey.shade400; // Inactive color
+                      }),
+                      // Make the scrollbar thicker when dragged
+                      thickness: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.dragged)) {
+                          return 12.0;
+                        }
+                        return 6.0;
+                      })
+                  ),
+                  child: Scrollbar(
+                    controller: _autoScrollController,
+                    thumbVisibility: true,
+                    interactive: true, // This is the key property!
+                    radius: const Radius.circular(6),
+                    child: Stack(
+                      children: [
+                        ListView.builder(
                           controller: _autoScrollController,
-                          index: index,
-                          highlightColor: Colors.amber.withOpacity(0.3),
-                          child: AyahCard(
-                            suraNumber: widget.suraNumber,
-                            ayah: ayah,
-                            suraName: suraName,
-                            isHighlighted: isHighlighted,
-                          ),
-                        );
-                      },
+                          itemCount: ayahs.length,
+                          padding: const EdgeInsets.only(bottom: 80.0, top: 8.0, left: 4.0, right: 4.0), // Added padding for scrollbar
+                          itemBuilder: (context, index) {
+                            final ayah = ayahs[index];
+                            final isHighlighted = quranAudioState != null &&
+                                quranAudioState.surah == widget.suraNumber &&
+                                quranAudioState.ayah == ayah.ayah;
+
+                            return AutoScrollTag(
+                              key: ValueKey(index),
+                              controller: _autoScrollController,
+                              index: index,
+                              highlightColor: Colors.amber.withOpacity(0.3),
+                              child: AyahCard(
+                                suraNumber: widget.suraNumber,
+                                ayah: ayah,
+                                suraName: suraName,
+                                isHighlighted: isHighlighted,
+                              ),
+                            );
+                          },
+                        ),
+                        if (isTimedScrolling) _buildAutoScrollController(context),
+                      ],
                     ),
-                    if (isTimedScrolling)
-                      _buildAutoScrollController(context),
-                  ],
+                  ),
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Failed to load Sura ${widget.suraNumber}:\n$error')),
@@ -192,10 +232,17 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           ],
         ),
         bottomNavigationBar: showBottomNav ? _buildBottomNavBar(context) : null,
+        floatingActionButton: _showScrollToTopButton
+            ? FloatingActionButton(
+          onPressed: _scrollToTop,
+          mini: true,
+          backgroundColor: Colors.green,
+          child: const Icon(Icons.arrow_upward, color: Colors.white),
+        )
+            : null,
       ),
     );
   }
-
 
   PreferredSizeWidget _buildAppBar(BuildContext context, String title) {
     return AppBar(
