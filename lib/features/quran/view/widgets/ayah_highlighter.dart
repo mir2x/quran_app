@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../model/ayah_box.dart';
-
-
-// Inside AyahHighlighter class (or its definition)
 class AyahHighlighter extends CustomPainter {
   final List<Rect> highlightRects;
 

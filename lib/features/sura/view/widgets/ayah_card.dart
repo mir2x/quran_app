@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
-import '../../model/ayah.dart';
-import '../../model/word_by_word.dart';
-import '../../viewmodel/font_settings_viewmodel.dart';
-import '../../viewmodel/sura_viewmodel.dart';
-import 'ayah_action_bottom_sheet.dart';
+import 'package:quran_app/features/sura/model/ayah.dart';
+import 'package:quran_app/features/sura/view/widgets/ayah_action_bottom_sheet.dart';
+import 'package:quran_app/features/sura/viewmodel/font_settings_viewmodel.dart';
+import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 
 class AyahCard extends ConsumerWidget {
   final int suraNumber;
@@ -32,37 +30,40 @@ class AyahCard extends ConsumerWidget {
     final cardColor = isHighlighted
         ? Theme.of(context).primaryColor.withOpacity(0.1)
         : Theme.of(context).cardTheme.color;
-    final borderColor = isHighlighted
-        ? Theme.of(context).primaryColor
-        : Colors.transparent;
+    final borderColor =
+    isHighlighted ? Theme.of(context).primaryColor : Colors.transparent;
     final cardElevation = isHighlighted ? 4.0 : 0.5;
 
-    return GestureDetector(
-      onTap: () => showAyahActionBottomSheet(context, suraNumber, ayah, suraName, ref),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        elevation: cardElevation,
-        color: cardColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-          side: BorderSide(color: borderColor, width: 2.0),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildCardHeader(context),
-              const SizedBox(height: 16),
-              if (showWords)
-                _buildWordByWordView(ayah.words, ref)
-              else
-                _buildArabicText(ref),
-              if (showTranslations &&
-                  selectedTranslators.isNotEmpty &&
-                  !showWords)
-                _buildTranslations(selectedTranslators, ref),
-            ],
+    // PERFORMANCE: Prevents repainting this card when other cards are highlighted.
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: () =>
+            showAyahActionBottomSheet(context, suraNumber, ayah, suraName, ref),
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          elevation: cardElevation,
+          color: cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            side: BorderSide(color: borderColor, width: 2.0),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildCardHeader(context),
+                const SizedBox(height: 16),
+                if (showWords)
+                  _buildWordByWordView(ayah.words, ref)
+                else
+                  _buildArabicText(ref),
+                if (showTranslations &&
+                    selectedTranslators.isNotEmpty &&
+                    !showWords)
+                  _buildTranslations(selectedTranslators, ref),
+              ],
+            ),
           ),
         ),
       ),
@@ -107,7 +108,6 @@ class AyahCard extends ConsumerWidget {
   }
 
   Widget _buildWordByWordView(List<WordByWord> words, WidgetRef ref) {
-
     final arabicFont = ref.watch(arabicFontProvider);
     final arabicFontSize = ref.watch(arabicFontSizeProvider);
     final bengaliFont = ref.watch(bengaliFontProvider);
@@ -130,8 +130,6 @@ class AyahCard extends ConsumerWidget {
                   fontSize: arabicFontSize,
                   letterSpacing: 0,
                 ),
-                // --- THE POLISH ---
-                // Ensures perfect right-alignment, even for single words.
                 textAlign: TextAlign.right,
                 textDirection: TextDirection.rtl,
               ),
@@ -143,7 +141,6 @@ class AyahCard extends ConsumerWidget {
                   fontSize: bengaliFontSize,
                   color: Colors.green,
                 ),
-                // It's good practice to set direction for all text, even LTR.
                 textDirection: TextDirection.ltr,
               ),
             ],
@@ -162,17 +159,14 @@ class AyahCard extends ConsumerWidget {
       style: TextStyle(
         fontFamily: arabicFont,
         fontSize: arabicFontSize,
-        height: 1.8, // Increased for better readability
+        height: 1.8,
         color: Colors.black87,
         letterSpacing: 0,
       ),
-      // --- THE FIX ---
-      // These two properties work together to ensure perfect RTL rendering.
       textAlign: TextAlign.right,
       textDirection: TextDirection.rtl,
     );
   }
-
 
   Widget _buildTranslations(List<String> selectedTranslators, WidgetRef ref) {
     final bengaliFont = ref.watch(bengaliFontProvider);
@@ -182,23 +176,22 @@ class AyahCard extends ConsumerWidget {
         .where((t) => selectedTranslators.contains(t.translatorName))
         .toList();
 
+    // PERFORMANCE: Use a Column with .map() instead of a nested ListView.
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 30, thickness: 0.5, color: Colors.grey),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: translationsToShow.length,
-          itemBuilder: (context, index) {
-            final translation = translationsToShow[index];
-            return Column(
+        ...translationsToShow.map((translation) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   translation.translatorName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'SolaimanLipi',
-                    color: Colors.grey.shade700,
+                    color: Colors.grey,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -214,10 +207,9 @@ class AyahCard extends ConsumerWidget {
                   ),
                 ),
               ],
-            );
-          },
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-        ),
+            ),
+          );
+        }).toList(),
       ],
     );
   }

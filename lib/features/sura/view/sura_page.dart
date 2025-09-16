@@ -1,21 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quran_app/features/sura/model/sura_audio_state.dart';
 import 'package:quran_app/features/sura/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/sura/view/widgets/audio_range_selection_dialog.dart';
 import 'package:quran_app/features/sura/view/widgets/ayah_card.dart';
+import 'package:quran_app/features/sura/view/widgets/ayah_placeholders.dart';
 import 'package:quran_app/features/sura/view/widgets/details_bottom_sheet.dart';
 import 'package:quran_app/features/sura/view/widgets/search_page.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
+import 'package:quran_app/features/sura/viewmodel/sura_reciter_viewmodel.dart';
+import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
-import '../model/sura_audio_state.dart';
-import '../viewmodel/sura_reciter_viewmodel.dart';
-import '../viewmodel/sura_viewmodel.dart';
 
 class SurahPage extends ConsumerStatefulWidget {
   final int suraNumber;
   final int? initialScrollIndex;
-  const SurahPage({super.key, required this.suraNumber, this.initialScrollIndex});
+  const SurahPage(
+      {super.key, required this.suraNumber, this.initialScrollIndex});
 
   @override
   ConsumerState<SurahPage> createState() => _SurahPageState();
@@ -31,7 +33,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   void initState() {
     super.initState();
     _autoScrollController = AutoScrollController(
-      viewportBoundaryGetter: () => Rect.fromLTRB(0, 0, 0, MediaQuery.of(context).padding.bottom),
+      viewportBoundaryGetter: () =>
+          Rect.fromLTRB(0, 0, 0, MediaQuery.of(context).padding.bottom),
       axis: Axis.vertical,
     );
     _autoScrollController.addListener(() {
@@ -60,6 +63,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     super.dispose();
   }
 
+  // --- All your controller methods (_startAutoScroll, _stopAutoScroll, etc.) remain unchanged ---
   void _startAutoScroll() {
     if (_timedScrollTimer?.isActive == true || _totalItems == 0) return;
 
@@ -86,11 +90,12 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       curve: Curves.linear,
     );
 
-    _timedScrollTimer = Timer(Duration(seconds: durationInSeconds.round() + 1), () {
-      if (mounted) {
-        _stopAutoScroll(resetSpeed: true);
-      }
-    });
+    _timedScrollTimer =
+        Timer(Duration(seconds: durationInSeconds.round() + 1), () {
+          if (mounted) {
+            _stopAutoScroll(resetSpeed: true);
+          }
+        });
   }
 
   void _stopAutoScroll({bool resetSpeed = false}) {
@@ -125,7 +130,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final currentSpeed = ref.read(scrollSpeedFactorProvider);
     double newSpeed = (currentSpeed + delta).clamp(0.5, 3.0);
     ref.read(scrollSpeedFactorProvider.notifier).state = newSpeed;
-    final bool isPlayingAndNotPaused = ref.read(isAutoScrollingProvider) && !ref.read(isAutoScrollPausedProvider);
+    final bool isPlayingAndNotPaused = ref.read(isAutoScrollingProvider) &&
+        !ref.read(isAutoScrollPausedProvider);
     if (isPlayingAndNotPaused) {
       _stopAutoScroll();
       _startAutoScroll();
@@ -141,26 +147,30 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
-    final suraAsyncValue = ref.watch(suraProvider(widget.suraNumber));
-    _totalItems = suraAsyncValue.asData?.value.length ?? 0;
+    // 1. WATCH THE AYAH COUNT PROVIDER FIRST
+    final ayahCountAsync = ref.watch(ayahCountProvider(widget.suraNumber));
 
-    ref.listen<SuraAudioState?>(suraAudioProvider, (previous, next) {
-      if (next != null && next.isPlaying) {
-        final ayahIndex = next.ayah;
-        _autoScrollController.scrollToIndex(
-          ayahIndex,
-          preferPosition: AutoScrollPosition.middle,
-          duration: const Duration(milliseconds: 700),
-        );
-      }
-    });
-
+    // Other UI state variables
     final suraName = "সূরা ${widget.suraNumber}";
     final quranAudioState = ref.watch(suraAudioProvider);
     final isTimedScrolling = ref.watch(isAutoScrollingProvider);
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
+
+    // Listen for audio changes to scroll automatically
+    ref.listen<SuraAudioState?>(suraAudioProvider, (previous, next) {
+      if (next != null && next.isPlaying) {
+        // Convert 1-based ayah number to 0-based list index
+        final ayahIndex = next.ayah - 1;
+        if (ayahIndex >= 0 && ayahIndex < _totalItems) {
+          _autoScrollController.scrollToIndex(
+            ayahIndex,
+            preferPosition: AutoScrollPosition.middle,
+            duration: const Duration(milliseconds: 700),
+          );
+        }
+      }
+    });
 
     return SafeArea(
       child: Scaffold(
@@ -168,70 +178,98 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         body: Column(
           children: [
             Expanded(
-              child: suraAsyncValue.when(
-                data: (ayahs) => ScrollbarTheme(
-                  data: ScrollbarThemeData(
-                    // Style for when the scrollbar is being dragged
-                      thumbColor: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.dragged)) {
-                          return Colors.green; // Active color
-                        }
-                        // Style for all other states (hovering, default, etc.)
-                        return Colors.grey.shade400; // Inactive color
-                      }),
-                      // Make the scrollbar thicker when dragged
-                      thickness: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.dragged)) {
-                          return 12.0;
-                        }
-                        return 6.0;
-                      })
-                  ),
-                  child: Scrollbar(
-                    controller: _autoScrollController,
-                    thumbVisibility: true,
-                    interactive: true, // This is the key property!
-                    radius: const Radius.circular(6),
-                    child: Stack(
-                      children: [
-                        ListView.builder(
-                          controller: _autoScrollController,
-                          itemCount: ayahs.length,
-                          padding: const EdgeInsets.only(bottom: 80.0, top: 8.0, left: 4.0, right: 4.0), // Added padding for scrollbar
-                          itemBuilder: (context, index) {
-                            final ayah = ayahs[index];
-                            final isHighlighted = quranAudioState != null &&
-                                quranAudioState.surah == widget.suraNumber &&
-                                quranAudioState.ayah == ayah.ayah;
-
-                            return AutoScrollTag(
-                              key: ValueKey(index),
-                              controller: _autoScrollController,
-                              index: index,
-                              highlightColor: Colors.amber.withOpacity(0.3),
-                              child: AyahCard(
-                                suraNumber: widget.suraNumber,
-                                ayah: ayah,
-                                suraName: suraName,
-                                isHighlighted: isHighlighted,
-                              ),
-                            );
-                          },
-                        ),
-                        if (isTimedScrolling) _buildAutoScrollController(context),
-                      ],
-                    ),
-                  ),
-                ),
+              // 2. THE MAIN .when() IS NOW ON THE AYAH COUNT
+              child: ayahCountAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Failed to load Sura ${widget.suraNumber}:\n$error')),
+                error: (error, stack) =>
+                    Center(child: Text('Failed to load Sura details:\n$error')),
+                data: (totalAyahs) {
+                  _totalItems = totalAyahs; // Update total items for controls
+
+                  // 3. THE LISTVIEW USES THE COUNT AND LAZY-LOADS EACH ITEM
+                  return ScrollbarTheme(
+                    data: ScrollbarThemeData(
+                        thumbColor: MaterialStateProperty.resolveWith((states) {
+                          if (states.contains(MaterialState.dragged)) {
+                            return Colors.green;
+                          }
+                          return Colors.grey.shade400;
+                        }), thickness: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.dragged)) {
+                        return 12.0;
+                      }
+                      return 6.0;
+                    })),
+                    child: Scrollbar(
+                      controller: _autoScrollController,
+                      thumbVisibility: true,
+                      interactive: true,
+                      radius: const Radius.circular(6),
+                      child: Stack(
+                        children: [
+                          ListView.builder(
+                            controller: _autoScrollController,
+                            itemCount: totalAyahs,
+                            padding: const EdgeInsets.only(
+                                bottom: 80.0, top: 8.0, left: 4.0, right: 4.0),
+                            itemBuilder: (context, index) {
+                              // 4. WRAP WITH A CONSUMER TO WATCH THE INDIVIDUAL AYAH
+                              return Consumer(
+                                builder: (context, ref, child) {
+                                  final params = AyahProviderParams(
+                                      suraNumber: widget.suraNumber,
+                                      index: index);
+                                  final ayahAsync =
+                                  ref.watch(ayahByIndexProvider(params));
+
+                                  // 5. USE A NESTED .when() FOR EACH AYAH'S STATE
+                                  return ayahAsync.when(
+                                    loading: () => const AyahPlaceholder(),
+                                    error: (err, stack) => Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                              'Error loading Ayah ${index + 1}\n${err.toString()}'),
+                                        )),
+                                    data: (ayah) {
+                                      final isHighlighted =
+                                          quranAudioState != null &&
+                                              quranAudioState.surah ==
+                                                  widget.suraNumber &&
+                                              quranAudioState.ayah == ayah.ayah;
+
+                                      return AutoScrollTag(
+                                        key: ValueKey(index),
+                                        controller: _autoScrollController,
+                                        index: index,
+                                        child: AyahCard(
+                                          suraNumber: widget.suraNumber,
+                                          ayah: ayah,
+                                          suraName: suraName,
+                                          isHighlighted: isHighlighted,
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                          if (isTimedScrolling)
+                            _buildAutoScrollController(context),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             if (quranAudioState != null)
               AudioControllerBar(color: Theme.of(context).primaryColor)
           ],
         ),
-        bottomNavigationBar: showBottomNav ? _buildBottomNavBar(context) : null,
+        bottomNavigationBar:
+        showBottomNav ? _buildBottomNavBar(context) : null,
         floatingActionButton: _showScrollToTopButton
             ? FloatingActionButton(
           onPressed: _scrollToTop,
@@ -244,9 +282,10 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     );
   }
 
+  // --- All your helper methods (_buildAppBar, _buildBottomNavBar, etc.) remain unchanged ---
   PreferredSizeWidget _buildAppBar(BuildContext context, String title) {
     return AppBar(
-      title: Text(title, /* ... */),
+      title: Text(title),
       centerTitle: true,
       actions: [
         IconButton(
@@ -267,24 +306,43 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final isPaused = ref.watch(isAutoScrollPausedProvider);
 
     return Positioned(
-      left: 0, right: 0, bottom: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, -2))],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, -2))
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             IconButton(
-              icon: Icon(isPaused ? Icons.play_arrow : Icons.pause, color: Colors.green.shade900),
+              icon: Icon(isPaused ? Icons.play_arrow : Icons.pause,
+                  color: Colors.green.shade900),
               onPressed: _togglePlayPauseAutoScroll,
             ),
-            IconButton(icon: Icon(Icons.remove, color: Colors.green.shade900), onPressed: () => _changeScrollSpeed(-0.5)),
-            Text('${scrollSpeedFactor.toStringAsFixed(1)}x', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green.shade900)),
-            IconButton(icon: Icon(Icons.add, color: Colors.green.shade900), onPressed: () => _changeScrollSpeed(0.5)),
-            IconButton(icon: Icon(Icons.close, color: Colors.green.shade900), onPressed: () => _stopAutoScroll(resetSpeed: true)),
+            IconButton(
+                icon: Icon(Icons.remove, color: Colors.green.shade900),
+                onPressed: () => _changeScrollSpeed(-0.5)),
+            Text('${scrollSpeedFactor.toStringAsFixed(1)}x',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade900)),
+            IconButton(
+                icon: Icon(Icons.add, color: Colors.green.shade900),
+                onPressed: () => _changeScrollSpeed(0.5)),
+            IconButton(
+                icon: Icon(Icons.close, color: Colors.green.shade900),
+                onPressed: () => _stopAutoScroll(resetSpeed: true)),
           ],
         ),
       ),
@@ -301,9 +359,12 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       onTap: (index) => _onNavBarTapped(index),
       items: const <BottomNavigationBarItem>[
         BottomNavigationBarItem(icon: Icon(Icons.menu_book), label: 'অনুবাদ'),
-        BottomNavigationBarItem(icon: Icon(Icons.text_fields), label: 'শব্দে শব্দে'),
-        BottomNavigationBarItem(icon: Icon(Icons.play_circle_fill_outlined), label: 'অডিও শুনুন'),
-        BottomNavigationBarItem(icon: Icon(Icons.swipe_outlined), label: 'অটো স্ক্রল'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.text_fields), label: 'শব্দে শব্দে'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle_fill_outlined), label: 'অডিও শুনুন'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.swipe_outlined), label: 'অটো স্ক্রল'),
         BottomNavigationBarItem(icon: Icon(Icons.grid_on), label: 'বিস্তারিত'),
       ],
     );
@@ -314,7 +375,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
     switch (index) {
       case 0:
-        showDialog(context: context, builder: (context) => const TranslatorSelectionDialog());
+        showDialog(
+            context: context,
+            builder: (context) => const TranslatorSelectionDialog());
         break;
       case 1:
         final currentState = ref.read(showWordByWordProvider);
@@ -325,7 +388,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           _stopAutoScroll(resetSpeed: true);
           showDialog(
             context: context,
-            builder: (context) => AudioRangeSelectionDialog(totalAyahs: _totalItems, suraNumber: widget.suraNumber),
+            builder: (context) => AudioRangeSelectionDialog(
+                totalAyahs: _totalItems, suraNumber: widget.suraNumber),
           );
         }
         break;

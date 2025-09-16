@@ -1,189 +1,178 @@
-import 'dart:async';
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../model/ayah.dart';
-import '../model/raw_ayah_data.dart';
-import '../model/word_by_word.dart';
+import 'package:quran_app/features/sura/model/ayah.dart';
+import 'package:sqflite/sqflite.dart';
+import '../../../core/utils/database_helper.dart';
 
+final databaseProvider = FutureProvider<Database>((ref) async {
+  return DatabaseHelper().database;
+});
+
+final quranDataServiceProvider = Provider<QuranDataService>((ref) {
+  return QuranDataService();
+});
 
 class QuranDataService {
-  List<Ayah>? _allAyahsCache;
-
-  Future<List<RawAyahData>> _loadAndParse(String assetPath) async {
-    final jsonString = await rootBundle.loadString(assetPath);
-    final List<dynamic> jsonList = jsonDecode(jsonString);
-    return jsonList.map((json) => RawAyahData.fromJson(json)).toList();
+  Future<int> getVerseCount(Database db, int suraNumber) async {
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM ayahs WHERE sura = ?',
+      [suraNumber],
+    );
+    return result.isNotEmpty ? Sqflite.firstIntValue(result) ?? 0 : 0;
   }
 
-  Future<List<WordByWord>> _loadAndParseWords(String assetPath) async {
-    final jsonString = await rootBundle.loadString(assetPath);
-    final List<dynamic> jsonList = jsonDecode(jsonString);
-    return jsonList.map((json) => WordByWord.fromJson(json)).toList();
+  Future<Ayah> getAyah(Database db, int suraNumber, int ayahNumber) async {
+    final ayahMap = await db.query(
+      'ayahs',
+      where: 'sura = ? AND ayah = ?',
+      whereArgs: [suraNumber, ayahNumber],
+    );
+
+    if (ayahMap.isEmpty) {
+      throw Exception('Ayah not found: $suraNumber:$ayahNumber');
+    }
+
+    final translationsMap = await db.query(
+      'translations',
+      where: 'sura = ? AND ayah = ?',
+      whereArgs: [suraNumber, ayahNumber],
+    );
+    final translations = translationsMap
+        .map((row) => Translation.fromDb(row))
+        .toList();
+
+    final wordsMap = await db.query(
+      'words',
+      where: 'sura = ? AND ayah = ?',
+      whereArgs: [suraNumber, ayahNumber],
+      orderBy: 'word_id ASC',
+    );
+    final words = wordsMap.map((row) => WordByWord.fromDb(row)).toList();
+
+    return Ayah.fromDb(ayahMap.first, translations: translations, words: words);
   }
 
-  Future<List<Ayah>> loadAllAyahs() async {
-    if (_allAyahsCache != null) {
-      return _allAyahsCache!;
+  Future<List<Ayah>> searchQuran(Database db, String query) async {
+    final String searchTerm = '%$query%';
+
+    // Step 1: Get the unique IDs of all matching Ayahs. This is fast and unchanged.
+    final List<Map<String, dynamic>> idResults = await db.rawQuery('''
+    SELECT DISTINCT sura, ayah FROM ayahs WHERE arabic_text LIKE ?
+    UNION
+    SELECT DISTINCT sura, ayah FROM translations WHERE translation_text LIKE ?
+    ORDER BY sura, ayah
+  ''', [searchTerm, searchTerm]);
+
+    if (idResults.isEmpty) {
+      return [];
     }
 
-    final sources = {
-      'arabic': 'assets/quran/arabic.json',
-      'মুফতী তাকী উসমানী': 'assets/quran/bn_taqi.json',
-      'মাওলানা মুহিউদ্দিন খান': 'assets/quran/bn_mohiuddin.json',
-      'ইসলামিক ফাউন্ডেশন': 'assets/quran/bn_islamic_foundation.json',
-      'words': 'assets/quran/word.json',
-    };
+    // --- THE FIX: BATCHING THE QUERIES ---
+    const int chunkSize = 250; // A safe number, well below the SQLite limit of 999
+    final List<Ayah> resultAyahs = [];
 
-    // Load all data sources in parallel.
-    final allData = await Future.wait([
-      _loadAndParse(sources['arabic']!),
-      _loadAndParse(sources['মুফতী তাকী উসমানী']!),
-      _loadAndParse(sources['মাওলানা মুহিউদ্দিন খান']!),
-      _loadAndParse(sources['ইসলামিক ফাউন্ডেশন']!),
-      _loadAndParseWords(sources['words']!),
-    ]);
+    // Loop through the IDs in chunks of 250
+    for (int i = 0; i < idResults.length; i += chunkSize) {
+      // Get the sublist for the current chunk
+      final chunkIds = idResults.sublist(
+          i, i + chunkSize > idResults.length ? idResults.length : i + chunkSize);
 
-    final arabicData = allData[0] as List<RawAyahData>;
-    final taqiData = allData[1] as List<RawAyahData>;
-    final mohiuddinData = allData[2] as List<RawAyahData>;
-    final foundationData = allData[3] as List<RawAyahData>;
-    final wordData = allData[4] as List<WordByWord>;
+      if (chunkIds.isEmpty) continue;
 
-    // Use a map to efficiently merge data by a unique key (sura:ayah)
-    final Map<String, Ayah> mergedAyahs = {};
+      // Step 2: Prepare a WHERE clause for this chunk only.
+      final whereClause = chunkIds.map((_) => '(sura = ? AND ayah = ?)').join(' OR ');
+      final whereArgs = chunkIds.expand((row) => [row['sura'], row['ayah']]).toList();
 
-    for (var ayahData in arabicData) {
-      final key = '${ayahData.sura}:${ayahData.ayah}';
-      mergedAyahs[key] = Ayah(
-        sura: ayahData.sura,
-        ayah: ayahData.ayah,
-        arabicText: ayahData.text,
-        translations: [],
-        words: [],
-      );
-    }
+      // Step 3: Fetch all data for this chunk in parallel.
+      final ayahsFuture = db.query('ayahs', where: whereClause, whereArgs: whereArgs);
+      final translationsFuture = db.query('translations', where: whereClause, whereArgs: whereArgs);
+      final wordsFuture = db.query('words', where: whereClause, whereArgs: whereArgs, orderBy: 'word_id ASC');
 
-    // Helper to add translation
-    void addTranslation(List<RawAyahData> data, String translatorName) {
-      for (var transData in data) {
-        final key = '${transData.sura}:${transData.ayah}';
-        if (mergedAyahs.containsKey(key)) {
-          mergedAyahs[key]!.translations.add(Translation(
-            translatorName: translatorName,
-            text: transData.text,
-          ));
-        }
+      final allData = await Future.wait([
+        ayahsFuture,
+        translationsFuture,
+        wordsFuture,
+      ]);
+
+      final List<Map<String, dynamic>> ayahData = allData[0];
+      final List<Map<String, dynamic>> translationData = allData[1];
+      final List<Map<String, dynamic>> wordData = allData[2];
+
+      // Step 4: Stitch the data for this chunk together (same logic as before).
+      final Map<String, List<Translation>> translationsByAyah = {};
+      for (final row in translationData) {
+        final key = "${row['sura']}:${row['ayah']}";
+        translationsByAyah.putIfAbsent(key, () => []).add(Translation.fromDb(row));
       }
-    }
 
-    addTranslation(taqiData, 'মুফতী তাকী উসমানী');
-    addTranslation(mohiuddinData, 'মাওলানা মুহিউদ্দিন খান');
-    addTranslation(foundationData, 'ইসলামিক ফাউন্ডেশন');
-
-    // Add words
-    for (var word in wordData) {
-      final key = '${word.sura}:${word.ayah}';
-      if (mergedAyahs.containsKey(key)) {
-        mergedAyahs[key]!.words.add(word);
+      final Map<String, List<WordByWord>> wordsByAyah = {};
+      for (final row in wordData) {
+        final key = "${row['sura']}:${row['ayah']}";
+        wordsByAyah.putIfAbsent(key, () => []).add(WordByWord.fromDb(row));
       }
-    }
 
-    final result = mergedAyahs.values.toList();
-    // Cache the result
-    _allAyahsCache = result;
-    return result;
-  }
-
-  Future<List<Ayah>> loadSuraData(int suraNumber) async {
-    final sources = {
-      'arabic': 'assets/quran/arabic.json',
-      'মুফতী তাকী উসমানী': 'assets/quran/bn_taqi.json',
-      'মাওলানা মুহিউদ্দিন খান': 'assets/quran/bn_mohiuddin.json',
-      'ইসলামিক ফাউন্ডেশন': 'assets/quran/bn_islamic_foundation.json',
-      'words': 'assets/quran/word.json',
-    };
-
-    final arabicData = await _loadAndParse(sources['arabic']!);
-    final taqiData = await _loadAndParse(sources['মুফতী তাকী উসমানী']!);
-    final mohiuddinData = await _loadAndParse(sources['মাওলানা মুহিউদ্দিন খান']!);
-    final foundationData = await _loadAndParse(sources['ইসলামিক ফাউন্ডেশন']!);
-    final wordData = await _loadAndParseWords(sources['words']!);
-
-    final suraArabic = arabicData.where((a) => a.sura == suraNumber).toList();
-    final suraWords = wordData.where((w) => w.sura == suraNumber).toList();
-
-    final Map<int, Ayah> mergedAyahs = {};
-
-    for (var ayahData in suraArabic) {
-      mergedAyahs[ayahData.ayah] = Ayah(
-        sura: ayahData.sura,
-        ayah: ayahData.ayah,
-        arabicText: ayahData.text,
-        translations: [],
-        words: [],
-      );
-    }
-
-    for (var transData in taqiData.where((t) => t.sura == suraNumber)) {
-      if (mergedAyahs.containsKey(transData.ayah)) {
-        mergedAyahs[transData.ayah]!.translations.add(Translation(
-          translatorName: 'মুফতী তাকী উসমানী',
-          text: transData.text,
+      // Add the processed ayahs from this chunk to our main results list.
+      for (final row in ayahData) {
+        final key = "${row['sura']}:${row['ayah']}";
+        resultAyahs.add(Ayah.fromDb(
+          row,
+          translations: translationsByAyah[key] ?? [],
+          words: wordsByAyah[key] ?? [],
         ));
       }
     }
 
-    for (var transData in mohiuddinData.where((t) => t.sura == suraNumber)) {
-      if (mergedAyahs.containsKey(transData.ayah)) {
-        mergedAyahs[transData.ayah]!.translations.add(Translation(
-          translatorName: 'মাওলানা মুহিউদ্দিন খান',
-          text: transData.text,
-        ));
-      }
-    }
+    // Ensure the final list is sorted correctly, as chunks might process out of order.
+    resultAyahs.sort((a, b) {
+      if (a.sura != b.sura) return a.sura.compareTo(b.sura);
+      return a.ayah.compareTo(b.ayah);
+    });
 
-    for (var transData in foundationData.where((t) => t.sura == suraNumber)) {
-      if (mergedAyahs.containsKey(transData.ayah)) {
-        mergedAyahs[transData.ayah]!.translations.add(Translation(
-          translatorName: 'ইসলামিক ফাউন্ডেশন',
-          text: transData.text,
-        ));
-      }
-    }
-
-    for (var word in suraWords) {
-      if (mergedAyahs.containsKey(word.ayah)) {
-        mergedAyahs[word.ayah]!.words.add(word);
-      }
-    }
-
-    final result = mergedAyahs.values.toList();
-    result.sort((a, b) => a.ayah.compareTo(b.ayah));
-    return result;
+    return resultAyahs;
   }
 }
 
-
-final suraProvider = FutureProvider.family<List<Ayah>, int>((ref, suraNumber) async {
-  final dataService = QuranDataService();
-  return dataService.loadSuraData(suraNumber);
+final ayahCountProvider = FutureProvider.family<int, int>((
+  ref,
+  suraNumber,
+) async {
+  final db = await ref.watch(databaseProvider.future);
+  return ref.read(quranDataServiceProvider).getVerseCount(db, suraNumber);
 });
 
-//
-// final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => [
-//   'মুফতী তাকী উসমানী',
-// ]);
+class AyahProviderParams {
+  final int suraNumber;
+  final int index; // 0-based index from ListView.builder
 
-final selectedTranslatorsProvider = StateProvider<List<String>>((ref) => []);
+  AyahProviderParams({required this.suraNumber, required this.index});
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AyahProviderParams &&
+          runtimeType == other.runtimeType &&
+          suraNumber == other.suraNumber &&
+          index == other.index;
+
+  @override
+  int get hashCode => suraNumber.hashCode ^ index.hashCode;
+}
+
+final ayahByIndexProvider = FutureProvider.family<Ayah, AyahProviderParams>((
+  ref,
+  params,
+) async {
+  final db = await ref.watch(databaseProvider.future);
+  final ayahNumber = params.index + 1;
+  return ref
+      .read(quranDataServiceProvider)
+      .getAyah(db, params.suraNumber, ayahNumber);
+});
+
+final selectedTranslatorsProvider = StateProvider<List<String>>(
+  (ref) => ['মুফতী তাকী উসমানী'],
+);
 final showTranslationsProvider = StateProvider<bool>((ref) => true);
 final showWordByWordProvider = StateProvider<bool>((ref) => false);
-
 final isAutoScrollingProvider = StateProvider<bool>((ref) => false);
 final scrollSpeedFactorProvider = StateProvider<double>((ref) => 1.0);
 final isAutoScrollPausedProvider = StateProvider<bool>((ref) => false);
-
-
-
-
