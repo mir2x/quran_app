@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:quran_app/core/utils/bengali_digit_extension.dart';
 import 'package:quran_app/features/quran/viewmodel/reciter_providers.dart';
 import 'package:quran_app/shared/extensions.dart';
+import '../../../shared/quran_data.dart';
 import '../../downloader/view/show_download_dialog.dart';
 import '../../downloader/view/show_download_permission_dialog.dart';
 import '../../downloader/viewmodel/download_providers.dart';
@@ -117,7 +119,7 @@ class QuranAudioPlayer {
     if (ayahsToDownload.isNotEmpty) {
       final confirmed = await showDownloadPermissionDialog(
         context,
-        assetName: 'Audio for Surah $sura (${ayahsToDownload.first}-${ayahsToDownload.last})',
+        assetName: 'সুরা ${suraNames[sura]} আয়াত (${ayahsToDownload.first.toBengaliDigit()}-${ayahsToDownload.last.toBengaliDigit()})',
       );
       if (!confirmed || !context.mounted) return false;
 
@@ -142,7 +144,7 @@ class QuranAudioPlayer {
       // 3. Create the specific download task.
       final audioDownloadTask = MultiFileDownloadTask(
         id: 'reciter_${reciterId}_sura_$sura',
-        displayName: 'Downloading Audio for Surah $sura',
+        displayName: 'সুরা ${suraNames[sura]}',
         urlToPathMap: urlToPathMap,
       );
 

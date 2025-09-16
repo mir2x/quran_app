@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quran_app/core/utils/bengali_digit_extension.dart';
 
 import 'package:quran_app/features/sura/view/sura_page.dart';
 
+import '../../../../shared/quran_data.dart';
 import '../../../quran/viewmodel/ayah_highlight_viewmodel.dart';
 import '../../viewmodel/search_viewmodel.dart';
 
@@ -47,7 +49,7 @@ class SearchPage extends ConsumerWidget {
               final ayah = ayahs[index];
               return ListTile(
                 title: Text(
-                  'সূরা ${ suraNames[ayah.sura - 1] ?? ayah.sura}:${ayah.ayah}',
+                  'সূরা ${ suraNames[ayah.sura - 1] ?? ayah.sura}: আয়াত ${ayah.ayah.toBengaliDigit()}',
                   style: const TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
                 ),
                 subtitle: HighlightedText(

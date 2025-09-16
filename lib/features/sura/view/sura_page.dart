@@ -13,6 +13,8 @@ import 'package:quran_app/features/sura/viewmodel/sura_reciter_viewmodel.dart';
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 
+import '../../../shared/quran_data.dart';
+
 class SurahPage extends ConsumerStatefulWidget {
   final int suraNumber;
   final int? initialScrollIndex;
@@ -152,7 +154,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     // STEP 1: Watch the new provider that gets the whole surah's data.
     final suraDataAsync = ref.watch(suraDataProvider(widget.suraNumber));
 
-    final suraName = "সূরা ${widget.suraNumber}";
+    final suraName = "সূরা ${suraNames[widget.suraNumber - 1]}";
     final quranAudioState = ref.watch(suraAudioProvider);
     final isTimedScrolling = ref.watch(isAutoScrollingProvider);
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
