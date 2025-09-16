@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/utils/bengali_utils.dart';
 import '../../../downloader/view/show_download_dialog.dart';
 import '../../../downloader/viewmodel/download_providers.dart';
 import '../../model/ayah.dart';
@@ -56,6 +55,7 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF1E4D2B),
                       ),
+                      textAlign: TextAlign.left,
                     ),
                   );
                 },
@@ -69,6 +69,7 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
                     style: const TextStyle(
                       fontFamily: 'SolaimanLipi', fontSize: 15, height: 1.8, color: Colors.black87,
                     ),
+                    textAlign: TextAlign.center,
                   )
                       : _buildDownloadButton(item, ayahIdentifier), // Otherwise, show download button
                 ),
@@ -90,6 +91,7 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
         const Text(
           "এই তাফসীরটি ডাউনলোড করা নেই।",
           style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 15),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
         ElevatedButton.icon(
@@ -155,6 +157,7 @@ void showTafsirBottomSheet(BuildContext context, String suraName, Ayah ayah) {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
+                    textAlign: TextAlign.left,
                   ),
                 ),
                 const Divider(height: 1, thickness: 1),
