@@ -44,6 +44,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         });
       }
     });
+    // Initial scroll logic remains the same
     if (widget.initialScrollIndex != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -63,7 +64,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     super.dispose();
   }
 
-  // --- All your controller methods (_startAutoScroll, _stopAutoScroll, etc.) remain unchanged ---
+  // --- All controller methods (_startAutoScroll, _scrollToTop, etc.) remain unchanged ---
   void _startAutoScroll() {
     if (_timedScrollTimer?.isActive == true || _totalItems == 0) return;
 
@@ -148,19 +149,17 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. WATCH THE AYAH COUNT PROVIDER FIRST
-    final ayahCountAsync = ref.watch(ayahCountProvider(widget.suraNumber));
+    // STEP 1: Watch the new provider that gets the whole surah's data.
+    final suraDataAsync = ref.watch(suraDataProvider(widget.suraNumber));
 
-    // Other UI state variables
     final suraName = "সূরা ${widget.suraNumber}";
     final quranAudioState = ref.watch(suraAudioProvider);
     final isTimedScrolling = ref.watch(isAutoScrollingProvider);
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
 
-    // Listen for audio changes to scroll automatically
+    // Audio listener logic remains the same
     ref.listen<SuraAudioState?>(suraAudioProvider, (previous, next) {
       if (next != null && next.isPlaying) {
-        // Convert 1-based ayah number to 0-based list index
         final ayahIndex = next.ayah - 1;
         if (ayahIndex >= 0 && ayahIndex < _totalItems) {
           _autoScrollController.scrollToIndex(
@@ -178,88 +177,79 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         body: Column(
           children: [
             Expanded(
-              // 2. THE MAIN .when() IS NOW ON THE AYAH COUNT
-              child: ayahCountAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+              // STEP 2: The main .when() is now on our new provider.
+              child: suraDataAsync.when(
+                // Show a list of placeholders for a visually stable loading state.
+                loading: () => ListView.builder(
+                  itemCount: 15, // Show a decent number of placeholders
+                  itemBuilder: (_, __) => const AyahPlaceholder(),
+                ),
                 error: (error, stack) =>
                     Center(child: Text('Failed to load Sura details:\n$error')),
-                data: (totalAyahs) {
-                  _totalItems = totalAyahs; // Update total items for controls
+                // DATA IS FULLY LOADED!
+                data: (ayahs) {
+                  // Update total items for other controls
+                  _totalItems = ayahs.length;
 
-                  // 3. THE LISTVIEW USES THE COUNT AND LAZY-LOADS EACH ITEM
-                  return ScrollbarTheme(
-                    data: ScrollbarThemeData(
-                        thumbColor: MaterialStateProperty.resolveWith((states) {
+                  return Stack(
+                    children: [
+                      ScrollbarTheme(
+                        data: ScrollbarThemeData(
+                            thumbColor: MaterialStateProperty.resolveWith((states) {
+                              if (states.contains(MaterialState.dragged)) {
+                                return Colors.green;
+                              }
+                              return Colors.grey.shade400;
+                            }), thickness: MaterialStateProperty.resolveWith((states) {
                           if (states.contains(MaterialState.dragged)) {
-                            return Colors.green;
+                            return 12.0;
                           }
-                          return Colors.grey.shade400;
-                        }), thickness: MaterialStateProperty.resolveWith((states) {
-                      if (states.contains(MaterialState.dragged)) {
-                        return 12.0;
-                      }
-                      return 6.0;
-                    })),
-                    child: Scrollbar(
-                      controller: _autoScrollController,
-                      thumbVisibility: true,
-                      interactive: true,
-                      radius: const Radius.circular(6),
-                      child: Stack(
-                        children: [
-                          ListView.builder(
+                          return 6.0;
+                        })),
+                        child: Scrollbar(
+                          controller: _autoScrollController,
+                          thumbVisibility: true,
+                          interactive: true,
+                          radius: const Radius.circular(6),
+                          child: CustomScrollView(
                             controller: _autoScrollController,
-                            itemCount: totalAyahs,
-                            padding: const EdgeInsets.only(
-                                bottom: 80.0, top: 8.0, left: 4.0, right: 4.0),
-                            itemBuilder: (context, index) {
-                              // 4. WRAP WITH A CONSUMER TO WATCH THE INDIVIDUAL AYAH
-                              return Consumer(
-                                builder: (context, ref, child) {
-                                  final params = AyahProviderParams(
-                                      suraNumber: widget.suraNumber,
-                                      index: index);
-                                  final ayahAsync =
-                                  ref.watch(ayahByIndexProvider(params));
+                            slivers: <Widget>[
+                              SliverPadding(
+                                padding: const EdgeInsets.only(
+                                    top: 8.0, left: 4.0, right: 4.0),
+                                sliver: SliverList.builder(
+                                  // STEP 3: Build the list from the fully loaded data.
+                                  itemCount: ayahs.length,
+                                  itemBuilder: (context, index) {
+                                    final ayah = ayahs[index];
+                                    final isHighlighted = quranAudioState != null &&
+                                        quranAudioState.surah == widget.suraNumber &&
+                                        quranAudioState.ayah == ayah.ayah;
 
-                                  // 5. USE A NESTED .when() FOR EACH AYAH'S STATE
-                                  return ayahAsync.when(
-                                    loading: () => const AyahPlaceholder(),
-                                    error: (err, stack) => Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                              'Error loading Ayah ${index + 1}\n${err.toString()}'),
-                                        )),
-                                    data: (ayah) {
-                                      final isHighlighted =
-                                          quranAudioState != null &&
-                                              quranAudioState.surah ==
-                                                  widget.suraNumber &&
-                                              quranAudioState.ayah == ayah.ayah;
-
-                                      return AutoScrollTag(
-                                        key: ValueKey(index),
-                                        controller: _autoScrollController,
-                                        index: index,
-                                        child: AyahCard(
-                                          suraNumber: widget.suraNumber,
-                                          ayah: ayah,
-                                          suraName: suraName,
-                                          isHighlighted: isHighlighted,
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              );
-                            },
+                                    // NO MORE NESTED CONSUMER NEEDED!
+                                    return AutoScrollTag(
+                                      key: ValueKey(index),
+                                      controller: _autoScrollController,
+                                      index: index,
+                                      child: AyahCard(
+                                        suraNumber: widget.suraNumber,
+                                        ayah: ayah,
+                                        suraName: suraName,
+                                        isHighlighted: isHighlighted,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              SliverToBoxAdapter(
+                                child: SizedBox(height: 80.0),
+                              ),
+                            ],
                           ),
-                          if (isTimedScrolling)
-                            _buildAutoScrollController(context),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (isTimedScrolling) _buildAutoScrollController(context),
+                    ],
                   );
                 },
               ),
