@@ -7,9 +7,7 @@ import 'package:quran_app/features/quran/viewmodel/reciter_providers.dart';
 import '../../downloader/view/show_download_dialog.dart';
 import '../../downloader/view/show_download_permission_dialog.dart';
 import '../../downloader/viewmodel/download_providers.dart';
-import '../../quran/view/widgets/download_dialog.dart';
 import '../../quran/viewmodel/audio_providers.dart';
-import '../../quran/viewmodel/download_providers.dart';
 import '../model/sura_audio_state.dart';
 
 class SuraAudioNotifier extends StateNotifier<SuraAudioState?> {

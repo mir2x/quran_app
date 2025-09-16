@@ -101,12 +101,14 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
         ref.read(selectedStartAyahProvider.notifier).state = _selectedStartAyah;
         ref.read(selectedEndAyahProvider.notifier).state = _selectedEndAyah;
         if (!context.mounted) return;
-        Navigator.of(context).pop();
-        await audioPlayer.playAyahs(
+        final bool playbackStarted = await audioPlayer.playAyahs(
           _selectedStartAyah,
           _selectedEndAyah,
           context,
         );
+        if (playbackStarted) {
+          Navigator.of(context).pop();
+        }
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.grey.shade200,
