@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../downloader/view/show_download_dialog.dart';
 import '../../../downloader/view/show_download_permission_dialog.dart';
 import '../../../downloader/viewmodel/download_providers.dart';
 import '../../../quran/view/quran_viewer_screen.dart';
+import '../../../sura/view/sura_page.dart';
 import '../../../sura_list/view/sura_list_page.dart';
 import '../../model/quran_edition.dart';
 import '../providers/home_providers.dart';
@@ -41,12 +43,43 @@ class HomeScreen extends ConsumerWidget {
             ),
             SizedBox(height: 24.h),
             OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SuraListPage()),
-                );
+              // The onPressed function is now async to wait for SharedPreferences
+              onPressed: () async {
+                // 1. Get an instance of SharedPreferences
+                final prefs = await SharedPreferences.getInstance();
+
+                // 2. Read the stored sura number and ayah index
+                final int? lastSura = prefs.getInt('last_read_sura');
+                final int? lastAyahIndex = prefs.getInt('last_read_ayah_index');
+
+                // 3. IMPORTANT: Check if the widget is still in the widget tree before navigating
+                if (!context.mounted) return;
+
+                // 4. Decide where to navigate
+                if (lastSura != null && lastAyahIndex != null) {
+                  // If a last read position exists, navigate directly to the SurahPage
+                  debugPrint('Found last read: Sura $lastSura, Ayah $lastAyahIndex. Navigating to SurahPage.');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SurahPage(
+                        suraNumber: lastSura,
+                        initialScrollIndex: lastAyahIndex,
+                      ),
+                      // Optional: Add settings name for popUntil logic if you use it
+                      settings: RouteSettings(name: '/surah/$lastSura'),
+                    ),
+                  );
+                } else {
+                  // If no position is saved, navigate to the Sura List Page as before
+                  debugPrint('No last read found. Navigating to SuraListPage.');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SuraListPage()),
+                  );
+                }
               },
+              // --- All the styling below remains exactly the same ---
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 side: BorderSide(

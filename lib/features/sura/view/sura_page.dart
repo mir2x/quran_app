@@ -10,6 +10,7 @@ import 'package:quran_app/features/sura/view/widgets/ayah_card.dart';
 import 'package:quran_app/features/sura/view/widgets/ayah_placeholders.dart';
 import 'package:quran_app/features/sura/view/widgets/sura_app_bar.dart';
 import 'package:quran_app/features/sura/view/widgets/sura_bottom_nav_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../viewmodel/sura_reciter_viewmodel.dart';
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 import '../../../shared/quran_data.dart';
@@ -150,6 +151,16 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     }
   }
 
+  Future<void> _saveLastReadPosition(int sura, int index) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_read_sura', sura);
+      await prefs.setInt('last_read_ayah_index', index);
+    } catch (e) {
+      _log('Error saving last read position: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final suraDataAsync = ref.watch(suraDataProvider(widget.suraNumber));
@@ -253,6 +264,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                         padding: const EdgeInsets.only(bottom: 80.0),
                         firstShown: (index) {
                           if (!mounted) return;
+                          _saveLastReadPosition(widget.suraNumber, index);
                           setState(() {
                             _topVisibleIndex = index;
                             _showScrollToTopButton = index > 5;
