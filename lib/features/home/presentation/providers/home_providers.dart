@@ -7,7 +7,7 @@ Future<List<QuranEdition>> getQuranEditionData() async {
     {
       'id': 'imdadia_hafezi',
       'title': 'হাফিজি কুরআন\n(এমদাদিয়া লাইব্রেরী)',
-      'cover': 'assets/image/front_page/imdadia_hafezi.jpg',
+      'cover': 'assets/image/front_page/imdadia_hafezi.png',
       'url': 'https://www.dropbox.com/scl/fi/r2qeg0pktyg8cunmc0yfw/imdadia_hafezi.zip?rlkey=1kp1pftw0if70ffaowkmyp9j4&st=8q0y0tsy&dl=1',
       'sizeBytes': 78614813,
       'width': 1152,
@@ -17,7 +17,7 @@ Future<List<QuranEdition>> getQuranEditionData() async {
     {
       'id': 'hafezi',
       'title': 'হাফিজি কুরআন',
-      'cover': 'assets/image/front_page/hafezi.jpg',
+      'cover': 'assets/image/front_page/hafezi.png',
       'url': 'https://www.dropbox.com/scl/fi/bj7wjg76a6awhffbph3d5/hafezi.zip?rlkey=4em4vz1qydsj4qy5gxizajd4z&st=7qwdtwln&dl=1',
       'sizeBytes': 120611119,
       'width': 1152,
@@ -47,7 +47,7 @@ Future<List<QuranEdition>> getQuranEditionData() async {
     {
       'id': 'nurani',
       'title': 'নূরানী কুরআন\n(এমদাদিয়া লাইব্রেরী)',
-      'cover': 'assets/image/front_page/nurani.jpg',
+      'cover': 'assets/image/front_page/nurani.png',
       'url': 'https://www.dropbox.com/scl/fi/pzzfjjfj2gxaj2uhffgmo/nurani.zip?rlkey=ovyzvi8awyx8x86nurlwrpy6z&st=ni7eo0o4&dl=1',
       'sizeBytes': 106934272,
       'width': 670,
@@ -57,7 +57,7 @@ Future<List<QuranEdition>> getQuranEditionData() async {
     {
       'id': 'colorful_hafezi',
       'title': 'রঙিন হাফিজি',
-      'cover': 'assets/image/front_page/colorful_hafezi.jpg',
+      'cover': 'assets/image/front_page/colorful_hafezi.png',
       'url' : 'https://www.dropbox.com/scl/fi/5o7v4h796ke75t090ngmg/colorful_hafezi.zip?rlkey=msix61njs8p33uy6bbo9ziant&st=d48fd6d0&dl=1',
       'sizeBytes': 162361420,
       'width': 560,
