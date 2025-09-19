@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 // Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -39,26 +40,28 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
   Orientation? _lastOrientation;
 
-  // Keep aspectRatio calculation as it's based on image dimensions
   double get _aspectRatio => widget.imageWidth / widget.imageHeight;
 
   static const Duration _animationDuration = Duration(milliseconds: 300);
-  // Scale bottomBarHeight using .h
-  static const double _bottomBarHeight = 64.0; // This value is now scaled by .h where used
+
+  static const double _bottomBarHeight = 64.0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(editionConfigProvider.notifier).set(EditionConfig(
-        dir: widget.editionDir,
-        imageWidth: widget.imageWidth,
-        imageHeight: widget.imageHeight,
-        imageExt: widget.imageExt,
-      ));
+      ref
+          .read(editionConfigProvider.notifier)
+          .set(
+            EditionConfig(
+              dir: widget.editionDir,
+              imageWidth: widget.imageWidth,
+              imageHeight: widget.imageHeight,
+              imageExt: widget.imageExt,
+            ),
+          );
     });
   }
-
 
   @override
   void dispose() {
@@ -75,9 +78,9 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     final barsVisibilityNotifier = ref.read(barsVisibilityProvider.notifier);
 
     ref.listen<int?>(navigateToPageCommandProvider, (
-        prevPageNum,
-        newPageNum,
-        ) async {
+      prevPageNum,
+      newPageNum,
+    ) async {
       final totalPageCountAsync = ref.read(totalPageCountProvider);
       final pageCount = totalPageCountAsync.value ?? 604;
 
@@ -86,8 +89,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
 
         if (targetPageIndex >= 0 && targetPageIndex < pageCount) {
           final currentOrientation = MediaQuery.of(context).orientation;
-          // Use screenutil for width
-          final width = MediaQuery.of(context).size.width; // Keep this for itemH calculation based on actual screen width
+          final width = MediaQuery.of(context).size.width;
 
           if (currentOrientation == Orientation.portrait &&
               _portraitController != null) {
@@ -98,7 +100,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
             );
           } else if (currentOrientation == Orientation.landscape &&
               _landscapeController != null) {
-            // itemH calculation based on actual screen width and aspect ratio is correct
             final itemH = width / _aspectRatio;
             final offset = targetPageIndex * itemH;
 
@@ -124,15 +125,13 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     });
 
     return allBoxesAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, s) => Scaffold(
         appBar: CustomAppBar(),
         body: Center(
           child: Text(
             'Error loading Quran data: ${e.toString()}\n$s',
-            // Optional: Scale text in error message
             style: TextStyle(fontSize: 14.sp),
           ),
         ),
@@ -140,15 +139,13 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
       data: (allBoxes) {
         final totalPageCountAsync = ref.watch(totalPageCountProvider);
         return totalPageCountAsync.when(
-          loading: () => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (e, s) => Scaffold(
             appBar: CustomAppBar(),
             body: Center(
               child: Text(
                 'Error loading page count: ${e.toString()}\n$s',
-                // Optional: Scale text in error message
                 style: TextStyle(fontSize: 14.sp),
               ),
             ),
@@ -156,18 +153,20 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           data: (pageCount) {
             return OrientationBuilder(
               builder: (_, ori) {
-                // Keep width and itemH calculation based on actual screen size for layout
                 final width = MediaQuery.of(context).size.width;
                 final itemH = width / _aspectRatio;
 
                 if (ori != _lastOrientation) {
                   if (ori == Orientation.portrait) {
                     _portraitController?.dispose();
-                    _portraitController = PageController(initialPage: ref.read(currentPageProvider));
+                    _portraitController = PageController(
+                      initialPage: ref.read(currentPageProvider),
+                    );
                   } else {
                     _landscapeController?.dispose();
                     _landscapeController = ScrollController(
-                      initialScrollOffset: ref.read(currentPageProvider) * itemH,
+                      initialScrollOffset:
+                          ref.read(currentPageProvider) * itemH,
                     );
                   }
                   _lastOrientation = ori;
@@ -181,13 +180,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     itemCount: pageCount,
                     onPageChanged: (idx) {
                       ref.read(currentPageProvider.notifier).state = idx;
-                      final currentSelectedState = ref.read(selectedAyahProvider);
-                      if (currentSelectedState?.source == AyahSelectionSource.tap) {
+                      final currentSelectedState = ref.read(
+                        selectedAyahProvider,
+                      );
+                      if (currentSelectedState?.source ==
+                          AyahSelectionSource.tap) {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
                     },
                     itemBuilder: (_, idx) => QuranPage(
-                      pageIndex: idx, // Pass 0-based index
+                      pageIndex: idx,
+                      // Pass 0-based index
                       editionDir: widget.editionDir,
                       imageWidth: widget.imageWidth,
                       imageHeight: widget.imageHeight,
@@ -199,12 +202,14 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     onNotification: (n) {
                       final p = (n.metrics.pixels / itemH).round().clamp(
                         0,
-                        math.max(0, pageCount - 1), // Use the loaded pageCount
+                        math.max(0, pageCount - 1),
                       );
                       ref.read(currentPageProvider.notifier).state = p.toInt();
-                      final currentSelectedState = ref.read(selectedAyahProvider);
-                      // Clear the selected ayah ONLY if it was selected by audio.
-                      if (currentSelectedState?.source == AyahSelectionSource.tap) {
+                      final currentSelectedState = ref.read(
+                        selectedAyahProvider,
+                      );
+                      if (currentSelectedState?.source ==
+                          AyahSelectionSource.tap) {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
                       return false;
@@ -212,15 +217,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     child: ListView.builder(
                       controller: _landscapeController!,
                       physics: const BouncingScrollPhysics(),
-                      itemCount: pageCount, // Use the loaded pageCount
+                      itemCount: pageCount,
                       itemBuilder: (_, idx) => SizedBox(
-                        // Keep height based on actual screen width and aspect ratio
                         height: itemH,
-                        // Use screenutil for width if you want the SizedBox width to scale relative to design width
-                        // However, double.infinity is fine here as it just takes available space.
                         width: double.infinity,
                         child: QuranPage(
-                          pageIndex: idx, // Pass 0-based index
+                          pageIndex: idx,
                           editionDir: widget.editionDir,
                           imageWidth: widget.imageWidth,
                           imageHeight: widget.imageHeight,
@@ -279,7 +281,6 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                                 curve: Curves.easeInOut,
                                 child: IgnorePointer(
                                   ignoring: !barsVisible,
-                                  // BottomBar height is handled internally, but elements inside can use .h
                                   child: BottomBar(
                                     drawerOpen: ref.watch(drawerOpenProvider),
                                     rootKey: _rootKey,
@@ -287,7 +288,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                                 ),
                               ),
                             ),
-                        
+
                             Consumer(
                               builder: (context, ref, _) {
                                 final audio = ref.watch(quranAudioProvider);
@@ -295,14 +296,17 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                                 if (!isAudioPlaying) {
                                   return const SizedBox.shrink(); // Hide when not playing
                                 }
-                        
-                                final double safeAreaBottom = MediaQuery.of(context).padding.bottom;
-                        
+
+                                final double safeAreaBottom = MediaQuery.of(
+                                  context,
+                                ).padding.bottom;
+
                                 // Use scaled bottom bar height
                                 final double dynamicBottom = barsVisible
-                                    ? _bottomBarHeight.h // Scale the static bottom bar height
+                                    ? _bottomBarHeight
+                                          .h // Scale the static bottom bar height
                                     : safeAreaBottom;
-                        
+
                                 return AnimatedPositioned(
                                   duration: _animationDuration,
                                   curve: Curves.easeInOut,

@@ -7,6 +7,7 @@ import 'package:quran_app/shared/extensions.dart';
 import '../../../core/constants.dart';
 import '../../../shared/quran_data.dart';
 import '../model/ayah_box.dart';
+import '../model/page_quran_info.dart';
 import '../model/selected_ayah_state.dart';
 
 final ayahCountsProvider = Provider<List<int>>((ref) {
@@ -485,8 +486,6 @@ class QuranInfoService {
 
     return currentSura;
   }
-
-  // Get the page number for a specific Sura and Ayah
   int? getPageBySuraAyah(int sura, int ayah) {
     final ayahPageMapping = _ref.read(ayahPageMappingProvider);
     return ayahPageMapping[(sura, ayah)];
@@ -501,79 +500,90 @@ class BarsVisibilityNotifier extends StateNotifier<bool> {
   Timer? _hideTimer;
   static const Duration _hideDuration = Duration(seconds: 5);
   bool _autoHideArmed =
-      true; // Flag to indicate if the initial auto-hide is still active
-
+      true;
   BarsVisibilityNotifier() : super(true) {
-    // Start with bars visible
-    // Start the initial auto-hide timer immediately when the notifier is created
     _startAutoHideTimer();
   }
 
-  // Starts the timer ONLY if auto-hide is still armed
   void _startAutoHideTimer() {
     if (_autoHideArmed) {
-      _hideTimer?.cancel(); // Cancel any existing timer
+      _hideTimer?.cancel();
       _hideTimer = Timer(_hideDuration, () {
         if (state) {
-          // Only hide if currently visible
-          state = false; // Update state to hidden
-          _autoHideArmed = false; // Auto-hide has occurred, disarm it
+          state = false;
+          _autoHideArmed = false;
         }
       });
     }
   }
 
-  // Method to show the bars.
-  // Called by user interactions like page change, orientation change, navigation.
-  // It shows the bars but does NOT restart the auto-hide timer if it's been disarmed.
   void show() {
     if (!state) {
       state = true; // Show the bars
     }
-    // We do NOT start the auto-hide timer here.
-    // The timer is only started initially by the constructor or manually if re-armed.
   }
 
-  // Method to hide the bars.
-  // Called by user interactions like double-tap when bars are visible.
-  // It hides the bars and permanently disarms auto-hide.
   void hide() {
     _hideTimer
-        ?.cancel(); // Cancel any active timer (auto-hide or potential future ones)
+        ?.cancel();
     if (state) {
-      state = false; // Hide the bars
+      state = false;
     }
-    _autoHideArmed = false; // Manual hide means auto-hide is no longer desired
+    _autoHideArmed = false;
   }
 
-  // Method to toggle the bars visibility.
-  // Called by the double-tap gesture.
   void toggle() {
     if (state) {
-      // If currently visible, hide them and disable auto-hide permanently
-      hide(); // Use the hide method which also cancels the timer and disarms auto-hide
+      hide();
     } else {
-      // If currently hidden, show them and disable auto-hide permanently
-      show(); // Use the show method (which doesn't start auto-hide timer if disarmed)
+      show();
       _autoHideArmed =
-          false; // Manual show means auto-hide is no longer desired
+          false;
       _hideTimer
-          ?.cancel(); // Ensure any pending auto-hide timer is cancelled just in case
+          ?.cancel();
     }
   }
-
-  // This method can be called if you ever needed to re-enable auto-hide
-  // void armAutoHide() {
-  //    _autoHideArmed = true;
-  //    _startAutoHideTimer(); // Optionally start timer immediately upon re-arming
-  // }
 
   @override
   void dispose() {
-    _hideTimer?.cancel(); // Cancel timer when notifier is disposed
+    _hideTimer?.cancel();
     super.dispose();
   }
 }
+
+final pageInfoProvider = Provider.family<PageQuranInfo, int>((ref, pageNumber) {
+  final boxesOnPage = ref.watch(boxesForPageProvider(pageNumber));
+  final paraNumber = ref.read(quranInfoServiceProvider).getParaByPage(pageNumber);
+
+  if (boxesOnPage.isEmpty) {
+    return PageQuranInfo(
+      pageNumber: pageNumber,
+      paraNumber: paraNumber,
+      suraAyahRanges: {},
+    );
+  }
+
+  final Map<int, List<int>> suraAyahs = {};
+  for (final box in boxesOnPage) {
+    if (!suraAyahs.containsKey(box.suraNumber)) {
+      suraAyahs[box.suraNumber] = [];
+    }
+    suraAyahs[box.suraNumber]!.add(box.ayahNumber);
+  }
+
+  final Map<int, (int, int)> suraAyahRanges = {};
+  for (final sura in suraAyahs.keys) {
+    final ayahs = suraAyahs[sura]!;
+    ayahs.sort();
+    suraAyahRanges[sura] = (ayahs.first, ayahs.last);
+  }
+
+  return PageQuranInfo(
+    pageNumber: pageNumber,
+    paraNumber: paraNumber,
+    suraAyahRanges: suraAyahRanges,
+  );
+});
 
 final barsVisibilityProvider =
     StateNotifierProvider<BarsVisibilityNotifier, bool>(

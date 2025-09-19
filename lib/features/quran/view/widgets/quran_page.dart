@@ -32,6 +32,20 @@ class QuranPage extends ConsumerWidget {
     final touchModeOn = ref.watch(touchModeProvider);
 
     final logicalPage = pageIndex + 1;
+
+    final pageInfo = ref.watch(pageInfoProvider(logicalPage));
+
+    final int currentPageNumber = pageInfo.pageNumber;
+    final int? currentParaNumber = pageInfo.paraNumber;
+    final List<int> surasOnThisPage = pageInfo.surasOnPage;
+
+    print('Page: $currentPageNumber, Para: $currentParaNumber');
+    for (final sura in surasOnThisPage) {
+      final (startAyah, endAyah) = pageInfo.suraAyahRanges[sura]!;
+      print('Sura $sura is on this page from ayah $startAyah to $endAyah.');
+    }
+
+
     final pageNumber  = logicalPage < kFirstPageNumber ? -1 : logicalPage;
     final boxes = pageNumber == -1 ? const <AyahBox>[] : ref.watch(boxesForPageProvider(pageNumber));
     final notifier = ref.read(selectedAyahProvider.notifier);
