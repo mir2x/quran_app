@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quran_app/core/utils/bengali_digit_extension.dart';
+import '../../../../core/utils/adaptive_text.dart';
 import '../../../downloader/view/show_download_dialog.dart';
 import '../../../downloader/viewmodel/download_providers.dart';
 import '../../model/ayah.dart';
@@ -64,12 +66,11 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
                   padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
                   alignment: Alignment.centerLeft,
                   child: item.isDownloaded
-                      ? Text( // If downloaded, show the content
+                      ? AdaptiveText( // If downloaded, show the content
                     item.content ?? "তাফসীর লোড হচ্ছে...",
                     style: const TextStyle(
                       fontFamily: 'SolaimanLipi', fontSize: 15, height: 1.8, color: Colors.black87,
                     ),
-                    textAlign: TextAlign.center,
                   )
                       : _buildDownloadButton(item, ayahIdentifier), // Otherwise, show download button
                 ),
@@ -151,7 +152,7 @@ void showTafsirBottomSheet(BuildContext context, String suraName, Ayah ayah) {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: Text(
-                    'তাফসীর: $suraName, আয়াত ${ayah.ayah}',
+                    'তাফসীর: $suraName, আয়াত ${ayah.ayah.toBengaliDigit()}',
                     style: const TextStyle(
                       fontFamily: 'SolaimanLipi',
                       fontSize: 18,

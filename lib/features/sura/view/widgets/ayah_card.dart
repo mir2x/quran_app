@@ -7,6 +7,8 @@ import 'package:quran_app/features/sura/view/widgets/ayah_action_bottom_sheet.da
 import 'package:quran_app/features/sura/viewmodel/font_settings_viewmodel.dart';
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 
+import '../../../../core/utils/adaptive_text.dart';
+
 class AyahCard extends ConsumerWidget {
   final int suraNumber;
   final Ayah ayah;
@@ -34,13 +36,12 @@ class AyahCard extends ConsumerWidget {
     isHighlighted ? Theme.of(context).primaryColor : Colors.transparent;
     final cardElevation = isHighlighted ? 4.0 : 0.5;
 
-    // PERFORMANCE: Prevents repainting this card when other cards are highlighted.
     return RepaintBoundary(
       child: GestureDetector(
         onTap: () =>
             showAyahActionBottomSheet(context, suraNumber, ayah, suraName, ref),
         child: Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
           elevation: cardElevation,
           color: cardColor,
           shape: RoundedRectangleBorder(
@@ -134,15 +135,13 @@ class AyahCard extends ConsumerWidget {
                 textDirection: TextDirection.rtl,
               ),
               SizedBox(height: 4.0.h),
-              Text(
+              AdaptiveText(
                 word.bengali,
                 style: TextStyle(
                   fontFamily: bengaliFont,
                   fontSize: bengaliFontSize,
                   color: Colors.green,
                 ),
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.ltr,
               ),
             ],
           );
@@ -177,7 +176,6 @@ class AyahCard extends ConsumerWidget {
         .where((t) => selectedTranslators.contains(t.translatorName))
         .toList();
 
-    // PERFORMANCE: Use a Column with .map() instead of a nested ListView.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -188,7 +186,7 @@ class AyahCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                AdaptiveText(
                   translation.translatorName,
                   style: const TextStyle(
                     fontFamily: 'SolaimanLipi',
@@ -198,7 +196,7 @@ class AyahCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                AdaptiveText(
                   translation.text,
                   style: TextStyle(
                     fontFamily: bengaliFont,
@@ -206,8 +204,7 @@ class AyahCard extends ConsumerWidget {
                     height: 1.5,
                     color: Colors.grey.shade900,
                   ),
-                  textAlign: TextAlign.center,
-                ),
+                )
               ],
             ),
           );
