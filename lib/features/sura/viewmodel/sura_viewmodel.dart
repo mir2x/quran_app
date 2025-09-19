@@ -213,6 +213,15 @@ final ayahByIndexProvider = FutureProvider.family<Ayah, AyahProviderParams>((
 final selectedTranslatorsProvider = StateProvider<List<String>>(
       (ref) => [],
 );
+
+class ScrollCommand {
+  final int suraNumber;
+  final int scrollIndex;
+
+  ScrollCommand({required this.suraNumber, required this.scrollIndex});
+}
+final activeSurahPagesProvider = StateProvider<Set<int>>((ref) => {});
+final suraScrollCommandProvider = StateProvider<ScrollCommand?>((ref) => null);
 final showTranslationsProvider = StateProvider<bool>((ref) => true);
 final showWordByWordProvider = StateProvider<bool>((ref) => false);
 final isAutoScrollingProvider = StateProvider<bool>((ref) => false);
