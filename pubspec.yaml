@@ -31,6 +31,7 @@ dependencies:
   sqflite: ^2.4.2
   huge_listview: ^2.0.12
   draggable_scrollbar: ^0.1.0
+  wakelock_plus: ^1.4.0
 
 dev_dependencies:
   flutter_test:

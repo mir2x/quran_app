@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'features/home/presentation/screens/home_screen.dart';
 import 'package:device_preview/device_preview.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  WakelockPlus.enable();
   runApp(
     DevicePreview(
       enabled: !kReleaseMode,
@@ -17,7 +19,6 @@ void main() async {
 
 class QuranApp extends StatelessWidget {
   const QuranApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(

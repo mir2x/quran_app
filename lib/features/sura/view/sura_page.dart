@@ -31,8 +31,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   Timer? _timedScrollTimer;
   int _totalItems = 0;
   int _topVisibleIndex = 0;
-  // --- NEW ---: State variable to track the current index for auto-scrolling
-  int _currentAutoScrollIndex = 0;
   bool _showScrollToTopButton = false;
 
   late final StateController<Set<int>> _activePagesNotifier;
@@ -40,10 +38,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   static const int _pageSize = 24;
 
   void _log(String msg) {
-    // ignore: avoid_print
     print('[SurahPage] $msg');
   }
-
 
   @override
   void initState() {
@@ -136,7 +132,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
     final isPlaying = ref.read(isAutoScrollingProvider) && !ref.read(isAutoScrollPausedProvider);
     if (isPlaying) {
-      // Restart the timer with the new speed
       _timedScrollTimer?.cancel();
       _startAutoScroll();
     }
@@ -144,7 +139,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
   void _scrollToTop() {
     if (_itemScrollController.isAttached) {
-      // Stop autoscroll if it's active when scrolling to top
       if (ref.read(isAutoScrollingProvider)) {
         _stopAutoScroll(resetSpeed: true);
       }
@@ -158,8 +152,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ... THE REST OF THE BUILD METHOD REMAINS EXACTLY THE SAME ...
-    // --- NO CHANGES NEEDED IN THE WIDGET TREE ---
     final suraDataAsync = ref.watch(suraDataProvider(widget.suraNumber));
     final suraName = "সূরা ${suraNames[widget.suraNumber - 1]}";
     final quranAudioState = ref.watch(suraAudioProvider);
@@ -261,7 +253,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                         padding: const EdgeInsets.only(bottom: 80.0),
                         firstShown: (index) {
                           if (!mounted) return;
-                          // We still use this to show/hide the scroll-to-top button
                           setState(() {
                             _topVisibleIndex = index;
                             _showScrollToTopButton = index > 5;
@@ -306,7 +297,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   }
 
   Widget _buildAutoScrollController(BuildContext context) {
-    // ... THIS METHOD REMAINS EXACTLY THE SAME ...
     final scrollSpeedFactor = ref.watch(scrollSpeedFactorProvider);
     final isPaused = ref.watch(isAutoScrollPausedProvider);
 
