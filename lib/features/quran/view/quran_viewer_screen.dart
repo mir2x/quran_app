@@ -50,6 +50,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(pageInfoVisibilityProvider.notifier).show();
       ref
           .read(editionConfigProvider.notifier)
           .set(
@@ -180,6 +181,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                     itemCount: pageCount,
                     onPageChanged: (idx) {
                       ref.read(currentPageProvider.notifier).state = idx;
+                      ref.read(pageInfoVisibilityProvider.notifier).show();
                       final currentSelectedState = ref.read(
                         selectedAyahProvider,
                       );
@@ -188,6 +190,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
                     },
+
                     itemBuilder: (_, idx) => QuranPage(
                       pageIndex: idx,
                       // Pass 0-based index
@@ -204,13 +207,16 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                         0,
                         math.max(0, pageCount - 1),
                       );
-                      ref.read(currentPageProvider.notifier).state = p.toInt();
-                      final currentSelectedState = ref.read(
-                        selectedAyahProvider,
-                      );
-                      if (currentSelectedState?.source ==
-                          AyahSelectionSource.tap) {
-                        ref.read(selectedAyahProvider.notifier).clear();
+                      if (ref.read(currentPageProvider) != p.toInt()) {
+                        ref.read(currentPageProvider.notifier).state = p.toInt();
+                        ref.read(pageInfoVisibilityProvider.notifier).show();
+                        final currentSelectedState = ref.read(
+                          selectedAyahProvider,
+                        );
+                        if (currentSelectedState?.source ==
+                            AyahSelectionSource.tap) {
+                          ref.read(selectedAyahProvider.notifier).clear();
+                        }
                       }
                       return false;
                     },

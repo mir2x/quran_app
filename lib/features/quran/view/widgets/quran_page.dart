@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:quran_app/features/quran/view/widgets/page_info_overlay.dart';
 import '../../../../core/constants.dart';
 import '../../model/ayah_box.dart';
 import '../../model/selected_ayah_state.dart';
@@ -152,6 +153,7 @@ class QuranPage extends ConsumerWidget {
               ),
               if (showMenuOnThisPage && menuAnchorRectOnThisPage != null)
                 AyahMenu(anchorRect: menuAnchorRectOnThisPage),
+              PageInfoOverlay(pageIndex: pageIndex),
             ],
           );
         }, //

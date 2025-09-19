@@ -585,6 +585,22 @@ final pageInfoProvider = Provider.family<PageQuranInfo, int>((ref, pageNumber) {
   );
 });
 
+class PageInfoVisibilityNotifier extends StateNotifier<bool> {
+  PageInfoVisibilityNotifier() : super(false);
+  void show() {
+    if (state) return;
+    state = true;
+    Timer(const Duration(seconds: 1), () {
+      state = false;
+    });
+  }
+}
+
+final pageInfoVisibilityProvider =
+StateNotifierProvider<PageInfoVisibilityNotifier, bool>(
+      (_) => PageInfoVisibilityNotifier(),
+);
+
 final barsVisibilityProvider =
     StateNotifierProvider<BarsVisibilityNotifier, bool>(
       (ref) => BarsVisibilityNotifier(),
