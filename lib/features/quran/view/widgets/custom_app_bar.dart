@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../sura/view/sura_page.dart';
+import '../../../sura/view/widgets/search_page.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 
 
@@ -25,7 +26,12 @@ class CustomAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       centerTitle: true,
       actions: [
-        IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+        IconButton(icon: const Icon(Icons.search), onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SearchPage()),
+          );
+        }),
         IconButton(icon: const Icon(Icons.nightlight_outlined), onPressed: () {}),
         IconButton(
           icon: const Icon(Icons.g_translate),

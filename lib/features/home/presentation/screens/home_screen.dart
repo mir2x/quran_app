@@ -27,22 +27,7 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: quranEditions.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16.r,
-                mainAxisSpacing: 16.r,
-                childAspectRatio: 0.5,
-              ),
-              itemBuilder: (context, index) {
-                return _QuranEditionGridItem(edition: quranEditions[index]);
-              },
-            ),
-            SizedBox(height: 24.h),
-
+            SizedBox(height: 48.h),
             OutlinedButton(
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
@@ -93,6 +78,21 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             SizedBox(height: 24.h),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: quranEditions.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16.r,
+                mainAxisSpacing: 16.r,
+                childAspectRatio: 0.5,
+              ),
+              itemBuilder: (context, index) {
+                return _QuranEditionGridItem(edition: quranEditions[index]);
+              },
+            ),
+            SizedBox(height: 24.h),
           ],
         ),
       ),
@@ -123,7 +123,7 @@ class _QuranEditionGridItem extends ConsumerWidget {
                   context,
                   assetName: edition.title,
                   sizeInfo:
-                      "(${(edition.sizeBytes / 1048576).toStringAsFixed(1)} MB)",
+                  "(${(edition.sizeBytes / 1048576).toStringAsFixed(1)} MB)",
                 );
                 if (!confirmed || !context.mounted) return;
 
@@ -170,45 +170,18 @@ class _QuranEditionGridItem extends ConsumerWidget {
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(8.r),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(8.r),
-                    // --- THIS IS THE CORRECTED BOX SHADOW ---
-                    boxShadow: [
-                      // Shadow 1: The subtle, darker "lift" shadow at the bottom.
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        // Slightly darker but still soft
-                        spreadRadius: 1.r,
-                        blurRadius: 4.r,
-                        // Less blur for a more defined lift
-                        offset: Offset(0, 4.r), // Pushes the shadow down
-                      ),
-                      // Shadow 2: The wide, soft "glow" shadow for the sides.
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        // Very transparent
-                        spreadRadius: 2.r,
-                        // A slight spread to push it out
-                        blurRadius: 12.r,
-                        // Very blurry to create the soft glow
-                        offset: Offset(
-                          0,
-                          0,
-                        ), // Centered, so it spreads evenly on all sides
-                      ),
-                    ],
-                    // --- END OF CORRECTION ---
+                    // By setting an empty boxShadow, we ensure no shadow is drawn.
+                    boxShadow: [],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4.r),
                     child: Image.asset(
                       edition.coverImagePath,
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-
                 if (hasCheckmark)
                   Positioned(
                     top: -15.h,
