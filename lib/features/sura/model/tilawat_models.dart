@@ -27,12 +27,13 @@ class PageContent {
 }
 
 class QuranPage {
-  final int globalPageNumber;
+  // FIX: Renamed for clarity. This now represents the page number within its own Surah.
+  final int pageNumberInSurah;
   final int paraNumber;
   final List<PageContent> content;
 
   QuranPage({
-    required this.globalPageNumber,
+    required this.pageNumberInSurah,
     required this.paraNumber,
     required this.content,
   });

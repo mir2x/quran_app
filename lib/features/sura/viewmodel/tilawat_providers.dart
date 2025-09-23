@@ -9,44 +9,50 @@ final quranPagesProvider = FutureProvider.family<List<QuranPage>, int>((ref, int
   final Map<String, dynamic> jsonData = json.decode(jsonString);
   final List<dynamic> surasJson = jsonData['suras'];
 
-  final List<QuranPage> allPages = [];
-  int globalPageCounter = 0;
+  // --- NEW, EFFICIENT LOGIC ---
 
-  // First, parse all pages in the entire Quran to handle pages that might contain multiple surahs.
-  for (var suraJson in surasJson) {
-    for (var pageJson in suraJson['pages']) {
-      globalPageCounter++;
-      final List<dynamic> ayahsJson = pageJson['ayahs'];
-      final List<TilawatAyah> ayahs =
-      ayahsJson.map((ayahJson) => TilawatAyah.fromJson(ayahJson)).toList();
+  // 1. Find the specific Surah JSON object from the list.
+  final targetSuraJson = surasJson.firstWhere(
+        (sura) => sura['sura_number'] == suraNumber,
+    orElse: () => null, // Return null if not found
+  );
 
-      final newContent = PageContent(
-        suraNumber: suraJson['sura_number'],
-        suraNameBengali: suraJson['name_bengali'],
-        suraNameArabic: suraJson['name_arabic'],
-        ayahs: ayahs,
-      );
-
-      int existingPageIndex = allPages.indexWhere((p) => p.globalPageNumber == globalPageCounter);
-      if (existingPageIndex != -1) {
-        allPages[existingPageIndex].content.add(newContent);
-      } else {
-        allPages.add(
-          QuranPage(
-            globalPageNumber: globalPageCounter,
-            paraNumber: suraJson['para_number'],
-            content: [newContent],
-          ),
-        );
-      }
-    }
+  // If the surah wasn't found, return an empty list to prevent errors.
+  if (targetSuraJson == null) {
+    return [];
   }
 
-  // **THE CRITICAL STEP**: Filter the fully parsed list to get only the pages
-  // that contain any content from the requested surah.
-  final filteredPages = allPages
-      .where((page) => page.content.any((content) => content.suraNumber == suraNumber))
-      .toList();
+  final List<QuranPage> surahPages = [];
+  int localPageCounter = 0; // This counter is specific to this Surah.
 
-  return filteredPages;
+  final String suraNameBengali = targetSuraJson['name_bengali'];
+  final String suraNameArabic = targetSuraJson['name_arabic'];
+  final int paraNumber = targetSuraJson['para_number'];
+
+  // 2. Loop ONLY through the pages of the found Surah.
+  for (var pageJson in targetSuraJson['pages']) {
+    localPageCounter++; // Increment the local page count (1, 2, 3...)
+
+    final List<dynamic> ayahsJson = pageJson['ayahs'];
+    final List<TilawatAyah> ayahs =
+    ayahsJson.map((ayahJson) => TilawatAyah.fromJson(ayahJson)).toList();
+
+    // 3. Create a QuranPage object using the LOCAL page number.
+    surahPages.add(
+      QuranPage(
+        pageNumberInSurah: localPageCounter, // Use the local counter here
+        paraNumber: paraNumber,
+        content: [
+          PageContent(
+            suraNumber: suraNumber,
+            suraNameBengali: suraNameBengali,
+            suraNameArabic: suraNameArabic,
+            ayahs: ayahs,
+          )
+        ],
+      ),
+    );
+  }
+
+  return surahPages;
 });

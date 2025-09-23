@@ -1,4 +1,3 @@
-// features/sura/view/widgets/sura_bottom_nav_bar.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/features/sura/view/widgets/audio_range_selection_dialog.dart';
@@ -56,7 +55,7 @@ class SuraBottomNavBar extends ConsumerWidget {
         }
         break;
       case 4:
-        showDetailsBottomSheet(context);
+        showDetailsBottomSheet(context, suraNumber: suraNumber);
         break;
     }
   }

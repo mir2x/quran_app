@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:quran_app/features/sura/view/widgets/reciter_selection_dialog.dart';
+import 'package:quran_app/features/sura/view/widgets/tilawat_page.dart';
 import 'package:quran_app/features/sura/view/widgets/translation_selection_dialog.dart';
 import '../../model/grid_item_data.dart';
 import 'font_change_dialog.dart';
 
-void showDetailsBottomSheet(BuildContext context) {
+void showDetailsBottomSheet(BuildContext context, {required int suraNumber}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -12,12 +13,14 @@ void showDetailsBottomSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (BuildContext context) => const DetailsBottomSheet(),
+    // Pass the suraNumber down to the DetailsBottomSheet widget
+    builder: (BuildContext context) => DetailsBottomSheet(suraNumber: suraNumber),
   );
 }
 
 class DetailsBottomSheet extends StatelessWidget {
-  const DetailsBottomSheet({super.key});
+  final int suraNumber;
+  const DetailsBottomSheet({super.key, required this.suraNumber});
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +42,21 @@ class DetailsBottomSheet extends StatelessWidget {
             _DetailsSection(
               title: 'ভিউ',
               items: [
-                GridItemData(icon: Icons.format_size, label: 'ফন্ট পরিবর্তন', onTap: () {
+                GridItemData(icon: Icons.font_download_outlined, label: 'ফন্ট পরিবর্তন', onTap: () {
                   showDialog(
                     context: context,
                     builder: (context) => const FontChangeDialog(),
+                  );
+                }),
+                GridItemData(icon: Icons.chrome_reader_mode, label: 'তিলাওয়াত মোড', onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TilawatPage(
+                        initialSuraNumber: suraNumber,
+                        initialAyahNumber: 1,
+                      ),
+                    ),
                   );
                 }),
               ],

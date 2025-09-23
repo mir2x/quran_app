@@ -70,14 +70,13 @@ class QuranPageWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'পารา-${page.paraNumber.toBengaliDigit()}',
+                  'পারা-${page.paraNumber.toBengaliDigit()}',
                   style: const TextStyle(
                       fontFamily: 'SolaimanLipi', fontSize: 16, color: Colors.white),
                 ),
                 Text(
-                  'পৃষ্ঠা-${page.globalPageNumber.toBengaliDigit()}',
-                  style: const TextStyle(
-                      fontFamily: 'SolaimanLipi', fontSize: 16, color: Colors.white),
+                  'পৃষ্ঠা-${page.pageNumberInSurah.toBengaliDigit()}',
+                  style: const TextStyle(fontFamily: 'SolaimanLipi', fontSize: 16, color: Colors.white),
                 ),
               ],
             ),

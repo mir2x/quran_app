@@ -72,7 +72,7 @@ void showAyahActionBottomSheet(
           },
         ),
         AyahActionItem(
-          icon: Icons.bookmark_border,
+          icon: Icons.chrome_reader_mode,
           label: 'তিলাওয়াত মোড',
           onTap: () {
             Navigator.pop(bottomSheetContext);
