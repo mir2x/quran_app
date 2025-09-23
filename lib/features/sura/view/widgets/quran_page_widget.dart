@@ -8,7 +8,6 @@ class QuranPageWidget extends StatelessWidget {
 
   const QuranPageWidget({super.key, required this.page});
 
-  /// Builds a single list of InlineSpan objects for continuous text flow.
   List<InlineSpan> _buildPageTextSpans() {
     final List<InlineSpan> spans = [];
 
@@ -29,20 +28,22 @@ class QuranPageWidget extends StatelessWidget {
       for (var ayah in contentItem.ayahs) {
         spans.add(TextSpan(
           text: '${ayah.text} ',
-          style: const TextStyle(
-            fontFamily: 'KFGQPC Uthmanic Script HAFS',
-            fontSize: 24,
+          style: TextStyle(
+            fontFamily: 'Al Mushaf Quran',
+            fontSize: 28,
             height: 2.2,
             color: Colors.black87,
+            letterSpacing: 0,
           ),
         ));
         spans.add(TextSpan(
           text: '\u{FD3F}${ayah.ayahNumber.toArabicDigit()}\u{FD3E} ',
           style: TextStyle(
-            fontFamily: 'KFGQPC Uthmanic Script HAFS',
-            fontSize: 22,
+            fontFamily: 'Al Mushaf Quran',
+            fontSize: 32,
             color: Colors.teal.shade700,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0,
           ),
         ));
       }
@@ -113,9 +114,10 @@ class QuranPageWidget extends StatelessWidget {
           child: Text(
             name,
             style: const TextStyle(
-              fontFamily: 'KFGQPC Uthmanic Script HAFS',
+              fontFamily: 'Al Mushaf Quran',
               fontSize: 28,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0,
             ),
           ),
         ),
@@ -130,8 +132,9 @@ class QuranPageWidget extends StatelessWidget {
         child: Text(
           'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
           style: TextStyle(
-            fontFamily: 'KFGQPC Uthmanic Script HAFS',
-            fontSize: 24,
+            fontFamily: 'Al Mushaf Quran',
+            fontSize: 28,
+            letterSpacing: 0,
           ),
         ),
       ),

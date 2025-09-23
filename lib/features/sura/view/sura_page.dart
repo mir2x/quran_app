@@ -100,12 +100,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     if (!mounted) return;
     _timedScrollTimer?.cancel();
 
-    // No need to jump, the view is already where it should be.
-    // If you still want to jump to the top visible item after stop:
-    // if (_itemScrollController.isAttached) {
-    //   _itemScrollController.jumpTo(index: _getTopVisibleIndex());
-    // }
-
     ref.read(isAutoScrollingProvider.notifier).state = false;
     ref.read(isAutoScrollPausedProvider.notifier).state = false;
     if (resetSpeed) {
