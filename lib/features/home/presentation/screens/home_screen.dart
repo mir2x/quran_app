@@ -123,7 +123,7 @@ class _QuranEditionGridItem extends ConsumerWidget {
                   context,
                   assetName: edition.title,
                   sizeInfo:
-                  "(${(edition.sizeBytes / 1048576).toStringAsFixed(1)} MB)",
+                      "(${(edition.sizeBytes / 1048576).toStringAsFixed(1)} MB)",
                 );
                 if (!confirmed || !context.mounted) return;
 
@@ -185,8 +185,9 @@ class _QuranEditionGridItem extends ConsumerWidget {
                 if (hasCheckmark)
                   Positioned(
                     top: -15.h,
-                    child: Icon(
-                      HugeIcons.solidRoundedLocationCheck02,
+                    child: HugeIcon(
+                      // HugeIcons.solidRoundedLocationCheck02,
+                      icon: HugeIcons.strokeRoundedLocationCheck01,
                       size: 36.r,
                       color: Theme.of(context).primaryColor,
                     ),

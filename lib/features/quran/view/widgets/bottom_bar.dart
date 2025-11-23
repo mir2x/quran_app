@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:hugeicons/hugeicons.dart';
 import '../../model/bookmark.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
@@ -20,18 +18,18 @@ class BottomBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedReciter = ref.watch(selectedReciterProvider);
-    final displayReciterName = reciters.entries
-        .firstWhere((e) => e.value == selectedReciter)
-        .key;
+    final displayReciterName =
+        reciters.entries.firstWhere((e) => e.value == selectedReciter).key;
 
     final currentPage = ref.watch(currentPageProvider) + 1;
     final bookmarkNotifier = ref.read(bookmarkProvider.notifier);
     final bookmarksAsync = ref.watch(bookmarkProvider);
 
+    final bool isPageBookmarked =
+        bookmarkNotifier.isPageBookmarked(currentPage);
 
-    final bool isPageBookmarked = bookmarkNotifier.isPageBookmarked(currentPage);
-
-    return Container( // Changed from BottomAppBar
+    return Container(
+      // Changed from BottomAppBar
       // Scale height using .h
       height: bottomBarHeight.h, // Set the desired height
       color: const Color(0xFF294B39), // Set the background color
@@ -40,22 +38,19 @@ class BottomBar extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _iconBtn(
-            icon: HugeIcons.solidRoundedPlay,
+            icon: HugeIcons.strokeRoundedPlay,
             onPressed: () {
-
               final sura = ref.watch(currentSuraProvider);
               final page = ref.watch(currentPageProvider);
-
 
               showModalBottomSheet(
                 context: context,
                 // Ensure the bottom sheet is responsive
                 // The content inside AudioBottomSheet will use ScreenUtil.
                 builder: (BuildContext context) {
-
-                  return AudioBottomSheet(currentSura: ref.read(currentSuraProvider));
+                  return AudioBottomSheet(
+                      currentSura: ref.read(currentSuraProvider));
                 },
-
               );
             },
           ),
@@ -79,7 +74,8 @@ class BottomBar extends ConsumerWidget {
                   isExpanded: true,
                   dropdownColor: const Color(0xFF294B39),
                   iconEnabledColor: Colors.white,
-                  style: TextStyle(color: Colors.white,
+                  style: TextStyle(
+                    color: Colors.white,
                     // Scale font size using .sp
                     fontSize: 14.sp, // Example size
                   ),
@@ -90,7 +86,8 @@ class BottomBar extends ConsumerWidget {
                       child: Text(
                         displayName,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white,
+                        style: TextStyle(
+                          color: Colors.white,
                           // Scale font size using .sp
                           fontSize: 14.sp, // Example size
                         ),
@@ -101,7 +98,7 @@ class BottomBar extends ConsumerWidget {
                     if (val != null) {
                       // Ensure selectedReciterProvider is accessible
                       ref.read(selectedReciterProvider.notifier).state =
-                      reciters[val]!;
+                          reciters[val]!;
                     }
                   },
                 ),
@@ -114,7 +111,7 @@ class BottomBar extends ConsumerWidget {
             builder: (_, ref, __) {
               final on = ref.watch(touchModeProvider);
               return _iconBtn(
-                icon: HugeIcons.solidStandardTouchLocked04,
+                icon: HugeIcons.strokeRoundedTouchLocked03,
                 color: on ? Colors.orangeAccent : Colors.white,
                 // Scale size using .r
                 size: 26.r,
@@ -128,14 +125,16 @@ class BottomBar extends ConsumerWidget {
             },
           ),
           _iconBtn(
-            icon: HugeIcons.solidSharpScreenRotation,
+            icon: HugeIcons.strokeRoundedScreenRotation,
             // Scale size using .r
             size: 24.r,
             onPressed: () => OrientationToggle.toggle(),
           ),
           // Bookmark Button (Enhanced)
           _iconBtn(
-            icon: isPageBookmarked ? HugeIcons.solidStandardStackStar : HugeIcons.strokeStandardStackStar,
+            icon: isPageBookmarked
+                ? HugeIcons.strokeRoundedStarOff
+                : HugeIcons.strokeRoundedStar,
             color: isPageBookmarked ? Colors.orangeAccent : Colors.white,
             // Scale size using .r
             size: 24.r,
@@ -151,12 +150,11 @@ class BottomBar extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                       content: Text(
-                        'পৃষ্ঠা বুকমার্ক থেকে সরানো হয়েছে',
-                        style: TextStyle(fontSize: 14.sp), // Scale text
-                      )),
+                    'পৃষ্ঠা বুকমার্ক থেকে সরানো হয়েছে',
+                    style: TextStyle(fontSize: 14.sp), // Scale text
+                  )),
                 );
               } else {
-
                 final quranInfoService = ref.read(quranInfoServiceProvider);
 
                 final sura = quranInfoService.getSuraByPage(pageToBookmark);
@@ -177,25 +175,24 @@ class BottomBar extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                         content: Text(
-                          'পৃষ্ঠা বুকমার্ক করা হয়েছে',
-                          style: TextStyle(fontSize: 14.sp), // Scale text
-                        )),
+                      'পৃষ্ঠা বুকমার্ক করা হয়েছে',
+                      style: TextStyle(fontSize: 14.sp), // Scale text
+                    )),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                         content: Text(
-                          'এই পৃষ্ঠার জন্য সূরা/পারা নির্ধারণ করা যায়নি',
-                          style: TextStyle(fontSize: 14.sp), // Scale text
-                        )),
+                      'এই পৃষ্ঠার জন্য সূরা/পারা নির্ধারণ করা যায়নি',
+                      style: TextStyle(fontSize: 14.sp), // Scale text
+                    )),
                   );
                 }
               }
             },
           ),
           _iconBtn(
-            icon: HugeIcons.solidRoundedNavigation01,
-            // Scale size using .r
+            icon: HugeIcons.strokeRoundedNavigation05,
             size: 24.r,
             onPressed: () {
               if (drawerOpen) {
@@ -211,19 +208,16 @@ class BottomBar extends ConsumerWidget {
   }
 
   Widget _iconBtn({
-    required IconData icon,
+    required List<List<dynamic>> icon,
     required VoidCallback onPressed,
     double? size,
     Color color = Colors.white,
   }) {
     return IconButton(
-      // Scale icon size using .r, fallback to a scaled default if size is null
       iconSize: size ?? 24.r,
-      // Scale constraints using .h and .w
       constraints: BoxConstraints(minHeight: 64.h, minWidth: 48.w),
-      // Padding is zero, no scaling needed
       padding: EdgeInsets.zero,
-      icon: Center(child: Icon(icon, color: color)),
+      icon: Center(child: HugeIcon(icon: icon, color: color)),
       onPressed: onPressed,
     );
   }

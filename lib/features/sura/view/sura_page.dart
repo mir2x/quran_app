@@ -18,14 +18,16 @@ import '../../../shared/quran_data.dart';
 class SurahPage extends ConsumerStatefulWidget {
   final int suraNumber;
   final int? initialScrollIndex;
-  const SurahPage({super.key, required this.suraNumber, this.initialScrollIndex});
+  const SurahPage(
+      {super.key, required this.suraNumber, this.initialScrollIndex});
 
   @override
   ConsumerState<SurahPage> createState() => _SurahPageState();
 }
 
 class _SurahPageState extends ConsumerState<SurahPage> {
-  final GlobalKey<HugeListViewState> _hugeListKey = GlobalKey<HugeListViewState>();
+  final GlobalKey<HugeListViewState> _hugeListKey =
+      GlobalKey<HugeListViewState>();
   final ItemScrollController _itemScrollController = ItemScrollController();
   late final HugeListViewController _hugeListController;
 
@@ -125,7 +127,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final newSpeed = (currentSpeed + delta).clamp(0.5, 3.0);
     ref.read(scrollSpeedFactorProvider.notifier).state = newSpeed;
 
-    final isPlaying = ref.read(isAutoScrollingProvider) && !ref.read(isAutoScrollPausedProvider);
+    final isPlaying = ref.read(isAutoScrollingProvider) &&
+        !ref.read(isAutoScrollPausedProvider);
     if (isPlaying) {
       _timedScrollTimer?.cancel();
       _startAutoScroll();
@@ -164,7 +167,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
 
     ref.listen<ScrollCommand?>(suraScrollCommandProvider, (previous, next) {
-      if (next != null && next.suraNumber == widget.suraNumber && _itemScrollController.isAttached) {
+      if (next != null &&
+          next.suraNumber == widget.suraNumber &&
+          _itemScrollController.isAttached) {
         _itemScrollController.scrollTo(
           index: next.scrollIndex,
           alignment: 0.5,
@@ -175,9 +180,11 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       }
     });
 
-    ref.listen<AsyncValue<List<dynamic>>>(suraDataProvider(widget.suraNumber), (previous, next) {
+    ref.listen<AsyncValue<List<dynamic>>>(suraDataProvider(widget.suraNumber),
+        (previous, next) {
       if (previous is AsyncLoading && next is AsyncData) {
-        if (widget.initialScrollIndex != null && _itemScrollController.isAttached) {
+        if (widget.initialScrollIndex != null &&
+            _itemScrollController.isAttached) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _itemScrollController.jumpTo(
               index: widget.initialScrollIndex!,
@@ -191,7 +198,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     ref.listen<SuraAudioState?>(suraAudioProvider, (previous, next) {
       if (next != null && next.isPlaying) {
         final ayahIndex = next.ayah - 1;
-        if (ayahIndex >= 0 && ayahIndex < _totalItems && _itemScrollController.isAttached) {
+        if (ayahIndex >= 0 &&
+            ayahIndex < _totalItems &&
+            _itemScrollController.isAttached) {
           _itemScrollController.scrollTo(
             index: ayahIndex,
             alignment: 0.5,
@@ -213,7 +222,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                   itemCount: 15,
                   itemBuilder: (_, __) => const AyahPlaceholder(),
                 ),
-                error: (error, stack) => Center(child: Text('Failed to load Sura details:\n$error')),
+                error: (error, stack) =>
+                    Center(child: Text('Failed to load Sura details:\n$error')),
                 data: (ayahs) {
                   _totalItems = ayahs.length;
                   _hugeListController.totalItemCount = _totalItems;
@@ -224,7 +234,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                         key: _hugeListKey,
                         scrollController: _itemScrollController,
                         listViewController: _hugeListController,
-
                         pageSize: _pageSize,
                         startIndex: widget.initialScrollIndex ?? 0,
                         pageFuture: (page) async {
@@ -233,7 +242,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                           if (from >= to) return const <dynamic>[];
                           return ayahs.sublist(from, to);
                         },
-
                         itemBuilder: (context, index, entry) {
                           final isHighlighted = quranAudioState != null &&
                               quranAudioState.surah == widget.suraNumber &&
@@ -246,15 +254,17 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                             isHighlighted: isHighlighted,
                           );
                         },
-                        placeholderBuilder: (context, index) => const AyahPlaceholder(),
+                        placeholderBuilder: (context, index) =>
+                            const AyahPlaceholder(),
                         waitBuilder: (context) => ListView.builder(
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: 15,
                           itemBuilder: (_, __) => const AyahPlaceholder(),
                         ),
-                        emptyBuilder: (context) => const Center(child: Text('No ayahs found')),
-                        errorBuilder: (context, error) => Center(child: Text('Error: $error')),
-
+                        emptyBuilder: (context) =>
+                            const Center(child: Text('No ayahs found')),
+                        errorBuilder: (context, error) =>
+                            Center(child: Text('Error: $error')),
                         padding: const EdgeInsets.only(bottom: 80.0),
                         firstShown: (index) {
                           if (!mounted) return;
@@ -264,15 +274,14 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                             _showScrollToTopButton = index > 5;
                           });
                         },
-
                         thumbBuilder: DraggableScrollbarThumbs.SemicircleThumb,
                         thumbHeight: 48,
                         thumbBackgroundColor: Colors.white,
                         thumbDrawColor: Colors.green,
                         alwaysVisibleThumb: false,
                       ),
-
-                      if (ref.watch(isAutoScrollingProvider)) _buildAutoScrollController(context),
+                      if (ref.watch(isAutoScrollingProvider))
+                        _buildAutoScrollController(context),
                     ],
                   );
                 },
@@ -284,19 +293,19 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         ),
         bottomNavigationBar: showBottomNav
             ? SuraBottomNavBar(
-          totalAyahs: _totalItems,
-          suraNumber: widget.suraNumber,
-          onStartAutoScroll: _startAutoScroll,
-          onStopAutoScroll: () => _stopAutoScroll(resetSpeed: true),
-        )
+                totalAyahs: _totalItems,
+                suraNumber: widget.suraNumber,
+                onStartAutoScroll: _startAutoScroll,
+                onStopAutoScroll: () => _stopAutoScroll(resetSpeed: true),
+              )
             : null,
         floatingActionButton: _showScrollToTopButton
             ? FloatingActionButton(
-          onPressed: _scrollToTop,
-          mini: true,
-          backgroundColor: Colors.green,
-          child: const Icon(Icons.arrow_upward, color: Colors.white),
-        )
+                onPressed: _scrollToTop,
+                mini: true,
+                backgroundColor: Colors.green,
+                child: const Icon(Icons.arrow_upward, color: Colors.white),
+              )
             : null,
       ),
     );

@@ -1,0 +1,1 @@
+IconForest URI: file:///home/mir/.pub-cache/hosted/pub.dev/icon_forest-1.1.8/lib/icon_forest.dart

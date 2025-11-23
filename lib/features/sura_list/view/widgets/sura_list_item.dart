@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
-import 'package:quran_app/features/sura/view/sura_page.dart';
 import '../../../../core/utils/sura_page_router.dart';
 import '../../../sura/viewmodel/sura_viewmodel.dart';
 import '../../model/sura_list_item.dart';
@@ -17,10 +16,8 @@ class SuraListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
       onTap: () {
-        // Schedule the navigation to occur after the current event loop is finished.
-        // This prevents the widget from being disposed while its onTap is still running.
         Future.delayed(Duration.zero, () {
-          if (!context.mounted) return; // Always check if the widget is still mounted
+          if (!context.mounted) return;
 
           final targetSura = sura.number;
           final int? targetIndex = null;
@@ -30,26 +27,24 @@ class SuraListItem extends ConsumerWidget {
 
           if (routeExists) {
             debugPrint("Surah $targetSura page exists. Popping back to it.");
-            Navigator.popUntil(context, (route) => route.settings.name == '/surah/$targetSura');
+            Navigator.popUntil(context,
+                (route) => route.settings.name == '/surah/$targetSura');
           } else {
-            debugPrint("Surah $targetSura page does not exist. Pushing new page.");
-            Navigator.push(context, createSurahPageRoute(targetSura, targetIndex));
+            debugPrint(
+                "Surah $targetSura page does not exist. Pushing new page.");
+            Navigator.push(
+                context, createSurahPageRoute(targetSura, targetIndex));
           }
         });
       },
-
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Row(
           children: [
-            // 1. Designed Number on the left
             _buildSuraNumber(),
             const SizedBox(width: 16.0),
-
-            // 2. Bangla Sura Name and Meaning
             _buildSuraNames(),
-            const Spacer(), // This creates the gap
-            // 3. Makki/Madani Icon and Arabic Name on the right
+            const Spacer(),
             _buildRevelationInfo(),
           ],
         ),
@@ -57,7 +52,6 @@ class SuraListItem extends ConsumerWidget {
     );
   }
 
-  // Widget for the decorated number
   Widget _buildSuraNumber() {
     return Container(
       width: 45,
@@ -79,7 +73,6 @@ class SuraListItem extends ConsumerWidget {
     );
   }
 
-  // Widget for the stacked Bangla names
   Widget _buildSuraNames() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,22 +99,16 @@ class SuraListItem extends ConsumerWidget {
   }
 
   Widget _buildRevelationInfo() {
-    IconData iconData = sura.revelationType == RevelationType.Makki
-        ? HugeIcons.solidSharpKaaba01
-        : HugeIcons.solidStandardMosque02;
+    List<List<dynamic>> iconData = sura.revelationType == RevelationType.Makki
+        ? HugeIcons.strokeRoundedKaaba01
+        : HugeIcons.strokeRoundedMosque04;
 
-    // Change Column to Row
     return Row(
-      // This ensures the icon and text are vertically aligned with each other's centers.
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // 1. The Icon (will appear on the left)
-        Icon(iconData, color: Colors.grey.shade400, size: 28),
-
-        // 2. Add SizedBox for horizontal spacing
+        HugeIcon(icon: iconData, color: Colors.grey.shade400, size: 28),
+        HugeIcon(icon: iconData, color: Colors.grey.shade400, size: 28),
         const SizedBox(width: 8.0),
-
-        // 3. The Arabic Text (will appear on the right)
         Text(
           sura.nameArabic,
           style: GoogleFonts.amiri(

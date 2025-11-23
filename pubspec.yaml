@@ -25,6 +25,7 @@ dependencies:
   sqflite_common_ffi: ^2.3.4+4
   sqflite: ^2.4.1
   wakelock_plus: ^1.2.10
+  hugeicons: ^1.1.1
 
 dev_dependencies:
   flutter_test:
