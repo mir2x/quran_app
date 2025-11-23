@@ -111,7 +111,10 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: HugeIcon(icon: HugeIcons.strokeRoundedPlay, size: 24.r),
+                icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedPlay,
+                    size: 24.r,
+                    color: Colors.white),
                 label: Text('Play', style: TextStyle(fontSize: 16.sp)),
                 onPressed: () async {
                   final service = ref.read(quranAudioPlayerProvider);
@@ -133,10 +136,9 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
     );
   }
 
-  // --- The _labeledDropdown helper method is unchanged ---
   Widget _labeledDropdown<T>({
     required String label,
-    required List<List<dynamic>> icon,
+    required IconData icon,
     required T value,
     required List<T> items,
     required void Function(T?) onChanged,

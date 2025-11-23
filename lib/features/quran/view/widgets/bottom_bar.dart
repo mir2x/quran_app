@@ -208,7 +208,7 @@ class BottomBar extends ConsumerWidget {
   }
 
   Widget _iconBtn({
-    required List<List<dynamic>> icon,
+    required IconData icon,
     required VoidCallback onPressed,
     double? size,
     Color color = Colors.white,

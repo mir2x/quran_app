@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:huge_listview/huge_listview.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:quran_app/features/sura/model/sura_audio_state.dart';
 import 'package:quran_app/features/sura/view/widgets/audio_control_bar.dart';
@@ -26,10 +24,14 @@ class SurahPage extends ConsumerStatefulWidget {
 }
 
 class _SurahPageState extends ConsumerState<SurahPage> {
-  final GlobalKey<HugeListViewState> _hugeListKey =
-      GlobalKey<HugeListViewState>();
+  // REMOVED: HugeListView variables
+  // final GlobalKey<HugeListViewState> _hugeListKey = GlobalKey<HugeListViewState>();
+  // late final HugeListViewController _hugeListController;
+
+  // ADDED: Listener for positions
   final ItemScrollController _itemScrollController = ItemScrollController();
-  late final HugeListViewController _hugeListController;
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
 
   Timer? _timedScrollTimer;
   int _totalItems = 0;
@@ -38,8 +40,6 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
   late final StateController<Set<int>> _activePagesNotifier;
 
-  static const int _pageSize = 24;
-
   void _log(String msg) {
     print('[SurahPage] $msg');
   }
@@ -47,7 +47,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   @override
   void initState() {
     super.initState();
-    _hugeListController = HugeListViewController(totalItemCount: 0);
+    // Setup position listener
+    _itemPositionsListener.itemPositions
+        .addListener(_onVisiblePositionsChanged);
     _activePagesNotifier = ref.read(activeSurahPagesProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _activePagesNotifier.update((state) => {...state, widget.suraNumber});
@@ -56,15 +58,39 @@ class _SurahPageState extends ConsumerState<SurahPage> {
 
   @override
   void dispose() {
+    _itemPositionsListener.itemPositions
+        .removeListener(_onVisiblePositionsChanged);
     _activePagesNotifier.update((state) => state..remove(widget.suraNumber));
     _timedScrollTimer?.cancel();
     super.dispose();
   }
 
+  // Logic to track visible items and show/hide "Scroll to Top" button
+  void _onVisiblePositionsChanged() {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
+
+    // Find the smallest index currently visible
+    final minIndex = positions
+        .where((ItemPosition position) => position.itemTrailingEdge > 0)
+        .reduce((min, position) => position.index < min.index ? position : min)
+        .index;
+
+    if (minIndex != _topVisibleIndex) {
+      _topVisibleIndex = minIndex;
+      _saveLastReadPosition(widget.suraNumber, minIndex);
+      final shouldShow = minIndex > 5;
+      if (shouldShow != _showScrollToTopButton) {
+        setState(() {
+          _showScrollToTopButton = shouldShow;
+        });
+      }
+    }
+  }
+
   int _getTopVisibleIndex() {
-    final positions = _hugeListKey.currentState?.listener.itemPositions.value;
-    if (positions == null || positions.isEmpty) return _topVisibleIndex;
-    return positions.map((p) => p.index).reduce(math.min);
+    // Use the local variable synced by the listener
+    return _topVisibleIndex;
   }
 
   void _startAutoScroll() {
@@ -88,12 +114,15 @@ class _SurahPageState extends ConsumerState<SurahPage> {
         return;
       }
       currentIndex++;
-      _itemScrollController.scrollTo(
-        index: currentIndex,
-        duration: perItemDuration,
-        curve: Curves.easeInOut,
-        alignment: 0.3,
-      );
+
+      if (_itemScrollController.isAttached) {
+        _itemScrollController.scrollTo(
+          index: currentIndex,
+          duration: perItemDuration,
+          curve: Curves.easeInOut,
+          alignment: 0.3, // Align near top
+        );
+      }
     });
   }
 
@@ -112,11 +141,9 @@ class _SurahPageState extends ConsumerState<SurahPage> {
   void _togglePlayPauseAutoScroll() {
     final bool isPaused = ref.read(isAutoScrollPausedProvider);
     if (isPaused) {
-      // If it was paused, resume scrolling
       ref.read(isAutoScrollPausedProvider.notifier).state = false;
       _startAutoScroll();
     } else {
-      // If it was playing, pause it
       _timedScrollTimer?.cancel();
       ref.read(isAutoScrollPausedProvider.notifier).state = true;
     }
@@ -166,13 +193,14 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     final isTimedScrolling = ref.watch(isAutoScrollingProvider);
     final showBottomNav = !isTimedScrolling && quranAudioState == null;
 
+    // Listeners for external scroll commands
     ref.listen<ScrollCommand?>(suraScrollCommandProvider, (previous, next) {
       if (next != null &&
           next.suraNumber == widget.suraNumber &&
           _itemScrollController.isAttached) {
         _itemScrollController.scrollTo(
           index: next.scrollIndex,
-          alignment: 0.5,
+          alignment: 0.1, // 0.1 is better for reading than 0.5
           duration: const Duration(milliseconds: 700),
           curve: Curves.easeInOutCubic,
         );
@@ -180,6 +208,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       }
     });
 
+    // Listener for initial data load scroll
     ref.listen<AsyncValue<List<dynamic>>>(suraDataProvider(widget.suraNumber),
         (previous, next) {
       if (previous is AsyncLoading && next is AsyncData) {
@@ -188,13 +217,14 @@ class _SurahPageState extends ConsumerState<SurahPage> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _itemScrollController.jumpTo(
               index: widget.initialScrollIndex!,
-              alignment: 0.5,
+              alignment: 0.1,
             );
           });
         }
       }
     });
 
+    // Listener for Audio Sync
     ref.listen<SuraAudioState?>(suraAudioProvider, (previous, next) {
       if (next != null && next.isPlaying) {
         final ayahIndex = next.ayah - 1;
@@ -203,7 +233,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
             _itemScrollController.isAttached) {
           _itemScrollController.scrollTo(
             index: ayahIndex,
-            alignment: 0.5,
+            alignment: 0.1, // Aligns ayah near top of screen
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeInOutCubic,
           );
@@ -226,23 +256,18 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                     Center(child: Text('Failed to load Sura details:\n$error')),
                 data: (ayahs) {
                   _totalItems = ayahs.length;
-                  _hugeListController.totalItemCount = _totalItems;
 
                   return Stack(
                     children: [
-                      HugeListView<dynamic>(
-                        key: _hugeListKey,
-                        scrollController: _itemScrollController,
-                        listViewController: _hugeListController,
-                        pageSize: _pageSize,
-                        startIndex: widget.initialScrollIndex ?? 0,
-                        pageFuture: (page) async {
-                          final from = page * _pageSize;
-                          final to = math.min(ayahs.length, from + _pageSize);
-                          if (from >= to) return const <dynamic>[];
-                          return ayahs.sublist(from, to);
-                        },
-                        itemBuilder: (context, index, entry) {
+                      // REPLACEMENT WIDGET
+                      ScrollablePositionedList.builder(
+                        itemScrollController: _itemScrollController,
+                        itemPositionsListener: _itemPositionsListener,
+                        itemCount: _totalItems,
+                        initialScrollIndex: widget.initialScrollIndex ?? 0,
+                        padding: const EdgeInsets.only(bottom: 80.0),
+                        itemBuilder: (context, index) {
+                          final entry = ayahs[index];
                           final isHighlighted = quranAudioState != null &&
                               quranAudioState.surah == widget.suraNumber &&
                               quranAudioState.ayah == entry.ayah;
@@ -254,32 +279,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
                             isHighlighted: isHighlighted,
                           );
                         },
-                        placeholderBuilder: (context, index) =>
-                            const AyahPlaceholder(),
-                        waitBuilder: (context) => ListView.builder(
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: 15,
-                          itemBuilder: (_, __) => const AyahPlaceholder(),
-                        ),
-                        emptyBuilder: (context) =>
-                            const Center(child: Text('No ayahs found')),
-                        errorBuilder: (context, error) =>
-                            Center(child: Text('Error: $error')),
-                        padding: const EdgeInsets.only(bottom: 80.0),
-                        firstShown: (index) {
-                          if (!mounted) return;
-                          _saveLastReadPosition(widget.suraNumber, index);
-                          setState(() {
-                            _topVisibleIndex = index;
-                            _showScrollToTopButton = index > 5;
-                          });
-                        },
-                        thumbBuilder: DraggableScrollbarThumbs.SemicircleThumb,
-                        thumbHeight: 48,
-                        thumbBackgroundColor: Colors.white,
-                        thumbDrawColor: Colors.green,
-                        alwaysVisibleThumb: false,
                       ),
+
                       if (ref.watch(isAutoScrollingProvider))
                         _buildAutoScrollController(context),
                     ],

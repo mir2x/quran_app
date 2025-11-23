@@ -99,7 +99,7 @@ class SuraListItem extends ConsumerWidget {
   }
 
   Widget _buildRevelationInfo() {
-    List<List<dynamic>> iconData = sura.revelationType == RevelationType.Makki
+    IconData iconData = sura.revelationType == RevelationType.Makki
         ? HugeIcons.strokeRoundedKaaba01
         : HugeIcons.strokeRoundedMosque04;
 
