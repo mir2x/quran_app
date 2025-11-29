@@ -138,7 +138,7 @@ class QuranAudioPlayer {
       final confirmed = await showDownloadPermissionDialog(
         context,
         assetName:
-            'সুরা ${suraNames[sura]} আয়াত (${ayahsToDownload.first.toBengaliDigit()}-${ayahsToDownload.last.toBengaliDigit()})',
+            'সুরা ${suraNames[sura - 1]} আয়াত (${ayahsToDownload.first.toBengaliDigit()}-${ayahsToDownload.last.toBengaliDigit()})',
       );
       if (!confirmed || !context.mounted) return false;
 

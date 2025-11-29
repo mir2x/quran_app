@@ -14,14 +14,27 @@ import '../model/sura_audio_state.dart';
 
 class SuraAudioNotifier extends StateNotifier<SuraAudioState?> {
   SuraAudioNotifier() : super(null);
-  void start(int surah, int ayah) => state = SuraAudioState(surah: surah, ayah: ayah, isPlaying: true);
-  void updateAyah(int ayah) { if (state != null && state!.ayah != ayah) state = state!.copyWith(ayah: ayah); }
-  void pause() { if (state != null) state = state!.copyWith(isPlaying: false); }
-  void resume() { if (state != null) state = state!.copyWith(isPlaying: true); }
+  void start(int surah, int ayah) =>
+      state = SuraAudioState(surah: surah, ayah: ayah, isPlaying: true);
+  void updateAyah(int ayah) {
+    if (state != null && state!.ayah != ayah)
+      state = state!.copyWith(ayah: ayah);
+  }
+
+  void pause() {
+    if (state != null) state = state!.copyWith(isPlaying: false);
+  }
+
+  void resume() {
+    if (state != null) state = state!.copyWith(isPlaying: true);
+  }
+
   void stop() => state = null;
 }
 
-final suraAudioProvider = StateNotifierProvider<SuraAudioNotifier, SuraAudioState?>((ref) => SuraAudioNotifier());
+final suraAudioProvider =
+    StateNotifierProvider<SuraAudioNotifier, SuraAudioState?>(
+        (ref) => SuraAudioNotifier());
 
 final selectedAudioSuraProvider = StateProvider<int>((_) => 1);
 final selectedStartAyahProvider = StateProvider<int>((_) => 1);
@@ -39,7 +52,8 @@ class SuraAudioPlayer {
     debugPrint("✅ [QuranAudioPlayer] INITIALIZED");
   }
 
-  Future<List<int>> _getAyahsToDownload(String reciterId, int sura, int startAyah, int endAyah) async {
+  Future<List<int>> _getAyahsToDownload(
+      String reciterId, int sura, int startAyah, int endAyah) async {
     final audioFileManager = _ref.read(audioFileManagerProvider);
     final List<int> ayahsNeeded = [];
     for (int i = startAyah; i <= endAyah; i++) {
@@ -50,7 +64,8 @@ class SuraAudioPlayer {
     return ayahsNeeded;
   }
 
-  Future<bool> playAyahs(int startAyah, int endAyah, BuildContext context) async {
+  Future<bool> playAyahs(
+      int startAyah, int endAyah, BuildContext context) async {
     await stop();
 
     _endAyahLimit = endAyah;
@@ -58,18 +73,22 @@ class SuraAudioPlayer {
     final sura = _ref.read(selectedAudioSuraProvider);
     final audioFileManager = _ref.read(audioFileManagerProvider);
 
-    final ayahsToDownload = await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
+    final ayahsToDownload =
+        await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
 
     // If ayahs are missing, trigger the unified download flow.
     if (ayahsToDownload.isNotEmpty) {
       final confirmed = await showDownloadPermissionDialog(
         context,
-        assetName: 'সুরা ${suraNames[sura]} আয়াত (${ayahsToDownload.first.toBengaliDigit()}-${ayahsToDownload.last.toBengaliDigit()})',
+        assetName:
+            'সুরা ${suraNames[sura - 1]} আয়াত (${ayahsToDownload.first.toBengaliDigit()}-${ayahsToDownload.last.toBengaliDigit()})',
       );
       if (!confirmed || !context.mounted) return false;
 
       // 1. Fetch the audio URLs needed for the download task.
-      final suraAudioData = await _ref.read(audioDataSourceProvider).getSuraAudioUrls(reciterId, sura);
+      final suraAudioData = await _ref
+          .read(audioDataSourceProvider)
+          .getSuraAudioUrls(reciterId, sura);
       if (suraAudioData == null) {
         debugPrint("Could not fetch audio URLs to start download.");
         return false;
@@ -80,7 +99,8 @@ class SuraAudioPlayer {
       for (int ayahNum in ayahsToDownload) {
         if (ayahNum > 0 && ayahNum <= suraAudioData.urls.length) {
           final remoteUrl = suraAudioData.urls[ayahNum - 1];
-          final localPath = await audioFileManager.getLocalPathForAyah(reciterId, sura, ayahNum);
+          final localPath = await audioFileManager.getLocalPathForAyah(
+              reciterId, sura, ayahNum);
           urlToPathMap[remoteUrl] = localPath;
         }
       }
@@ -94,7 +114,9 @@ class SuraAudioPlayer {
 
       // 4. Show the unified dialog and start the download.
       showDownloadDialog(context);
-      final success = await _ref.read(downloadManagerProvider).startDownload(audioDownloadTask);
+      final success = await _ref
+          .read(downloadManagerProvider)
+          .startDownload(audioDownloadTask);
 
       // 5. If the download failed or was cancelled, stop here.
       if (!success) {
@@ -106,16 +128,19 @@ class SuraAudioPlayer {
     // --- Playback logic (unchanged) ---
     final List<AudioSource> audioSources = [];
     for (int i = startAyah; i <= endAyah; i++) {
-      final localPath = await audioFileManager.getLocalPathForAyah(reciterId, sura, i);
+      final localPath =
+          await audioFileManager.getLocalPathForAyah(reciterId, sura, i);
       if (await File(localPath).exists()) {
         audioSources.add(AudioSource.uri(Uri.file(localPath)));
       } else {
-        debugPrint("WARNING: Ayah $i was expected but not found locally after download check.");
+        debugPrint(
+            "WARNING: Ayah $i was expected but not found locally after download check.");
       }
     }
 
     if (audioSources.isEmpty) {
-      debugPrint("ERROR: No audio files found for the selected range $startAyah-$endAyah");
+      debugPrint(
+          "ERROR: No audio files found for the selected range $startAyah-$endAyah");
       return false;
     }
 
@@ -124,7 +149,8 @@ class SuraAudioPlayer {
     debugPrint("Fired suraAudioProvider.start with $sura:$startAyah");
 
     final playlist = ConcatenatingAudioSource(children: audioSources);
-    await _player.setAudioSource(playlist, initialIndex: 0, initialPosition: Duration.zero);
+    await _player.setAudioSource(playlist,
+        initialIndex: 0, initialPosition: Duration.zero);
     _player.play();
 
     return true;
@@ -142,13 +168,15 @@ class SuraAudioPlayer {
         final currentAyah = actualStartAyah + index;
 
         if (_endAyahLimit != null && currentAyah > _endAyahLimit!) {
-          debugPrint("  [Listener] 🏁 Reached end ayah limit ($_endAyahLimit). Stopping playback.");
+          debugPrint(
+              "  [Listener] 🏁 Reached end ayah limit ($_endAyahLimit). Stopping playback.");
           stop();
           return;
         }
         _ref.read(suraAudioProvider.notifier).updateAyah(currentAyah);
       } else {
-        debugPrint("  [Listener] ⚠️ SKIPPED: index or suraAudioState is null (player not ready or stopped).");
+        debugPrint(
+            "  [Listener] ⚠️ SKIPPED: index or suraAudioState is null (player not ready or stopped).");
       }
     });
 
@@ -156,9 +184,10 @@ class SuraAudioPlayer {
       final suraAudioState = _ref.read(suraAudioProvider);
       if (suraAudioState == null) return;
 
-      debugPrint("🎵 [Listener] playerStateStream FIRED: Playing=${state.playing}, ProcessingState=${state.processingState}");
+      debugPrint(
+          "🎵 [Listener] playerStateStream FIRED: Playing=${state.playing}, ProcessingState=${state.processingState}");
 
-      if(state.playing) {
+      if (state.playing) {
         _ref.read(suraAudioProvider.notifier).resume();
       } else {
         if (state.processingState == ProcessingState.completed) {
@@ -215,7 +244,8 @@ class SuraAudioPlayer {
   void playPrev() {
     final currentAyahInPlaylistIndex = _player.currentIndex;
     if (currentAyahInPlaylistIndex == null || currentAyahInPlaylistIndex == 0) {
-      debugPrint("  [playPrev] At the start of the playlist or no current ayah. Cannot seek previous.");
+      debugPrint(
+          "  [playPrev] At the start of the playlist or no current ayah. Cannot seek previous.");
       return;
     }
     _player.seekToPrevious();
