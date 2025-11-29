@@ -23,12 +23,12 @@ Future<String> getLocalPath(String id) async {
   return '${dir.path}/$id';
 }
 
-
 abstract class DownloadTask {
   String get id;
   String get displayName;
 
-  Future<void> run(Ref ref, Function(int received, int total) onProgress, CancelToken cancelToken);
+  Future<void> run(Ref ref, Function(int received, int total) onProgress,
+      CancelToken cancelToken);
 }
 
 class MultiFileDownloadTask extends DownloadTask {
@@ -45,7 +45,8 @@ class MultiFileDownloadTask extends DownloadTask {
   });
 
   @override
-  Future<void> run(Ref ref, Function(int received, int total) onProgress, CancelToken cancelToken) async {
+  Future<void> run(Ref ref, Function(int received, int total) onProgress,
+      CancelToken cancelToken) async {
     final dio = Dio();
     int completed = 0;
     for (final entry in urlToPathMap.entries) {
@@ -72,7 +73,8 @@ class ZipDownloadTask extends DownloadTask {
   });
 
   @override
-  Future<void> run(Ref ref, Function(int received, int total) onProgress, CancelToken cancelToken) async {
+  Future<void> run(Ref ref, Function(int received, int total) onProgress,
+      CancelToken cancelToken) async {
     final notifier = ref.read(downloadStateProvider.notifier);
     final dio = Dio();
     final dirPath = await getLocalPath(id);
@@ -80,12 +82,16 @@ class ZipDownloadTask extends DownloadTask {
 
     await Directory(dirPath).create(recursive: true);
 
-    await dio.download(zipUrl, zipPath, onReceiveProgress: onProgress, cancelToken: cancelToken);
+    await dio.download(zipUrl, zipPath,
+        onReceiveProgress: onProgress, cancelToken: cancelToken);
     if (cancelToken.isCancelled) return;
 
     notifier.setExtracting();
     final bytes = await File(zipPath).readAsBytes();
-    if (cancelToken.isCancelled) { await File(zipPath).delete(); return; }
+    if (cancelToken.isCancelled) {
+      await File(zipPath).delete();
+      return;
+    }
 
     final archive = ZipDecoder().decodeBytes(bytes);
     for (final file in archive) {
@@ -99,12 +105,16 @@ class ZipDownloadTask extends DownloadTask {
     }
 
     if (cancelToken.isCancelled) {
-      if (await Directory(dirPath).exists()) { await Directory(dirPath).delete(recursive: true); }
+      if (await Directory(dirPath).exists()) {
+        await Directory(dirPath).delete(recursive: true);
+      }
     } else {
       await markAsDownloaded(id);
     }
 
-    if (await File(zipPath).exists()) { await File(zipPath).delete(); }
+    if (await File(zipPath).exists()) {
+      await File(zipPath).delete();
+    }
   }
 }
 
@@ -124,11 +134,13 @@ class SingleFileDownloadTask extends DownloadTask {
   });
 
   @override
-  Future<void> run(Ref ref, Function(int received, int total) onProgress, CancelToken cancelToken) async {
+  Future<void> run(Ref ref, Function(int received, int total) onProgress,
+      CancelToken cancelToken) async {
     final dio = Dio();
     final file = File(localPath);
     await file.parent.create(recursive: true);
-    await dio.download(fileUrl, localPath, onReceiveProgress: onProgress, cancelToken: cancelToken);
+    await dio.download(fileUrl, localPath,
+        onReceiveProgress: onProgress, cancelToken: cancelToken);
     if (!cancelToken.isCancelled) {
       await markAsDownloaded(id);
     }
@@ -139,10 +151,15 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   DownloadNotifier() : super(DownloadState());
 
   void start(DownloadTask task) {
-    state = DownloadState(status: DownloadStatus.preparing, taskName: task.displayName);
+    state = DownloadState(
+        status: DownloadStatus.preparing, taskName: task.displayName);
   }
 
-  void updateProgress({int? completedItems, int? totalItems, int? receivedSize, int? totalSize}) {
+  void updateProgress(
+      {int? completedItems,
+      int? totalItems,
+      int? receivedSize,
+      int? totalSize}) {
     state = state.copyWith(
       status: DownloadStatus.downloading,
       completedItems: completedItems,
@@ -152,14 +169,20 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
     );
   }
 
-  void setExtracting() => state = state.copyWith(status: DownloadStatus.extracting);
-  void setError(String message) => state = state.copyWith(status: DownloadStatus.error, errorMessage: message);
-  void setCancelled() => state = state.copyWith(status: DownloadStatus.cancelled);
-  void setCompleted() => state = state.copyWith(status: DownloadStatus.completed);
+  void setExtracting() =>
+      state = state.copyWith(status: DownloadStatus.extracting);
+  void setError(String message) => state =
+      state.copyWith(status: DownloadStatus.error, errorMessage: message);
+  void setCancelled() =>
+      state = state.copyWith(status: DownloadStatus.cancelled);
+  void setCompleted() =>
+      state = state.copyWith(status: DownloadStatus.completed);
   void reset() => state = DownloadState();
 }
 
-final downloadStateProvider = StateNotifierProvider<DownloadNotifier, DownloadState>((ref) => DownloadNotifier());
+final downloadStateProvider =
+    StateNotifierProvider<DownloadNotifier, DownloadState>(
+        (ref) => DownloadNotifier());
 
 class DownloadManager {
   final Ref _ref;
@@ -171,7 +194,7 @@ class DownloadManager {
   Future<bool> startDownload(DownloadTask task) async {
     if (_isDownloading) {
       print("Another download is already in progress.");
-      return false; // Indicate failure if a download is already active
+      return false;
     }
     _isDownloading = true;
     _cancelToken = CancelToken();
@@ -191,23 +214,22 @@ class DownloadManager {
 
       if (_cancelToken?.isCancelled ?? false) {
         notifier.setCancelled();
-        return false; // Return false on cancellation
+        return false;
       }
 
       notifier.setCompleted();
       await _ref.read(quranEditionProvider.notifier).refreshDownloadStatus();
-      return true; // Return true on successful completion
-
+      return true;
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         notifier.setCancelled();
       } else {
         notifier.setError("A network error occurred.");
       }
-      return false; // Return false on any error
+      return false;
     } catch (e) {
       notifier.setError("An unexpected error occurred: $e");
-      return false; // Return false on any error
+      return false;
     } finally {
       _isDownloading = false;
       _cancelToken = null;

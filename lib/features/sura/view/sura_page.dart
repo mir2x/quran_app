@@ -13,6 +13,8 @@ import '../viewmodel/sura_reciter_viewmodel.dart';
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 import '../../../shared/quran_data.dart';
 
+import 'package:quran_app/features/sura/view/widgets/drawer/sura_selection_drawer.dart';
+
 class SurahPage extends ConsumerStatefulWidget {
   final int suraNumber;
   final int? initialScrollIndex;
@@ -185,6 +187,8 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     }
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     final suraDataAsync = ref.watch(suraDataProvider(widget.suraNumber));
@@ -241,10 +245,12 @@ class _SurahPageState extends ConsumerState<SurahPage> {
       }
     });
 
-    return SafeArea(
-      child: Scaffold(
-        appBar: SuraAppBar(title: suraName),
-        body: Column(
+    return Scaffold(
+      key: _scaffoldKey,
+      appBar: SuraAppBar(title: suraName, scaffoldKey: _scaffoldKey),
+      drawer: SuraSelectionDrawer(currentSuraNumber: widget.suraNumber),
+      body: SafeArea(
+        child: Column(
           children: [
             Expanded(
               child: suraDataAsync.when(
@@ -292,23 +298,23 @@ class _SurahPageState extends ConsumerState<SurahPage> {
               AudioControllerBar(color: Theme.of(context).primaryColor),
           ],
         ),
-        bottomNavigationBar: showBottomNav
-            ? SuraBottomNavBar(
-                totalAyahs: _totalItems,
-                suraNumber: widget.suraNumber,
-                onStartAutoScroll: _startAutoScroll,
-                onStopAutoScroll: () => _stopAutoScroll(resetSpeed: true),
-              )
-            : null,
-        floatingActionButton: _showScrollToTopButton
-            ? FloatingActionButton(
-                onPressed: _scrollToTop,
-                mini: true,
-                backgroundColor: Colors.green,
-                child: const Icon(Icons.arrow_upward, color: Colors.white),
-              )
-            : null,
       ),
+      bottomNavigationBar: showBottomNav
+          ? SuraBottomNavBar(
+              totalAyahs: _totalItems,
+              suraNumber: widget.suraNumber,
+              onStartAutoScroll: _startAutoScroll,
+              onStopAutoScroll: () => _stopAutoScroll(resetSpeed: true),
+            )
+          : null,
+      floatingActionButton: _showScrollToTopButton
+          ? FloatingActionButton(
+              onPressed: _scrollToTop,
+              mini: true,
+              backgroundColor: Colors.green,
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
+            )
+          : null,
     );
   }
 
