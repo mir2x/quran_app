@@ -248,6 +248,7 @@ class _SurahPageState extends ConsumerState<SurahPage> {
     return Scaffold(
       key: _scaffoldKey,
       appBar: SuraAppBar(
+        key: ValueKey(widget.suraNumber),
         title: suraName,
         suraNumber: widget.suraNumber,
         scaffoldKey: _scaffoldKey,

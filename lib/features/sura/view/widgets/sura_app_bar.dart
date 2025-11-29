@@ -23,6 +23,8 @@ class SuraAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           icon: const Icon(Icons.menu_book, color: Colors.white),
           onPressed: () {
+            debugPrint(
+                'Navigating to TilawatPage with suraNumber: $suraNumber');
             Navigator.push(
               context,
               MaterialPageRoute(
