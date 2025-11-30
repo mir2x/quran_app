@@ -6,7 +6,8 @@ import '../../../sura/view/widgets/search_page.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 
 class CustomAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const CustomAppBar({super.key});
+  final bool isLandscape;
+  const CustomAppBar({super.key, this.isLandscape = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -14,17 +15,22 @@ class CustomAppBar extends ConsumerWidget implements PreferredSizeWidget {
       leading: Builder(
         builder: (ctx) => IconButton(
           icon: const Icon(Icons.menu),
+          iconSize: isLandscape ? 20.0 : 24.0,
           onPressed: () => Scaffold.of(ctx).openDrawer(),
         ),
       ),
       title: Text(
         'কুরআন মাজীদ',
-        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 22.sp),
+        style: TextStyle(
+          fontFamily: 'SolaimanLipi',
+          fontSize: isLandscape ? 18.0 : 22.sp,
+        ),
       ),
       centerTitle: true,
       actions: [
         IconButton(
             icon: const Icon(Icons.search),
+            iconSize: isLandscape ? 20.0 : 24.0,
             onPressed: () {
               Navigator.push(
                 context,
@@ -32,9 +38,12 @@ class CustomAppBar extends ConsumerWidget implements PreferredSizeWidget {
               );
             }),
         IconButton(
-            icon: const Icon(Icons.nightlight_outlined), onPressed: () {}),
+            icon: const Icon(Icons.nightlight_outlined),
+            iconSize: isLandscape ? 20.0 : 24.0,
+            onPressed: () {}),
         IconButton(
           icon: const Icon(Icons.g_translate),
+          iconSize: isLandscape ? 20.0 : 24.0,
           onPressed: () {
             final int suraNumber = ref.watch(currentSuraProvider);
             Navigator.push(

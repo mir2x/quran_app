@@ -22,11 +22,16 @@ class BookmarkNavigationView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bookmarksAsync = ref.watch(bookmarkProvider);
     final suraNames = ref.watch(suraNamesProvider);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final tabFontSize = isLandscape ? 12.0 : 14.sp;
+    final listTileTitleFontSize = isLandscape ? 12.0 : 14.sp;
+    final listTileSubtitleFontSize = isLandscape ? 10.0 : 12.sp;
 
     return DefaultTabController(
       length: 2,
       child: bookmarksAsync.when(
-        loading: () => Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(
           child: Text(
             'Error loading bookmarks: ${e.toString()}\n$s',
@@ -47,21 +52,27 @@ class BookmarkNavigationView extends ConsumerWidget {
                   dividerColor: Colors.transparent,
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white,
-                  indicator: BoxDecoration(
-                    color: const Color(0xFF144910),
+                  indicator: const BoxDecoration(
+                    color: Color(0xFF144910),
                     borderRadius: BorderRadius.zero,
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
                   indicatorWeight: 0.0,
                   tabs: [
                     Tab(
-                        child: Text('আয়াত',
-                            style: TextStyle(
-                                fontSize: 14.sp, color: Colors.white))),
+                      child: Text(
+                        'আয়াত',
+                        style: TextStyle(
+                            fontSize: tabFontSize, color: Colors.white),
+                      ),
+                    ),
                     Tab(
-                        child: Text('পৃষ্ঠা',
-                            style: TextStyle(
-                                fontSize: 14.sp, color: Colors.white))),
+                      child: Text(
+                        'পৃষ্ঠা',
+                        style: TextStyle(
+                            fontSize: tabFontSize, color: Colors.white),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -71,10 +82,11 @@ class BookmarkNavigationView extends ConsumerWidget {
                     ayahBookmarks.isEmpty
                         ? Center(
                             child: Text(
-                            'কোনো আয়াত বুকমার্ক করা নেই।',
-                            style: TextStyle(
-                                fontSize: 14.sp, color: Colors.grey.shade600),
-                          ))
+                              'কোনো আয়াত বুকমার্ক করা নেই।',
+                              style: TextStyle(
+                                  fontSize: 14.sp, color: Colors.grey.shade600),
+                            ),
+                          )
                         : ListView.separated(
                             padding: EdgeInsets.zero,
                             itemCount: ayahBookmarks.length,
@@ -99,7 +111,7 @@ class BookmarkNavigationView extends ConsumerWidget {
                                     Text(
                                       '${toBengaliNumber(i + 1)}.',
                                       style: TextStyle(
-                                        fontSize: 14.sp,
+                                        fontSize: listTileTitleFontSize,
                                         fontWeight: FontWeight.bold,
                                         color: Theme.of(context).primaryColor,
                                       ),
@@ -115,7 +127,8 @@ class BookmarkNavigationView extends ConsumerWidget {
                                           Text(
                                             '$suraName, আয়াত ${toBengaliNumber(b.ayah!)}',
                                             style: TextStyle(
-                                              fontSize: 12.sp,
+                                              fontSize:
+                                                  listTileSubtitleFontSize,
                                               fontWeight: FontWeight.w500,
                                               color: Colors.grey.shade800,
                                             ),
@@ -124,7 +137,8 @@ class BookmarkNavigationView extends ConsumerWidget {
                                           Text(
                                             'পারা ${toBengaliNumber(b.para!)}, পৃষ্ঠা ${toBengaliNumber(b.page!)}',
                                             style: TextStyle(
-                                              fontSize: 12.sp,
+                                              fontSize:
+                                                  listTileSubtitleFontSize,
                                               color: Colors.grey.shade600,
                                             ),
                                           ),
@@ -137,7 +151,7 @@ class BookmarkNavigationView extends ConsumerWidget {
                                 listTileContent = Text(
                                   'Bookmark ID: ${b.identifier} (Data incomplete)',
                                   style: TextStyle(
-                                      fontSize: 14.sp,
+                                      fontSize: listTileTitleFontSize,
                                       color: Colors.grey.shade600),
                                 );
                               }
@@ -152,23 +166,28 @@ class BookmarkNavigationView extends ConsumerWidget {
                                       final sura = b.sura!;
                                       final ayah = b.ayah!;
                                       final targetPage = b.page!;
+                                      // Select Ayah FIRST
+                                      ref
+                                          .read(selectedAyahProvider.notifier)
+                                          .selectByNavigation(sura, ayah);
+                                      // THEN Navigate
                                       ref
                                           .read(navigateToPageCommandProvider
                                               .notifier)
                                           .state = targetPage;
-                                      ref
-                                          .read(selectedAyahProvider.notifier)
-                                          .selectByNavigation(sura, ayah);
                                       Navigator.of(context).pop();
                                     } catch (e) {
                                       debugPrint(
                                           'Error during ayah bookmark navigation: $e');
                                       ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text(
-                                                  'Could not navigate to bookmark',
-                                                  style: TextStyle(
-                                                      fontSize: 14.sp))));
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not navigate to bookmark',
+                                            style: TextStyle(fontSize: 14.sp),
+                                          ),
+                                        ),
+                                      );
                                     }
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -188,10 +207,14 @@ class BookmarkNavigationView extends ConsumerWidget {
                                           .read(bookmarkProvider.notifier)
                                           .remove(b.identifier);
                                       ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text('Bookmark removed',
-                                                  style: TextStyle(
-                                                      fontSize: 14.sp))));
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Bookmark removed',
+                                            style: TextStyle(fontSize: 14.sp),
+                                          ),
+                                        ),
+                                      );
                                     }),
                                 contentPadding: EdgeInsets.symmetric(
                                     horizontal: 16.w, vertical: 8.h),
@@ -203,15 +226,18 @@ class BookmarkNavigationView extends ConsumerWidget {
                     pageBookmarks.isEmpty
                         ? Center(
                             child: Text(
-                            'কোনো পৃষ্ঠা বুকমার্ক করা নেই।',
-                            style: TextStyle(
-                                fontSize: 14.sp, color: Colors.grey.shade600),
-                          ))
+                              'কোনো পৃষ্ঠা বুকমার্ক করা নেই।',
+                              style: TextStyle(
+                                  fontSize: 14.sp, color: Colors.grey.shade600),
+                            ),
+                          )
                         : ListView.separated(
                             padding: EdgeInsets.zero,
                             itemCount: pageBookmarks.length,
                             separatorBuilder: (context, index) => Divider(
-                                height: 1.h, color: Colors.grey.shade300),
+                              height: 1.h,
+                              color: Colors.grey.shade300,
+                            ),
                             itemBuilder: (_, i) {
                               final b = pageBookmarks[i];
                               final suraName = (b.sura != null &&
@@ -230,7 +256,7 @@ class BookmarkNavigationView extends ConsumerWidget {
                                     Text(
                                       '${toBengaliNumber(i + 1)}.',
                                       style: TextStyle(
-                                        fontSize: 14.sp,
+                                        fontSize: listTileTitleFontSize,
                                         fontWeight: FontWeight.bold,
                                         color: Theme.of(context).primaryColor,
                                       ),
@@ -246,7 +272,8 @@ class BookmarkNavigationView extends ConsumerWidget {
                                           Text(
                                             suraName,
                                             style: TextStyle(
-                                              fontSize: 12.sp,
+                                              fontSize:
+                                                  listTileSubtitleFontSize,
                                               fontWeight: FontWeight.w500,
                                               color: Colors.grey.shade800,
                                             ),
@@ -255,7 +282,8 @@ class BookmarkNavigationView extends ConsumerWidget {
                                           Text(
                                             'পারা ${toBengaliNumber(b.para!)}, পৃষ্ঠা ${toBengaliNumber(b.page!)}',
                                             style: TextStyle(
-                                              fontSize: 12.sp,
+                                              fontSize:
+                                                  listTileSubtitleFontSize,
                                               color: Colors.grey.shade600,
                                             ),
                                           ),
@@ -268,7 +296,7 @@ class BookmarkNavigationView extends ConsumerWidget {
                                 listTileContent = Text(
                                   'Bookmark ID: ${b.identifier} (Data incomplete)',
                                   style: TextStyle(
-                                      fontSize: 14.sp,
+                                      fontSize: listTileTitleFontSize,
                                       color: Colors.grey.shade600),
                                 );
                               }
@@ -279,49 +307,61 @@ class BookmarkNavigationView extends ConsumerWidget {
                                   if (b.page != null) {
                                     try {
                                       final page = b.page!;
+                                      // Clear selection FIRST
+                                      ref
+                                          .read(selectedAyahProvider.notifier)
+                                          .clear();
+                                      // THEN Navigate
                                       ref
                                           .read(navigateToPageCommandProvider
                                               .notifier)
                                           .state = page;
-                                      ref
-                                          .read(selectedAyahProvider.notifier)
-                                          .clear();
                                       Navigator.of(context).pop();
                                     } catch (e) {
                                       debugPrint(
                                           'Error during page bookmark navigation: $e');
                                       ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text(
-                                                  'Could not navigate to bookmark',
-                                                  style: TextStyle(
-                                                      fontSize: 14.sp))));
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not navigate to bookmark',
+                                            style: TextStyle(fontSize: 14.sp),
+                                          ),
+                                        ),
+                                      );
                                     }
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                            content: Text(
-                                                'Bookmark data incomplete. Cannot navigate.',
-                                                style: TextStyle(
-                                                    fontSize: 14.sp))));
+                                      SnackBar(
+                                        content: Text(
+                                          'Bookmark data incomplete. Cannot navigate.',
+                                          style: TextStyle(fontSize: 14.sp),
+                                        ),
+                                      ),
+                                    );
                                   }
                                 },
                                 trailing: IconButton(
-                                    icon: Icon(Icons.delete,
-                                        size: 24.r,
-                                        color: Colors.grey.shade600),
-                                    onPressed: () {
-                                      ref
-                                          .read(bookmarkProvider.notifier)
-                                          .remove(b.identifier);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text('Bookmark removed',
-                                                  style: TextStyle(
-                                                      fontSize: 14.sp))));
-                                    }),
+                                  icon: Icon(Icons.delete,
+                                      size: 24.r, color: Colors.grey.shade600),
+                                  onPressed: () {
+                                    ref
+                                        .read(bookmarkProvider.notifier)
+                                        .remove(b.identifier);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Bookmark removed',
+                                          style: TextStyle(fontSize: 14.sp),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                                 contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 8.h),
+                                  horizontal: 16.w,
+                                  vertical: 8.h,
+                                ),
                                 minVerticalPadding: 0,
                                 visualDensity: VisualDensity.compact,
                               );

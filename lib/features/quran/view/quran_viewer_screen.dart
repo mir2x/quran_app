@@ -97,7 +97,32 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
           } else if (currentOrientation == Orientation.landscape &&
               _landscapeController != null) {
             final itemH = width / _aspectRatio;
-            final offset = targetPageIndex * itemH;
+            double offset = targetPageIndex * itemH;
+
+            // Auto-scroll to specific Ayah if selected
+            final selectedAyah = ref.read(selectedAyahProvider);
+            if (selectedAyah != null) {
+              final boxes =
+                  ref.read(boxesForPageProvider(newPageNum)); // 1-based page
+              final ayahBoxes = boxes
+                  .where((b) =>
+                      b.suraNumber == selectedAyah.suraNumber &&
+                      b.ayahNumber == selectedAyah.ayahNumber)
+                  .toList();
+
+              if (ayahBoxes.isNotEmpty) {
+                // Find the top-most box for this Ayah
+                final firstBox =
+                    ayahBoxes.reduce((a, b) => a.minY < b.minY ? a : b);
+
+                final scaleY = itemH / widget.imageHeight;
+                final ayahOffset = firstBox.minY * scaleY;
+
+                // Add some padding so it's not at the very top edge
+                // But ensure we don't scroll before the start of the page
+                offset += math.max(0, ayahOffset - 100);
+              }
+            }
 
             _landscapeController!.animateTo(
               offset,
@@ -267,7 +292,9 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                                 curve: Curves.easeInOut,
                                 child: IgnorePointer(
                                   ignoring: !barsVisible,
-                                  child: CustomAppBar(),
+                                  child: CustomAppBar(
+                                    isLandscape: ori == Orientation.landscape,
+                                  ),
                                 ),
                               ),
                             ),
@@ -284,6 +311,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                                   child: BottomBar(
                                     drawerOpen: ref.watch(drawerOpenProvider),
                                     rootKey: _rootKey,
+                                    isLandscape: ori == Orientation.landscape,
                                   ),
                                 ),
                               ),

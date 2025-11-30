@@ -98,6 +98,10 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 14.0 : 16.sp;
+
     return Container(
       color: Theme.of(context).primaryColor,
       padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -110,7 +114,7 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
+                    fontSize: fontSize,
                     fontFamily: 'SolaimanLipi')),
           ),
           Expanded(
@@ -120,7 +124,7 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
+                    fontSize: fontSize,
                     fontFamily: 'SolaimanLipi')),
           ),
         ],
@@ -132,6 +136,9 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
     final selectedSurah = ref.watch(selectedNavigationSurahProvider);
     final suraNames = ref.watch(suraNamesProvider);
     final selectedAyah = ref.watch(selectedAyahProvider);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 14.0 : 16.sp;
 
     return ScrollablePositionedList.separated(
       itemScrollController: _surahScrollController,
@@ -148,7 +155,7 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
           title: Text(
             '${toBengaliNumber(suraNumber)}. ${suraNames[index]}',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: fontSize,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected ? Colors.white : Colors.black87,
             ),
@@ -171,6 +178,9 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
     final selectedAyah = ref.watch(selectedNavigationAyahProvider);
     final ayahCounts = ref.watch(ayahCountsProvider);
     final ayahPageMapping = ref.watch(ayahPageMappingProvider);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final fontSize = isLandscape ? 12.0 : 14.sp;
 
     final totalAyahs = ayahCounts[selectedSurah - 1];
 
@@ -200,7 +210,7 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
             child: Text(
               toBengaliNumber(ayahNumber),
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: fontSize,
                 color: isSelected ? Colors.white : Colors.black87,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -209,11 +219,13 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
           onTap: () {
             final targetPage = ayahPageMapping[(selectedSurah, ayahNumber)];
             if (targetPage != null) {
-              ref.read(navigateToPageCommandProvider.notifier).state =
-                  targetPage;
+              // Select Ayah FIRST
               ref
                   .read(selectedAyahProvider.notifier)
                   .selectByNavigation(selectedSurah, ayahNumber);
+              // THEN Navigate
+              ref.read(navigateToPageCommandProvider.notifier).state =
+                  targetPage;
               Navigator.of(context).pop();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
