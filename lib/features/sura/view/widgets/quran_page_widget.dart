@@ -30,20 +30,28 @@ class QuranPageWidget extends StatelessWidget {
           text: '${ayah.text} ',
           style: TextStyle(
             fontFamily: 'Al Mushaf Quran',
-            fontSize: 28,
-            height: 2.2,
+            fontSize: 35,
+            height: 2.5,
             color: Colors.black87,
             letterSpacing: 0,
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.grey.shade400,
+            decorationStyle: TextDecorationStyle.solid,
+            decorationThickness: 2.0,
           ),
         ));
         spans.add(TextSpan(
           text: '\u{FD3F}${ayah.ayahNumber.toArabicDigit()}\u{FD3E} ',
           style: TextStyle(
             fontFamily: 'Al Mushaf Quran',
-            fontSize: 32,
+            fontSize: 35,
             color: Colors.teal.shade700,
             fontWeight: FontWeight.bold,
             letterSpacing: 0,
+            height: 2.5,
+            decoration: TextDecoration.underline,
+            decorationColor: Colors.grey.shade400,
+            decorationThickness: 2.0,
           ),
         ));
       }
@@ -62,7 +70,8 @@ class QuranPageWidget extends StatelessWidget {
         children: [
           // 1. Header (Para and Page number)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
             decoration: BoxDecoration(
               color: const Color(0xff344955),
               borderRadius: BorderRadius.circular(4),
@@ -73,11 +82,16 @@ class QuranPageWidget extends StatelessWidget {
                 Text(
                   'পারা-${page.paraNumber.toBengaliDigit()}',
                   style: const TextStyle(
-                      fontFamily: 'SolaimanLipi', fontSize: 16, color: Colors.white),
+                      fontFamily: 'SolaimanLipi',
+                      fontSize: 16,
+                      color: Colors.white),
                 ),
                 Text(
                   'পৃষ্ঠা-${page.pageNumberInSurah.toBengaliDigit()}',
-                  style: const TextStyle(fontFamily: 'SolaimanLipi', fontSize: 16, color: Colors.white),
+                  style: const TextStyle(
+                      fontFamily: 'SolaimanLipi',
+                      fontSize: 16,
+                      color: Colors.white),
                 ),
               ],
             ),
@@ -115,7 +129,7 @@ class QuranPageWidget extends StatelessWidget {
             name,
             style: const TextStyle(
               fontFamily: 'Al Mushaf Quran',
-              fontSize: 28,
+              fontSize: 32,
               fontWeight: FontWeight.bold,
               letterSpacing: 0,
             ),
@@ -133,7 +147,7 @@ class QuranPageWidget extends StatelessWidget {
           'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
           style: TextStyle(
             fontFamily: 'Al Mushaf Quran',
-            fontSize: 28,
+            fontSize: 32,
             letterSpacing: 0,
           ),
         ),
