@@ -5,6 +5,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:quran_app/features/quran/viewmodel/ayah_highlight_viewmodel.dart';
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 import 'package:quran_app/features/sura/view/sura_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final selectedDrawerSurahProvider = StateProvider<int>((ref) => 1);
 final selectedDrawerAyahProvider = StateProvider<int?>((ref) => null);
@@ -205,7 +206,14 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
     );
   }
 
-  void _onAyahSelected(BuildContext context, int suraNumber, int ayahNumber) {
+  void _onAyahSelected(
+      BuildContext context, int suraNumber, int ayahNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_read_sura', suraNumber);
+    await prefs.setInt('last_read_ayah_index', ayahNumber - 1);
+
+    if (!mounted) return;
+
     if (suraNumber == widget.currentSuraNumber) {
       ref.read(suraScrollCommandProvider.notifier).state = ScrollCommand(
         suraNumber: suraNumber,
@@ -214,7 +222,7 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
       Navigator.pop(context);
     } else {
       Navigator.pop(context);
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => SurahPage(
