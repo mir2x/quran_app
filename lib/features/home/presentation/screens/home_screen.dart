@@ -184,7 +184,6 @@ class _QuranEditionGridItem extends ConsumerWidget {
                   Positioned(
                     top: -15.h,
                     child: HugeIcon(
-                      // HugeIcons.solidRoundedLocationCheck02,
                       icon: HugeIcons.strokeRoundedLocationCheck01,
                       size: 36.r,
                       color: Theme.of(context).primaryColor,

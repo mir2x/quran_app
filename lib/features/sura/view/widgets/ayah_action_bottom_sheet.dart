@@ -34,7 +34,6 @@ void showAyahActionBottomSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
     ),
     builder: (BuildContext bottomSheetContext) {
-      // Renamed to avoid confusion
       final List<AyahActionItem> actions = [
         AyahActionItem(
           icon: Icons.bookmark_border,

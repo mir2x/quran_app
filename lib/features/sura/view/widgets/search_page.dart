@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quran_app/core/utils/bengali_digit_extension.dart';
-
-import 'package:quran_app/features/sura/view/sura_page.dart';
-
 import '../../../../core/utils/sura_page_router.dart';
 import '../../../../shared/quran_data.dart';
-import '../../../quran/viewmodel/ayah_highlight_viewmodel.dart';
 import '../../viewmodel/search_viewmodel.dart';
 import '../../viewmodel/sura_viewmodel.dart';
 
@@ -24,10 +20,12 @@ class SearchPage extends ConsumerWidget {
           autofocus: true,
           decoration: const InputDecoration(
             hintText: 'আরবি বা বাংলায় খুঁজুন...',
-            hintStyle: TextStyle(fontFamily: 'SolaimanLipi', color: Colors.white70),
+            hintStyle:
+                TextStyle(fontFamily: 'SolaimanLipi', color: Colors.white70),
             border: InputBorder.none,
           ),
-          style: const TextStyle(fontFamily: 'SolaimanLipi', color: Colors.white, fontSize: 18),
+          style: const TextStyle(
+              fontFamily: 'SolaimanLipi', color: Colors.white, fontSize: 18),
           onChanged: (value) {
             ref.read(searchQueryProvider.notifier).state = value;
           },
@@ -37,12 +35,14 @@ class SearchPage extends ConsumerWidget {
         data: (ayahs) {
           if (searchQuery.isEmpty) {
             return const Center(
-              child: Text('আয়াত বা অনুবাদ খুঁজতে টাইপ করুন।', style: TextStyle(fontFamily: 'SolaimanLipi')),
+              child: Text('আয়াত বা অনুবাদ খুঁজতে টাইপ করুন।',
+                  style: TextStyle(fontFamily: 'SolaimanLipi')),
             );
           }
           if (ayahs.isEmpty) {
             return const Center(
-              child: Text('কোন ফলাফল পাওয়া যায়নি।', style: TextStyle(fontFamily: 'SolaimanLipi')),
+              child: Text('কোন ফলাফল পাওয়া যায়নি।',
+                  style: TextStyle(fontFamily: 'SolaimanLipi')),
             );
           }
           return ListView.builder(
@@ -51,16 +51,19 @@ class SearchPage extends ConsumerWidget {
               final ayah = ayahs[index];
               return ListTile(
                 title: Text(
-                  'সূরা ${ suraNames[ayah.sura - 1] ?? ayah.sura}: আয়াত ${ayah.ayah.toBengaliDigit()}',
-                  style: const TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
+                  'সূরা ${suraNames[ayah.sura - 1] ?? ayah.sura}: আয়াত ${ayah.ayah.toBengaliDigit()}',
+                  style: const TextStyle(
+                      fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
                 ),
                 subtitle: HighlightedText(
                   text: ayah.arabicText,
                   query: searchQuery,
-                  style: const TextStyle(fontFamily: 'Al Mushaf Quran', fontSize: 20, color: Colors.black),
+                  style: const TextStyle(
+                      fontFamily: 'Al Mushaf Quran',
+                      fontSize: 20,
+                      color: Colors.black),
                 ),
                 onTap: () {
-                  // Schedule the navigation to avoid race conditions
                   Future.delayed(Duration.zero, () {
                     if (!context.mounted) return;
 
@@ -71,15 +74,22 @@ class SearchPage extends ConsumerWidget {
                     final bool routeExists = activeSurahs.contains(targetSura);
 
                     if (routeExists) {
-                      debugPrint("Surah $targetSura page exists. Issuing scroll command to index $targetIndex.");
-                      ref.read(suraScrollCommandProvider.notifier).state = ScrollCommand(
+                      debugPrint(
+                          "Surah $targetSura page exists. Issuing scroll command to index $targetIndex.");
+                      ref.read(suraScrollCommandProvider.notifier).state =
+                          ScrollCommand(
                         suraNumber: targetSura,
                         scrollIndex: targetIndex,
                       );
-                      Navigator.popUntil(context, (route) => route.settings.name == '/surah/$targetSura');
+                      Navigator.popUntil(
+                          context,
+                          (route) =>
+                              route.settings.name == '/surah/$targetSura');
                     } else {
-                      debugPrint("Surah $targetSura page does not exist. Pushing new page.");
-                      Navigator.push(context, createSurahPageRoute(targetSura, targetIndex));
+                      debugPrint(
+                          "Surah $targetSura page does not exist. Pushing new page.");
+                      Navigator.push(context,
+                          createSurahPageRoute(targetSura, targetIndex));
                     }
                   });
                 },
@@ -94,7 +104,6 @@ class SearchPage extends ConsumerWidget {
   }
 }
 
-// Helper widget for highlighting text
 class HighlightedText extends StatelessWidget {
   final String text;
   final String query;
@@ -119,7 +128,7 @@ class HighlightedText extends StatelessWidget {
     final spans = <TextSpan>[];
     int start = 0;
 
-    while(start < text.length) {
+    while (start < text.length) {
       final startIndex = lowerText.indexOf(lowerQuery, start);
       if (startIndex == -1) {
         spans.add(TextSpan(text: text.substring(start)));
@@ -140,14 +149,9 @@ class HighlightedText extends StatelessWidget {
     }
 
     return RichText(
-      // Apply textAlign and textDirection directly to RichText
-      textAlign: TextAlign.start, // Or whatever you need
-      textDirection: TextDirection.rtl, // Set this if your text is Arabic
-      text: TextSpan(
-        // The style for the children is defined here
-          style: style,
-          children: spans
-      ),
+      textAlign: TextAlign.start,
+      textDirection: TextDirection.rtl,
+      text: TextSpan(style: style, children: spans),
     );
   }
 }

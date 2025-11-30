@@ -17,7 +17,8 @@ class TranslatorSelectionDialog extends ConsumerWidget {
     return AlertDialog(
       title: const Text(
         'অনুবাদক নির্বাচন করুন',
-        style: TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
+        style:
+            TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -31,7 +32,7 @@ class TranslatorSelectionDialog extends ConsumerWidget {
               value: selected.contains(translatorName),
               onChanged: (bool? isSelected) {
                 final currentSelection =
-                List<String>.from(ref.read(selectedTranslatorsProvider));
+                    List<String>.from(ref.read(selectedTranslatorsProvider));
 
                 if (isSelected == true) {
                   currentSelection.add(translatorName);
@@ -39,7 +40,8 @@ class TranslatorSelectionDialog extends ConsumerWidget {
                   currentSelection.remove(translatorName);
                 }
 
-                ref.read(selectedTranslatorsProvider.notifier).state = currentSelection;
+                ref.read(selectedTranslatorsProvider.notifier).state =
+                    currentSelection;
               },
               activeColor: Colors.green.shade700,
             );

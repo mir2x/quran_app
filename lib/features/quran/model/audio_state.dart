@@ -3,7 +3,8 @@ class QuranAudioState {
   final int ayah;
   final bool isPlaying;
 
-  QuranAudioState({required this.surah, required this.ayah, required this.isPlaying});
+  QuranAudioState(
+      {required this.surah, required this.ayah, required this.isPlaying});
 
   QuranAudioState copyWith({int? surah, int? ayah, bool? isPlaying}) {
     return QuranAudioState(

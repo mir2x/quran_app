@@ -5,11 +5,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../../viewmodel/ayah_highlight_viewmodel.dart';
 
-// State provider for the selected Surah (defaults to 1)
 final selectedNavigationSurahProvider = StateProvider<int>((_) => 1);
-// State provider for the selected Ayah (can be null)
-final selectedNavigationAyahProvider = StateProvider<int?>((_) => null);
 
+final selectedNavigationAyahProvider = StateProvider<int?>((_) => null);
 
 class SurahNavigationView extends ConsumerStatefulWidget {
   const SurahNavigationView({super.key});
@@ -20,7 +18,6 @@ class SurahNavigationView extends ConsumerStatefulWidget {
 }
 
 class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
-  // --- Controllers for BOTH lists ---
   final ItemScrollController _surahScrollController = ItemScrollController();
   final ItemScrollController _ayahScrollController = ItemScrollController();
 
@@ -44,22 +41,23 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
       return const Center(child: CircularProgressIndicator());
     }
     if (allBoxesAsync.hasError) {
-      return Center(child: Text('Error loading Surah/Ayah data', style: TextStyle(fontSize: 14.sp)));
+      return Center(
+          child: Text('Error loading Surah/Ayah data',
+              style: TextStyle(fontSize: 14.sp)));
     }
 
     final suraPageMapping = ref.watch(suraPageMappingProvider);
     final selectedAyah = ref.watch(selectedAyahProvider);
 
-    // --- SMART STATE RETENTION LOGIC ---
     if (!_isInitialStateSet && suraPageMapping.isNotEmpty) {
-      // Use the highlighted Ayah if available, otherwise find Surah from current page.
       int currentSurah = selectedAyah?.suraNumber ?? 1;
       int? currentAyah = selectedAyah?.ayahNumber;
 
       if (currentAyah == null) {
         final currentPage = ref.read(currentPageProvider) + 1;
         for (int i = 1; i <= 114; i++) {
-          if (suraPageMapping.containsKey(i) && suraPageMapping[i]! <= currentPage) {
+          if (suraPageMapping.containsKey(i) &&
+              suraPageMapping[i]! <= currentPage) {
             currentSurah = i;
           } else {
             break;
@@ -69,7 +67,8 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ref.read(selectedNavigationSurahProvider.notifier).state = currentSurah;
+          ref.read(selectedNavigationSurahProvider.notifier).state =
+              currentSurah;
           ref.read(selectedNavigationAyahProvider.notifier).state = currentAyah;
 
           _surahScrollController.jumpTo(index: currentSurah - 1);
@@ -81,7 +80,6 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
       });
       _isInitialStateSet = true;
     }
-    // --- END OF SMART LOGIC ---
 
     return Column(
       children: [
@@ -107,11 +105,23 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
         children: [
           Expanded(
             flex: 3,
-            child: Text('সুরা', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp, fontFamily: 'SolaimanLipi')),
+            child: Text('সুরা',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                    fontFamily: 'SolaimanLipi')),
           ),
           Expanded(
             flex: 2,
-            child: Text('আয়াত', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp, fontFamily: 'SolaimanLipi')),
+            child: Text('আয়াত',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                    fontFamily: 'SolaimanLipi')),
           ),
         ],
       ),
@@ -127,7 +137,8 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
       itemScrollController: _surahScrollController,
       padding: EdgeInsets.zero,
       itemCount: 114,
-      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
+      separatorBuilder: (context, index) =>
+          Divider(height: 1.h, color: Colors.grey.shade300),
       itemBuilder: (context, index) {
         final suraNumber = index + 1;
         final isSelected = suraNumber == selectedSurah;
@@ -144,9 +155,11 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
           ),
           contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
           onTap: () {
-            ref.read(selectedNavigationSurahProvider.notifier).state = suraNumber;
-            // When a new surah is tapped, update the selected ayah to reflect the current reading state
-            ref.read(selectedNavigationAyahProvider.notifier).state = selectedAyah?.ayahNumber;
+            ref.read(selectedNavigationSurahProvider.notifier).state =
+                suraNumber;
+
+            ref.read(selectedNavigationAyahProvider.notifier).state =
+                selectedAyah?.ayahNumber;
           },
         );
       },
@@ -161,7 +174,6 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
 
     final totalAyahs = ayahCounts[selectedSurah - 1];
 
-    // Auto-scroll the Ayah list when the selected Surah changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _ayahScrollController.isAttached) {
         final currentAyah = ref.read(selectedAyahProvider)?.ayahNumber;
@@ -174,11 +186,13 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
     return ScrollablePositionedList.separated(
       itemScrollController: _ayahScrollController,
       padding: EdgeInsets.zero,
-      separatorBuilder: (context, index) => Divider(height: 1.h, color: Colors.grey.shade300),
+      separatorBuilder: (context, index) =>
+          Divider(height: 1.h, color: Colors.grey.shade300),
       itemCount: totalAyahs,
       itemBuilder: (context, index) {
         final ayahNumber = index + 1;
-        final isSelected = selectedSurah == selectedSurah && ayahNumber == selectedAyah;
+        final isSelected =
+            selectedSurah == selectedSurah && ayahNumber == selectedAyah;
 
         return ListTile(
           tileColor: isSelected ? Theme.of(context).primaryColor : null,
@@ -195,12 +209,16 @@ class _SurahNavigationViewState extends ConsumerState<SurahNavigationView> {
           onTap: () {
             final targetPage = ayahPageMapping[(selectedSurah, ayahNumber)];
             if (targetPage != null) {
-              ref.read(navigateToPageCommandProvider.notifier).state = targetPage;
-              ref.read(selectedAyahProvider.notifier).selectByNavigation(selectedSurah, ayahNumber);
+              ref.read(navigateToPageCommandProvider.notifier).state =
+                  targetPage;
+              ref
+                  .read(selectedAyahProvider.notifier)
+                  .selectByNavigation(selectedSurah, ayahNumber);
               Navigator.of(context).pop();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Page data not found for this Ayah')),
+                const SnackBar(
+                    content: Text('Page data not found for this Ayah')),
               );
             }
           },

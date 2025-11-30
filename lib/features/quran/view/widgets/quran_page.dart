@@ -25,7 +25,6 @@ class QuranPage extends ConsumerWidget {
     required this.imageExt,
   });
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final allBoxesAsync = ref.watch(allBoxesProvider);
@@ -46,29 +45,33 @@ class QuranPage extends ConsumerWidget {
       print('Sura $sura is on this page from ayah $startAyah to $endAyah.');
     }
 
-
-    final pageNumber  = logicalPage < kFirstPageNumber ? -1 : logicalPage;
-    final boxes = pageNumber == -1 ? const <AyahBox>[] : ref.watch(boxesForPageProvider(pageNumber));
+    final pageNumber = logicalPage < kFirstPageNumber ? -1 : logicalPage;
+    final boxes = pageNumber == -1
+        ? const <AyahBox>[]
+        : ref.watch(boxesForPageProvider(pageNumber));
     final notifier = ref.read(selectedAyahProvider.notifier);
     final imgFile = File('${editionDir.path}/qm${pageIndex + 1}.$imageExt');
 
     final bool isSelectedAyahOnThisPage = selectedState != null &&
         pageNumber != -1 &&
-        boxes.any((box) => box.suraNumber == selectedState.suraNumber && box.ayahNumber == selectedState.ayahNumber);
+        boxes.any((box) =>
+            box.suraNumber == selectedState.suraNumber &&
+            box.ayahNumber == selectedState.ayahNumber);
 
     final bool showMenuOnThisPage = selectedState != null &&
         selectedState.source == AyahSelectionSource.tap &&
         isSelectedAyahOnThisPage;
 
     void onTapDown(
-        TapDownDetails d,
-        double scaleX,
-        double scaleY,
-        List<AyahBox> currentPageBoxes,
-        ) {
+      TapDownDetails d,
+      double scaleX,
+      double scaleY,
+      List<AyahBox> currentPageBoxes,
+    ) {
       final logicX = d.localPosition.dx / scaleX;
       final logicY = d.localPosition.dy / scaleY;
-      final tappedBoxes = currentPageBoxes.where((b) => b.contains(logicX, logicY)).toList();
+      final tappedBoxes =
+          currentPageBoxes.where((b) => b.contains(logicX, logicY)).toList();
 
       if (tappedBoxes.isNotEmpty) {
         final tappedSura = tappedBoxes.first.suraNumber;
@@ -87,30 +90,30 @@ class QuranPage extends ConsumerWidget {
       }
     }
 
-
     return allBoxesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error:   (e, _) => Center(
+      error: (e, _) => Center(
         child: Text(
           e.toString(),
           style: TextStyle(fontSize: 14.sp),
         ),
       ),
-      data:    (_) => LayoutBuilder(
+      data: (_) => LayoutBuilder(
         builder: (_, constraints) {
-          final scaleX = constraints.maxWidth  / imageWidth;
+          final scaleX = constraints.maxWidth / imageWidth;
           final scaleY = constraints.maxHeight / imageHeight;
 
           List<Rect> highlightRectsOnThisPage = [];
           Rect? menuAnchorRectOnThisPage;
 
           if (selectedState != null && isSelectedAyahOnThisPage) {
-
-            final boxesForSelectedAyah = boxes.where(
+            final boxesForSelectedAyah = boxes
+                .where(
                   (box) =>
-              box.suraNumber == selectedState.suraNumber &&
-                  box.ayahNumber == selectedState.ayahNumber,
-            ).toList();
+                      box.suraNumber == selectedState.suraNumber &&
+                      box.ayahNumber == selectedState.ayahNumber,
+                )
+                .toList();
 
             if (boxesForSelectedAyah.isNotEmpty) {
               highlightRectsOnThisPage = boxesForSelectedAyah.map((box) {
@@ -123,7 +126,8 @@ class QuranPage extends ConsumerWidget {
               }).toList();
 
               try {
-                final firstBoxOnPageForSelectedAyah = boxesForSelectedAyah.reduce((a, b) => a.boxId < b.boxId ? a : b);
+                final firstBoxOnPageForSelectedAyah = boxesForSelectedAyah
+                    .reduce((a, b) => a.boxId < b.boxId ? a : b);
                 menuAnchorRectOnThisPage = Rect.fromLTWH(
                   firstBoxOnPageForSelectedAyah.minX * scaleX,
                   firstBoxOnPageForSelectedAyah.minY * scaleY,
@@ -131,7 +135,8 @@ class QuranPage extends ConsumerWidget {
                   firstBoxOnPageForSelectedAyah.height * scaleY,
                 );
               } catch (e) {
-                debugPrint("Error finding first box for selected ayah on page $pageNumber: $e");
+                debugPrint(
+                    "Error finding first box for selected ayah on page $pageNumber: $e");
                 menuAnchorRectOnThisPage = null;
               }
             }
@@ -148,7 +153,8 @@ class QuranPage extends ConsumerWidget {
               ),
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapDown: (details) => onTapDown(details, scaleX, scaleY, boxes),
+                onTapDown: (details) =>
+                    onTapDown(details, scaleX, scaleY, boxes),
                 child: Container(),
               ),
               if (showMenuOnThisPage && menuAnchorRectOnThisPage != null)
@@ -156,8 +162,8 @@ class QuranPage extends ConsumerWidget {
               PageInfoOverlay(pageIndex: pageIndex),
             ],
           );
-        }, //
-      ), //
+        },
+      ),
     );
   }
 }

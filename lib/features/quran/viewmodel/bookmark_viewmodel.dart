@@ -1,8 +1,6 @@
 import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../model/bookmark.dart';
 
 class BookmarkNotifier extends AsyncNotifier<List<Bookmark>> {
@@ -39,7 +37,7 @@ class BookmarkNotifier extends AsyncNotifier<List<Bookmark>> {
       return false;
     }
     return state.value!.any(
-          (b) => b.type == 'ayah' && b.sura == sura && b.ayah == ayah,
+      (b) => b.type == 'ayah' && b.sura == sura && b.ayah == ayah,
     );
   }
 
@@ -48,10 +46,11 @@ class BookmarkNotifier extends AsyncNotifier<List<Bookmark>> {
       return false;
     }
     return state.value!.any(
-          (b) => b.type == 'page' && b.page == page,
+      (b) => b.type == 'page' && b.page == page,
     );
   }
 }
 
 final bookmarkProvider =
-AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(BookmarkNotifier.new);
+    AsyncNotifierProvider<BookmarkNotifier, List<Bookmark>>(
+        BookmarkNotifier.new);

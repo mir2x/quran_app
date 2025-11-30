@@ -21,22 +21,16 @@ class AudioControllerBar extends ConsumerWidget {
       elevation: 6,
       color: color,
       child: Container(
-        // Scale height using .h
         height: 60.h,
-        // Scale padding using .w
         padding: EdgeInsets.symmetric(horizontal: 12.w),
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                // No change to text content
-                  '$surah : $ayah',
-                  style: TextStyle( // Remove const as font size is scaled
+              child: Text('$surah : $ayah',
+                  style: TextStyle(
                     color: Colors.white,
-                    // Scale font size using .sp
                     fontSize: 16.sp,
-                  )
-              ),
+                  )),
             ),
             Row(
               children: [
@@ -44,40 +38,36 @@ class AudioControllerBar extends ConsumerWidget {
                   icon: Icon(
                     Icons.skip_previous,
                     color: Colors.white,
-                    // Scale icon size using .r (Optional)
-                    size: 24.r, // Example scaling
+                    size: 24.r,
                   ),
-                  tooltip: 'Previous Ayah', // Tooltip text remains
+                  tooltip: 'Previous Ayah',
                   onPressed: service.playPrev,
                 ),
                 IconButton(
                   icon: Icon(
                     isPlaying ? Icons.pause : Icons.play_arrow,
                     color: Colors.white,
-                    // Scale icon size using .r (Optional)
-                    size: 24.r, // Example scaling
+                    size: 24.r,
                   ),
-                  tooltip: isPlaying ? 'Pause' : 'Play', // Tooltip text remains
+                  tooltip: isPlaying ? 'Pause' : 'Play',
                   onPressed: service.togglePlayPause,
                 ),
                 IconButton(
                   icon: Icon(
                     Icons.stop,
                     color: Colors.white,
-                    // Scale icon size using .r (Optional)
-                    size: 24.r, // Example scaling
+                    size: 24.r,
                   ),
-                  tooltip: 'Stop', // Tooltip text remains
+                  tooltip: 'Stop',
                   onPressed: service.stop,
                 ),
                 IconButton(
                   icon: Icon(
                     Icons.skip_next,
                     color: Colors.white,
-                    // Scale icon size using .r (Optional)
-                    size: 24.r, // Example scaling
+                    size: 24.r,
                   ),
-                  tooltip: 'Next Ayah', // Tooltip text remains
+                  tooltip: 'Next Ayah',
                   onPressed: service.playNext,
                 ),
               ],

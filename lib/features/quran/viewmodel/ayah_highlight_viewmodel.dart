@@ -153,8 +153,8 @@ class EditionConfigNotifier extends StateNotifier<EditionConfig?> {
 
 final editionConfigProvider =
     StateNotifierProvider<EditionConfigNotifier, EditionConfig?>(
-      (_) => EditionConfigNotifier(),
-    );
+  (_) => EditionConfigNotifier(),
+);
 
 final allBoxesProvider = FutureProvider<List<AyahBox>>((ref) async {
   final config = ref.watch(editionConfigProvider);
@@ -223,8 +223,8 @@ class SelectedAyahNotifier extends StateNotifier<SelectedAyahState?> {
 
 final selectedAyahProvider =
     StateNotifierProvider<SelectedAyahNotifier, SelectedAyahState?>(
-      (ref) => SelectedAyahNotifier(),
-    );
+  (ref) => SelectedAyahNotifier(),
+);
 final currentPageProvider = StateProvider<int>((_) => 0);
 
 final currentSuraProvider = Provider<int>((ref) {
@@ -326,9 +326,7 @@ const List<(int sura, int ayah)> paraStarts = [
 ];
 
 final suraPageMappingProvider = Provider<Map<int, int>>((ref) {
-  return ref
-      .watch(allBoxesProvider)
-      .maybeWhen(
+  return ref.watch(allBoxesProvider).maybeWhen(
         data: (boxes) {
           final Map<int, int> suraMapping = {};
           for (final box in boxes) {
@@ -343,9 +341,7 @@ final suraPageMappingProvider = Provider<Map<int, int>>((ref) {
 });
 
 final ayahPageMappingProvider = Provider<Map<(int, int), int>>((ref) {
-  return ref
-      .watch(allBoxesProvider)
-      .maybeWhen(
+  return ref.watch(allBoxesProvider).maybeWhen(
         data: (boxes) {
           final Map<(int, int), int> mapping = {};
           for (final box in boxes) {
@@ -406,8 +402,8 @@ final paraPageRangesProvider = Provider<Map<int, List<int>>>((ref) {
 
     final endPage = (i < 30)
         ? paraMapping[i + 1] != null
-              ? paraMapping[i + 1]! - 1
-              : null
+            ? paraMapping[i + 1]! - 1
+            : null
         : totalPages;
 
     if (startPage != null && endPage != null && startPage <= endPage) {
@@ -486,6 +482,7 @@ class QuranInfoService {
 
     return currentSura;
   }
+
   int? getPageBySuraAyah(int sura, int ayah) {
     final ayahPageMapping = _ref.read(ayahPageMappingProvider);
     return ayahPageMapping[(sura, ayah)];
@@ -499,8 +496,7 @@ final quranInfoServiceProvider = Provider<QuranInfoService>(
 class BarsVisibilityNotifier extends StateNotifier<bool> {
   Timer? _hideTimer;
   static const Duration _hideDuration = Duration(seconds: 5);
-  bool _autoHideArmed =
-      true;
+  bool _autoHideArmed = true;
   BarsVisibilityNotifier() : super(true) {
     _startAutoHideTimer();
   }
@@ -519,13 +515,12 @@ class BarsVisibilityNotifier extends StateNotifier<bool> {
 
   void show() {
     if (!state) {
-      state = true; // Show the bars
+      state = true;
     }
   }
 
   void hide() {
-    _hideTimer
-        ?.cancel();
+    _hideTimer?.cancel();
     if (state) {
       state = false;
     }
@@ -537,10 +532,8 @@ class BarsVisibilityNotifier extends StateNotifier<bool> {
       hide();
     } else {
       show();
-      _autoHideArmed =
-          false;
-      _hideTimer
-          ?.cancel();
+      _autoHideArmed = false;
+      _hideTimer?.cancel();
     }
   }
 
@@ -553,7 +546,8 @@ class BarsVisibilityNotifier extends StateNotifier<bool> {
 
 final pageInfoProvider = Provider.family<PageQuranInfo, int>((ref, pageNumber) {
   final boxesOnPage = ref.watch(boxesForPageProvider(pageNumber));
-  final paraNumber = ref.read(quranInfoServiceProvider).getParaByPage(pageNumber);
+  final paraNumber =
+      ref.read(quranInfoServiceProvider).getParaByPage(pageNumber);
 
   if (boxesOnPage.isEmpty) {
     return PageQuranInfo(
@@ -597,11 +591,11 @@ class PageInfoVisibilityNotifier extends StateNotifier<bool> {
 }
 
 final pageInfoVisibilityProvider =
-StateNotifierProvider<PageInfoVisibilityNotifier, bool>(
-      (_) => PageInfoVisibilityNotifier(),
+    StateNotifierProvider<PageInfoVisibilityNotifier, bool>(
+  (_) => PageInfoVisibilityNotifier(),
 );
 
 final barsVisibilityProvider =
     StateNotifierProvider<BarsVisibilityNotifier, bool>(
-      (ref) => BarsVisibilityNotifier(),
-    );
+  (ref) => BarsVisibilityNotifier(),
+);

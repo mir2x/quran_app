@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../quran/viewmodel/ayah_highlight_viewmodel.dart';
 import '../../../quran/viewmodel/reciter_providers.dart';
 
 class ReciterSelectionDialog extends ConsumerWidget {
@@ -8,16 +7,17 @@ class ReciterSelectionDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Find the key (reciter name) that corresponds to the selected reciter ID.
     final selectedReciterId = ref.watch(selectedReciterProvider);
     final selectedReciterName = reciters.entries
-        .firstWhere((entry) => entry.value == selectedReciterId, orElse: () => reciters.entries.first)
+        .firstWhere((entry) => entry.value == selectedReciterId,
+            orElse: () => reciters.entries.first)
         .key;
 
     return AlertDialog(
       title: const Text(
         'ক্বারী নির্বাচন করুন',
-        style: TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
+        style:
+            TextStyle(fontFamily: 'SolaimanLipi', fontWeight: FontWeight.bold),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -28,13 +28,13 @@ class ReciterSelectionDialog extends ConsumerWidget {
                 reciterName,
                 style: const TextStyle(fontFamily: 'SolaimanLipi'),
               ),
-              value: reciterName, // The value is the reciter's name
-              groupValue: selectedReciterName, // The group value is also the reciter's name
+              value: reciterName,
+              groupValue: selectedReciterName,
               onChanged: (String? value) {
                 if (value != null && reciters.containsKey(value)) {
-                  // When changed, update the provider with the corresponding ID.
-                  ref.read(selectedReciterProvider.notifier).state = reciters[value]!;
-                  // Optionally close the dialog after selection
+                  ref.read(selectedReciterProvider.notifier).state =
+                      reciters[value]!;
+
                   Navigator.of(context).pop();
                 }
               },
@@ -46,7 +46,7 @@ class ReciterSelectionDialog extends ConsumerWidget {
       actions: <Widget>[
         TextButton(
           child: Text(
-            'বন্ধ করুন', // "Close" in Bengali
+            'বন্ধ করুন',
             style: TextStyle(
                 fontFamily: 'SolaimanLipi', color: Colors.green.shade800),
           ),

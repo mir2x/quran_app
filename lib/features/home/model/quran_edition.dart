@@ -11,7 +11,6 @@ class QuranEdition {
   final String imageExt;
   final bool isDownloaded;
 
-
   const QuranEdition({
     required this.id,
     required this.title,

@@ -6,7 +6,6 @@ import 'package:quran_app/features/sura/model/ayah.dart';
 import 'package:quran_app/features/sura/view/widgets/ayah_action_bottom_sheet.dart';
 import 'package:quran_app/features/sura/viewmodel/font_settings_viewmodel.dart';
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
-
 import '../../../../core/utils/adaptive_text.dart';
 
 class AyahCard extends ConsumerWidget {
@@ -33,7 +32,7 @@ class AyahCard extends ConsumerWidget {
         ? Theme.of(context).primaryColor.withOpacity(0.1)
         : Theme.of(context).cardTheme.color;
     final borderColor =
-    isHighlighted ? Theme.of(context).primaryColor : Colors.transparent;
+        isHighlighted ? Theme.of(context).primaryColor : Colors.transparent;
     final cardElevation = isHighlighted ? 4.0 : 0.5;
 
     return RepaintBoundary(

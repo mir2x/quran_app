@@ -4,8 +4,36 @@ import '../model/download_state.dart';
 import '../viewmodel/download_providers.dart';
 
 String _toBanglaNumber(String input) {
-  const en = ['0','1','2','3','4','5','6','7','8','9','MB','KB','GB'];
-  const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯','এমবি','কেবি','জিবি'];
+  const en = [
+    '0',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    'MB',
+    'KB',
+    'GB'
+  ];
+  const bn = [
+    '০',
+    '১',
+    '২',
+    '৩',
+    '৪',
+    '৫',
+    '৬',
+    '৭',
+    '৮',
+    '৯',
+    'এমবি',
+    'কেবি',
+    'জিবি'
+  ];
 
   String output = input;
   for (int i = 0; i < en.length; i++) {
@@ -13,7 +41,6 @@ String _toBanglaNumber(String input) {
   }
   return output;
 }
-
 
 void showDownloadDialog(BuildContext context) {
   final container = ProviderScope.containerOf(context, listen: false);
@@ -80,11 +107,11 @@ class DownloadDialog extends ConsumerWidget {
         final bool isMultiFile = state.totalItems > 0;
         final progressValue = isMultiFile
             ? (state.totalItems > 0
-            ? state.completedItems / state.totalItems
-            : null)
+                ? state.completedItems / state.totalItems
+                : null)
             : (state.totalSize > 0
-            ? state.receivedSize / state.totalSize
-            : null);
+                ? state.receivedSize / state.totalSize
+                : null);
 
         final rawProgressText = isMultiFile
             ? 'ডাউনলোড হয়েছে ${state.completedItems} / ${state.totalItems}'
@@ -102,8 +129,7 @@ class DownloadDialog extends ConsumerWidget {
         );
         actions = [
           TextButton(
-            onPressed: () =>
-                ref.read(downloadManagerProvider).cancelDownload(),
+            onPressed: () => ref.read(downloadManagerProvider).cancelDownload(),
             child: const Text("বাতিল"),
           )
         ];

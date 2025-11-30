@@ -2,10 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// Import screenutil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'package:quran_app/features/quran/view/widgets/audio_control_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/bottom_bar.dart';
 import 'package:quran_app/features/quran/view/widgets/custom_app_bar.dart';
@@ -51,9 +48,7 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(pageInfoVisibilityProvider.notifier).show();
-      ref
-          .read(editionConfigProvider.notifier)
-          .set(
+      ref.read(editionConfigProvider.notifier).set(
             EditionConfig(
               dir: widget.editionDir,
               imageWidth: widget.imageWidth,
@@ -190,10 +185,8 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                         ref.read(selectedAyahProvider.notifier).clear();
                       }
                     },
-
                     itemBuilder: (_, idx) => QuranPage(
                       pageIndex: idx,
-                      // Pass 0-based index
                       editionDir: widget.editionDir,
                       imageWidth: widget.imageWidth,
                       imageHeight: widget.imageHeight,
@@ -204,11 +197,12 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                   viewer = NotificationListener<ScrollUpdateNotification>(
                     onNotification: (n) {
                       final p = (n.metrics.pixels / itemH).round().clamp(
-                        0,
-                        math.max(0, pageCount - 1),
-                      );
+                            0,
+                            math.max(0, pageCount - 1),
+                          );
                       if (ref.read(currentPageProvider) != p.toInt()) {
-                        ref.read(currentPageProvider.notifier).state = p.toInt();
+                        ref.read(currentPageProvider.notifier).state =
+                            p.toInt();
                         ref.read(pageInfoVisibilityProvider.notifier).show();
                         final currentSelectedState = ref.read(
                           selectedAyahProvider,
@@ -294,23 +288,20 @@ class _QuranViewerState extends ConsumerState<QuranViewerScreen> {
                                 ),
                               ),
                             ),
-
                             Consumer(
                               builder: (context, ref, _) {
                                 final audio = ref.watch(quranAudioProvider);
                                 final isAudioPlaying = audio != null;
                                 if (!isAudioPlaying) {
-                                  return const SizedBox.shrink(); // Hide when not playing
+                                  return const SizedBox.shrink();
                                 }
 
                                 final double safeAreaBottom = MediaQuery.of(
                                   context,
                                 ).padding.bottom;
 
-                                // Use scaled bottom bar height
                                 final double dynamicBottom = barsVisible
-                                    ? _bottomBarHeight
-                                          .h // Scale the static bottom bar height
+                                    ? _bottomBarHeight.h
                                     : safeAreaBottom;
 
                                 return AnimatedPositioned(

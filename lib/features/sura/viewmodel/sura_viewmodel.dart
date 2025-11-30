@@ -3,7 +3,6 @@ import 'package:quran_app/features/sura/model/ayah.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../core/utils/database_helper.dart';
 
-// --- NO CHANGES TO THESE TOP PROVIDERS ---
 final databaseProvider = FutureProvider<Database>((ref) async {
   return DatabaseHelper().database;
 });
@@ -12,15 +11,13 @@ final quranDataServiceProvider = Provider<QuranDataService>((ref) {
   return QuranDataService();
 });
 
-
 class QuranDataService {
-  // --- NEW METHOD TO FETCH ALL AYAH DATA FOR A SURAH ---
   Future<List<Ayah>> getAyahsForSura(Database db, int suraNumber) async {
-    // 1. Fetch all data for the given surah in parallel
     final allDataFuture = Future.wait([
       db.query('ayahs', where: 'sura = ?', whereArgs: [suraNumber]),
       db.query('translations', where: 'sura = ?', whereArgs: [suraNumber]),
-      db.query('words', where: 'sura = ?', whereArgs: [suraNumber], orderBy: 'word_id ASC'),
+      db.query('words',
+          where: 'sura = ?', whereArgs: [suraNumber], orderBy: 'word_id ASC'),
     ]);
 
     final allData = await allDataFuture;
@@ -29,14 +26,15 @@ class QuranDataService {
     final List<Map<String, dynamic>> wordData = allData[2];
 
     if (ayahData.isEmpty) {
-      return []; // Return an empty list if the surah has no ayahs
+      return [];
     }
 
-    // 2. Process translations and words into maps for efficient lookup
     final Map<int, List<Translation>> translationsByAyah = {};
     for (final row in translationData) {
       final ayahNum = row['ayah'] as int;
-      translationsByAyah.putIfAbsent(ayahNum, () => []).add(Translation.fromDb(row));
+      translationsByAyah
+          .putIfAbsent(ayahNum, () => [])
+          .add(Translation.fromDb(row));
     }
 
     final Map<int, List<WordByWord>> wordsByAyah = {};
@@ -45,7 +43,6 @@ class QuranDataService {
       wordsByAyah.putIfAbsent(ayahNum, () => []).add(WordByWord.fromDb(row));
     }
 
-    // 3. Stitch everything together into a list of Ayah objects
     final List<Ayah> resultAyahs = [];
     for (final row in ayahData) {
       final ayahNum = row['ayah'] as int;
@@ -58,11 +55,8 @@ class QuranDataService {
 
     return resultAyahs;
   }
-  // --- END OF NEW METHOD ---
-
 
   Future<int> getVerseCount(Database db, int suraNumber) async {
-    // ... existing method is unchanged
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM ayahs WHERE sura = ?',
       [suraNumber],
@@ -71,7 +65,6 @@ class QuranDataService {
   }
 
   Future<Ayah> getAyah(Database db, int suraNumber, int ayahNumber) async {
-    // ... existing method is unchanged
     final ayahMap = await db.query(
       'ayahs',
       where: 'sura = ? AND ayah = ?',
@@ -87,9 +80,8 @@ class QuranDataService {
       where: 'sura = ? AND ayah = ?',
       whereArgs: [suraNumber, ayahNumber],
     );
-    final translations = translationsMap
-        .map((row) => Translation.fromDb(row))
-        .toList();
+    final translations =
+        translationsMap.map((row) => Translation.fromDb(row)).toList();
 
     final wordsMap = await db.query(
       'words',
@@ -103,7 +95,6 @@ class QuranDataService {
   }
 
   Future<List<Ayah>> searchQuran(Database db, String query) async {
-    // ... existing method is unchanged
     final String searchTerm = '%$query%';
     final List<Map<String, dynamic>> idResults = await db.rawQuery('''
     SELECT DISTINCT sura, ayah FROM ayahs WHERE arabic_text LIKE ?
@@ -117,14 +108,19 @@ class QuranDataService {
     const int chunkSize = 250;
     final List<Ayah> resultAyahs = [];
     for (int i = 0; i < idResults.length; i += chunkSize) {
-      final chunkIds = idResults.sublist(
-          i, i + chunkSize > idResults.length ? idResults.length : i + chunkSize);
+      final chunkIds = idResults.sublist(i,
+          i + chunkSize > idResults.length ? idResults.length : i + chunkSize);
       if (chunkIds.isEmpty) continue;
-      final whereClause = chunkIds.map((_) => '(sura = ? AND ayah = ?)').join(' OR ');
-      final whereArgs = chunkIds.expand((row) => [row['sura'], row['ayah']]).toList();
-      final ayahsFuture = db.query('ayahs', where: whereClause, whereArgs: whereArgs);
-      final translationsFuture = db.query('translations', where: whereClause, whereArgs: whereArgs);
-      final wordsFuture = db.query('words', where: whereClause, whereArgs: whereArgs, orderBy: 'word_id ASC');
+      final whereClause =
+          chunkIds.map((_) => '(sura = ? AND ayah = ?)').join(' OR ');
+      final whereArgs =
+          chunkIds.expand((row) => [row['sura'], row['ayah']]).toList();
+      final ayahsFuture =
+          db.query('ayahs', where: whereClause, whereArgs: whereArgs);
+      final translationsFuture =
+          db.query('translations', where: whereClause, whereArgs: whereArgs);
+      final wordsFuture = db.query('words',
+          where: whereClause, whereArgs: whereArgs, orderBy: 'word_id ASC');
       final allData = await Future.wait([
         ayahsFuture,
         translationsFuture,
@@ -136,7 +132,9 @@ class QuranDataService {
       final Map<String, List<Translation>> translationsByAyah = {};
       for (final row in translationData) {
         final key = "${row['sura']}:${row['ayah']}";
-        translationsByAyah.putIfAbsent(key, () => []).add(Translation.fromDb(row));
+        translationsByAyah
+            .putIfAbsent(key, () => [])
+            .add(Translation.fromDb(row));
       }
       final Map<String, List<WordByWord>> wordsByAyah = {};
       for (final row in wordData) {
@@ -160,48 +158,41 @@ class QuranDataService {
   }
 }
 
-// --- NEW PROVIDER FOR THE REFACTORED SURAH PAGE ---
 final suraDataProvider = FutureProvider.family<List<Ayah>, int>((
-    ref,
-    suraNumber,
-    ) async {
+  ref,
+  suraNumber,
+) async {
   final db = await ref.watch(databaseProvider.future);
   return ref.read(quranDataServiceProvider).getAyahsForSura(db, suraNumber);
 });
-// --- END OF NEW PROVIDER ---
 
-
-// --- OLD PROVIDERS (can be kept for other parts of the app, but not used by the new SurahPage) ---
 final ayahCountProvider = FutureProvider.family<int, int>((
-    ref,
-    suraNumber,
-    ) async {
-  // ... implementation unchanged
+  ref,
+  suraNumber,
+) async {
   final db = await ref.watch(databaseProvider.future);
   return ref.read(quranDataServiceProvider).getVerseCount(db, suraNumber);
 });
 
 class AyahProviderParams {
-  // ... implementation unchanged
   final int suraNumber;
   final int index;
   AyahProviderParams({required this.suraNumber, required this.index});
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is AyahProviderParams &&
-              runtimeType == other.runtimeType &&
-              suraNumber == other.suraNumber &&
-              index == other.index;
+      other is AyahProviderParams &&
+          runtimeType == other.runtimeType &&
+          suraNumber == other.suraNumber &&
+          index == other.index;
   @override
   int get hashCode => suraNumber.hashCode ^ index.hashCode;
 }
 
 final ayahByIndexProvider = FutureProvider.family<Ayah, AyahProviderParams>((
-    ref,
-    params,
-    ) async {
-  // ... implementation unchanged
+  ref,
+  params,
+) async {
   final db = await ref.watch(databaseProvider.future);
   final ayahNumber = params.index + 1;
   return ref
@@ -209,9 +200,8 @@ final ayahByIndexProvider = FutureProvider.family<Ayah, AyahProviderParams>((
       .getAyah(db, params.suraNumber, ayahNumber);
 });
 
-// --- UI STATE PROVIDERS (unchanged) ---
 final selectedTranslatorsProvider = StateProvider<List<String>>(
-      (ref) => [],
+  (ref) => [],
 );
 
 class ScrollCommand {
@@ -220,6 +210,7 @@ class ScrollCommand {
 
   ScrollCommand({required this.suraNumber, required this.scrollIndex});
 }
+
 final activeSurahPagesProvider = StateProvider<Set<int>>((ref) => {});
 final suraScrollCommandProvider = StateProvider<ScrollCommand?>((ref) => null);
 final showTranslationsProvider = StateProvider<bool>((ref) => true);

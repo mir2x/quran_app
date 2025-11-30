@@ -63,12 +63,9 @@ class QuranPageWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      // The Column will now determine its own height based on its children.
       child: Column(
-        // FIX: Set mainAxisSize to min so the Column doesn't try to expand infinitely.
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Header (Para and Page number)
           Container(
             padding:
                 const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
@@ -97,9 +94,6 @@ class QuranPageWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-
-          // 2. Main Content Area - REMOVED Expanded and SingleChildScrollView
-          // The RichText widget will now be a direct child of the Column.
           RichText(
             textAlign: TextAlign.justify,
             textDirection: TextDirection.rtl,
@@ -113,7 +107,6 @@ class QuranPageWidget extends StatelessWidget {
     );
   }
 
-  // --- Helper Widgets (No Changes Needed) ---
   Widget _buildSurahHeader(String name) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),

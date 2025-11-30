@@ -16,7 +16,7 @@ class SuraAudioData {
       urls: List<String>.from(json['urls']),
       totalAyahs: json['totalAyahs'],
       totalDownloadSizeBytes: json['totalDownloadSizeBytes'],
-        totalDownloadSizeMB: json['totalDownloadSizeMB'],
+      totalDownloadSizeMB: json['totalDownloadSizeMB'],
     );
   }
 }

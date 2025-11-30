@@ -6,7 +6,6 @@ import 'package:quran_app/features/quran/viewmodel/ayah_highlight_viewmodel.dart
 import 'package:quran_app/features/sura/viewmodel/sura_viewmodel.dart';
 import 'package:quran_app/features/sura/view/sura_page.dart';
 
-// Local state providers for the drawer
 final selectedDrawerSurahProvider = StateProvider<int>((ref) => 1);
 final selectedDrawerAyahProvider = StateProvider<int?>((ref) => null);
 
@@ -38,7 +37,7 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
   @override
   void initState() {
     super.initState();
-    // Initialize the selected Surah to the current one
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(selectedDrawerSurahProvider.notifier).state =
           widget.currentSuraNumber;
@@ -47,7 +46,6 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure we scroll to the selected Surah on first build
     if (!_isInitialStateSet) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _surahScrollController.isAttached) {
@@ -66,7 +64,7 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
       child: Padding(
         padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
         child: SizedBox(
-          width: 280.w, // Slightly wider to accommodate content
+          width: 280.w,
           child: Material(
             elevation: 16,
             color: Colors.white,
@@ -162,8 +160,6 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
           contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
           onTap: () {
             ref.read(selectedDrawerSurahProvider.notifier).state = suraNumber;
-            // Reset Ayah selection or scroll to top of Ayah list?
-            // We'll just let the Ayah list rebuild with the new count
           },
         );
       },
@@ -174,21 +170,12 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
     final selectedSurah = ref.watch(selectedDrawerSurahProvider);
     final ayahCounts = ref.watch(ayahCountsProvider);
 
-    // Safety check
     if (selectedSurah < 1 || selectedSurah > 114) return const SizedBox();
 
     final totalAyahs = ayahCounts[selectedSurah - 1];
 
-    // Scroll to top when Surah changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _ayahScrollController.isAttached) {
-        // We don't want to jump every build, only when Surah changes.
-        // But since this widget rebuilds when selectedSurah changes,
-        // and it's a new list, it might naturally start at 0.
-        // However, ScrollablePositionedList might need explicit jump if key doesn't change.
-        // Let's try to jump to 0 if we are not already there?
-        // Actually, simpler: just let it be.
-      }
+      if (mounted && _ayahScrollController.isAttached) {}
     });
 
     return ScrollablePositionedList.separated(
@@ -220,15 +207,13 @@ class _SuraSelectionDrawerState extends ConsumerState<SuraSelectionDrawer> {
 
   void _onAyahSelected(BuildContext context, int suraNumber, int ayahNumber) {
     if (suraNumber == widget.currentSuraNumber) {
-      // Same Surah, just scroll
       ref.read(suraScrollCommandProvider.notifier).state = ScrollCommand(
         suraNumber: suraNumber,
         scrollIndex: ayahNumber - 1,
       );
       Navigator.pop(context);
     } else {
-      // Different Surah, navigate
-      Navigator.pop(context); // Close drawer
+      Navigator.pop(context);
       Navigator.push(
         context,
         MaterialPageRoute(

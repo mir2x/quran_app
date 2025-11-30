@@ -27,7 +27,6 @@ class PageContent {
 }
 
 class QuranPage {
-  // FIX: Renamed for clarity. This now represents the page number within its own Surah.
   final int pageNumberInSurah;
   final int paraNumber;
   final List<PageContent> content;

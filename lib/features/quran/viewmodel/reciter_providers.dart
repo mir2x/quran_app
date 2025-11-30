@@ -10,4 +10,5 @@ final Map<String, String> reciters = {
   'সৌদ আল-শুরাইম': 'qari-saud-bin-ibrahim-ash-shuraim',
 };
 
-final selectedReciterProvider = StateProvider<String>((_) => reciters.values.first);
+final selectedReciterProvider =
+    StateProvider<String>((_) => reciters.values.first);

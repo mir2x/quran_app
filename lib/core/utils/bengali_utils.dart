@@ -12,5 +12,9 @@ String toBanglaNumber(int number) {
     '9': '৯',
   };
 
-  return number.toString().split('').map((digit) => englishToBangla[digit] ?? digit).join();
+  return number
+      .toString()
+      .split('')
+      .map((digit) => englishToBangla[digit] ?? digit)
+      .join();
 }

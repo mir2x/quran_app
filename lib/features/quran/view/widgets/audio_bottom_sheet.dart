@@ -44,7 +44,6 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // --- The dropdown widgets are unchanged ---
             _labeledDropdown<String>(
               label: "সূরা",
               icon: HugeIcons.strokeRoundedArrowRight01,
@@ -57,7 +56,7 @@ class _AudioBottomSheetState extends ConsumerState<AudioBottomSheet> {
                     final newSuraNumber = newSuraIndex + 1;
                     ref.read(selectedAudioSuraProvider.notifier).state =
                         newSuraNumber;
-                    // Reset ayah selection when surah changes
+
                     ref.read(selectedStartAyahProvider.notifier).state = 1;
                     ref.read(selectedEndAyahProvider.notifier).state = 1;
                   }

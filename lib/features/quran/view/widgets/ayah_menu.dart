@@ -8,7 +8,6 @@ import '../../viewmodel/audio_providers.dart';
 import '../../viewmodel/ayah_highlight_viewmodel.dart';
 import '../../viewmodel/bookmark_viewmodel.dart';
 
-// The AyahMenu now needs to show the AudioBottomSheet
 import '../widgets/audio_bottom_sheet.dart';
 
 class AyahMenu extends ConsumerWidget {
@@ -60,7 +59,6 @@ class AyahMenu extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // --- Bookmark Icon Button (Unchanged) ---
               Expanded(
                 child: IconButton(
                   icon: HugeIcon(
@@ -71,7 +69,6 @@ class AyahMenu extends ConsumerWidget {
                     size: 24.r,
                   ),
                   onPressed: () {
-                    // ... (This logic is correct and remains unchanged)
                     if (isBookmarked) {
                       final identifier = 'ayah-$selectedSura-$selectedAyah';
                       bookmarkNotifier.remove(identifier);
@@ -99,8 +96,6 @@ class AyahMenu extends ConsumerWidget {
                   },
                 ),
               ),
-
-              // --- Play Audio Icon Button (NEW LOGIC) ---
               Expanded(
                 child: IconButton(
                   icon: HugeIcon(
@@ -111,22 +106,18 @@ class AyahMenu extends ConsumerWidget {
                     final selectedState = ref.read(selectedAyahProvider);
                     if (selectedState == null) return;
 
-                    // 1. Pre-fill the audio player settings with the selected ayah.
                     ref.read(selectedAudioSuraProvider.notifier).state =
                         selectedState.suraNumber;
                     ref.read(selectedStartAyahProvider.notifier).state =
                         selectedState.ayahNumber;
                     ref.read(selectedEndAyahProvider.notifier).state =
-                        selectedState.ayahNumber; // Play only this one ayah
+                        selectedState.ayahNumber;
 
-                    // 2. Clear the current selection to hide this AyahMenu.
                     ref.read(selectedAyahProvider.notifier).clear();
 
-                    // 3. Show the main AudioBottomSheet to handle download/playback.
                     showModalBottomSheet(
                       context: context,
                       builder: (BuildContext context) {
-                        // Pass the sura number to the bottom sheet.
                         return AudioBottomSheet(
                             currentSura: selectedState.suraNumber);
                       },
@@ -134,42 +125,10 @@ class AyahMenu extends ConsumerWidget {
                   },
                 ),
               ),
-
-              // --- Copy Icon Button (Unchanged) ---
-              // Expanded(
-              //   child: IconButton(
-              //     icon: Icon(Icons.copy, color: Colors.white, size: 24.r),
-              //     onPressed: () async {
-              //       // ... (This logic is correct and remains unchanged)
-              //       final arabicText = quran.getVerse(selectedSura, selectedAyah);
-              //       final formattedText = '(সূরা ${toBengaliNumber(selectedSura)}, আয়াত ${toBengaliNumber(selectedAyah)}) $arabicText';
-              //       await Clipboard.setData(ClipboardData(text: formattedText));
-              //       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('আয়াতটি কপি করা হয়েছে', style: TextStyle(fontSize: 14.sp))));
-              //       ref.read(selectedAyahProvider.notifier).clear();
-              //     },
-              //   ),
-              // ),
-
-              // --- Share Icon Button (Unchanged) ---
-              // Expanded(
-              //   child: IconButton(
-              //     icon: Icon(Icons.share, color: Colors.white, size: 24.r),
-              //     onPressed: () async {
-              //       // ... (This logic is correct and remains unchanged)
-              //       final arabicText = quran.getVerse(selectedSura, selectedAyah);
-              //       final formattedText = '(সূরা ${toBengaliNumber(selectedSura)}, আয়াত ${toBengaliNumber(selectedAyah)}) $arabicText';
-              //       await Share.share(formattedText);
-              //       ref.read(selectedAyahProvider.notifier).clear();
-              //     },
-              //   ),
-              // ),
-
-              // --- Fullscreen Icon Button (Unchanged) ---
               Expanded(
                 child: IconButton(
                   icon: Icon(Icons.fullscreen, color: Colors.white, size: 24.r),
                   onPressed: () {
-                    // ... (This logic is correct and remains unchanged)
                     ref.read(barsVisibilityProvider.notifier).hide();
                     ref.read(selectedAyahProvider.notifier).clear();
                   },

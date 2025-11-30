@@ -53,7 +53,7 @@ class AudioFileManager {
   Future<String> getLocalPathForAyah(
       String reciterId, int sura, int ayah) async {
     final suraDir = await getSuraDirectory(reciterId, sura);
-    // Ensure the directory exists before returning the path, though download manager should create it.
+
     if (!await suraDir.exists()) {
       await suraDir.create(recursive: true);
     }
@@ -97,7 +97,7 @@ final selectedStartAyahProvider = StateProvider<int>((_) => 1);
 final selectedEndAyahProvider = StateProvider<int>((_) => 1);
 
 class QuranAudioPlayer {
-  final AudioPlayer _player; // Initialize player here
+  final AudioPlayer _player;
   final Ref _ref;
 
   int? _endAyahLimit;
@@ -105,7 +105,6 @@ class QuranAudioPlayer {
   StreamSubscription<int?>? _indexSub;
 
   QuranAudioPlayer(this._ref) : _player = AudioPlayer() {
-    // Player initialized in constructor
     debugPrint("✅ [QuranAudioPlayer] INITIALIZED");
   }
 
@@ -133,7 +132,6 @@ class QuranAudioPlayer {
     final ayahsToDownload =
         await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
 
-    // If ayahs are missing, trigger the unified download flow.
     if (ayahsToDownload.isNotEmpty) {
       final confirmed = await showDownloadPermissionDialog(
         context,
@@ -142,17 +140,14 @@ class QuranAudioPlayer {
       );
       if (!confirmed || !context.mounted) return false;
 
-      // 1. Fetch the audio URLs needed for the download task.
       final suraAudioData = await _ref
           .read(audioDataSourceProvider)
           .getSuraAudioUrls(reciterId, sura);
       if (suraAudioData == null) {
-        // Optionally show an error to the user here.
         debugPrint("Could not fetch audio URLs to start download.");
         return false;
       }
 
-      // 2. Prepare the map of URLs to local file paths for the task.
       final Map<String, String> urlToPathMap = {};
       for (int ayahNum in ayahsToDownload) {
         if (ayahNum > 0 && ayahNum <= suraAudioData.urls.length) {
@@ -163,27 +158,23 @@ class QuranAudioPlayer {
         }
       }
 
-      // 3. Create the specific download task.
       final audioDownloadTask = MultiFileDownloadTask(
         id: 'reciter_${reciterId}_sura_$sura',
         displayName: 'সুরা ${suraNames[sura]}',
         urlToPathMap: urlToPathMap,
       );
 
-      // 4. Show the unified dialog and start the download.
       showDownloadDialog(context);
       final success = await _ref
           .read(downloadManagerProvider)
           .startDownload(audioDownloadTask);
 
-      // 5. If the download failed or was cancelled, stop here.
       if (!success) {
         debugPrint("Download failed or was cancelled. Aborting playback.");
         return false;
       }
     }
 
-    // --- Playback logic (unchanged) ---
     final List<AudioSource> audioSources = [];
     for (int i = startAyah; i <= endAyah; i++) {
       final localPath =
@@ -215,7 +206,6 @@ class QuranAudioPlayer {
   }
 
   void _setupStateListeners() {
-    // Cancel existing subscriptions if any, to avoid duplicate listeners
     _indexSub?.cancel();
     _playerStateSub?.cancel();
 
@@ -235,7 +225,6 @@ class QuranAudioPlayer {
         _ref.read(quranAudioProvider.notifier).updateAyah(currentAyah);
         _highlightAndNavigate(quranAudioState.surah, currentAyah);
       } else {
-        // This might fire with null initially or during state transitions.
         debugPrint(
             "  [Listener] ⚠️ SKIPPED: index or quranAudioState is null (player not ready or stopped).");
       }
@@ -253,7 +242,7 @@ class QuranAudioPlayer {
       } else {
         if (state.processingState == ProcessingState.completed) {
           debugPrint("  [Listener] Player completed playback. Stopping.");
-          stop(); // Stop when the playlist finishes
+          stop();
         } else {
           _ref.read(quranAudioProvider.notifier).pause();
         }
@@ -291,15 +280,15 @@ class QuranAudioPlayer {
 
   Future<void> stop() async {
     debugPrint("⏹️ [stop] CALLED. Stopping player and clearing state.");
-    // Only cancel subscriptions, do NOT dispose the player here
+
     await _indexSub?.cancel();
     await _playerStateSub?.cancel();
     _indexSub = null;
     _playerStateSub = null;
 
-    await _player.stop(); // Stop the audio playback
-    _ref.read(quranAudioProvider.notifier).stop(); // Clear audio state
-    _ref.read(selectedAyahProvider.notifier).clear(); // Clear ayah highlight
+    await _player.stop();
+    _ref.read(quranAudioProvider.notifier).stop();
+    _ref.read(selectedAyahProvider.notifier).clear();
     _endAyahLimit = null;
   }
 
@@ -339,13 +328,11 @@ class QuranAudioPlayer {
     _player.seekToPrevious();
   }
 
-  // This dispose method will only be called when the provider itself is disposed
-  // by Riverpod (e.g., if it's autoDispose and nothing is listening, or if explicitly done).
   void dispose() {
     debugPrint('🗑️ [QuranAudioPlayer] DISPOSED');
     _indexSub?.cancel();
     _playerStateSub?.cancel();
-    _player.dispose(); // Dispose the actual audio player instance here
+    _player.dispose();
   }
 }
 

@@ -76,7 +76,6 @@ class SuraAudioPlayer {
     final ayahsToDownload =
         await _getAyahsToDownload(reciterId, sura, startAyah, endAyah);
 
-    // If ayahs are missing, trigger the unified download flow.
     if (ayahsToDownload.isNotEmpty) {
       final confirmed = await showDownloadPermissionDialog(
         context,
@@ -85,7 +84,6 @@ class SuraAudioPlayer {
       );
       if (!confirmed || !context.mounted) return false;
 
-      // 1. Fetch the audio URLs needed for the download task.
       final suraAudioData = await _ref
           .read(audioDataSourceProvider)
           .getSuraAudioUrls(reciterId, sura);
@@ -94,7 +92,6 @@ class SuraAudioPlayer {
         return false;
       }
 
-      // 2. Prepare the map of URLs to local file paths for the task.
       final Map<String, String> urlToPathMap = {};
       for (int ayahNum in ayahsToDownload) {
         if (ayahNum > 0 && ayahNum <= suraAudioData.urls.length) {
@@ -105,27 +102,23 @@ class SuraAudioPlayer {
         }
       }
 
-      // 3. Create the specific download task.
       final audioDownloadTask = MultiFileDownloadTask(
-        id: 'reciter_${reciterId}_sura_$sura', // Unique ID for this download operation
+        id: 'reciter_${reciterId}_sura_$sura',
         displayName: 'সুরা ${suraNames[sura]}',
         urlToPathMap: urlToPathMap,
       );
 
-      // 4. Show the unified dialog and start the download.
       showDownloadDialog(context);
       final success = await _ref
           .read(downloadManagerProvider)
           .startDownload(audioDownloadTask);
 
-      // 5. If the download failed or was cancelled, stop here.
       if (!success) {
         debugPrint("Download failed or was cancelled. Aborting playback.");
         return false;
       }
     }
 
-    // --- Playback logic (unchanged) ---
     final List<AudioSource> audioSources = [];
     for (int i = startAyah; i <= endAyah; i++) {
       final localPath =
@@ -200,8 +193,6 @@ class SuraAudioPlayer {
     });
   }
 
-  // Removed: _highlightAndNavigate method completely
-
   Future<void> stop() async {
     debugPrint("⏹️ [stop] CALLED. Stopping player and clearing state.");
     await _indexSub?.cancel();
@@ -211,7 +202,7 @@ class SuraAudioPlayer {
 
     await _player.stop();
     _ref.read(suraAudioProvider.notifier).stop();
-    // Removed: _ref.read(selectedAyahProvider.notifier).clear(); // No longer highlighting
+
     _endAyahLimit = null;
   }
 

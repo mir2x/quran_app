@@ -27,7 +27,8 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
 
   @override
   Widget build(BuildContext context) {
-    final ayahIdentifier = AyahIdentifier(sura: widget.suraNumber, ayah: widget.ayahNumber);
+    final ayahIdentifier =
+        AyahIdentifier(sura: widget.suraNumber, ayah: widget.ayahNumber);
     final tafsirAsyncValue = ref.watch(tafsirProvider(ayahIdentifier));
 
     return tafsirAsyncValue.when(
@@ -61,18 +62,20 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
                     ),
                   );
                 },
-                // --- CONDITIONAL BODY ---
                 body: Container(
                   padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
                   alignment: Alignment.centerLeft,
                   child: item.isDownloaded
-                      ? AdaptiveText( // If downloaded, show the content
-                    item.content ?? "তাফসীর লোড হচ্ছে...",
-                    style: const TextStyle(
-                      fontFamily: 'SolaimanLipi', fontSize: 15, height: 1.8, color: Colors.black87,
-                    ),
-                  )
-                      : _buildDownloadButton(item, ayahIdentifier), // Otherwise, show download button
+                      ? AdaptiveText(
+                          item.content ?? "তাফসীর লোড হচ্ছে...",
+                          style: const TextStyle(
+                            fontFamily: 'SolaimanLipi',
+                            fontSize: 15,
+                            height: 1.8,
+                            color: Colors.black87,
+                          ),
+                        )
+                      : _buildDownloadButton(item, ayahIdentifier),
                 ),
               );
             }).toList(),
@@ -84,8 +87,8 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
     );
   }
 
-  // --- NEW WIDGET FOR THE DOWNLOAD BUTTON ---
-  Widget _buildDownloadButton(TafsirSource tafsir, AyahIdentifier ayahIdentifier) {
+  Widget _buildDownloadButton(
+      TafsirSource tafsir, AyahIdentifier ayahIdentifier) {
     final sizeInMB = (tafsir.sizeBytes / 1048576).toStringAsFixed(1);
     return Column(
       children: [
@@ -99,10 +102,10 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
           icon: const Icon(Icons.download),
           label: Text("ডাউনলোড করুন ($sizeInMB MB)"),
           onPressed: () async {
-            // Get the local path where the file should be saved
-            final localPath = await ref.read(tafsirRepositoryProvider).getLocalTafsirPath(tafsir.id);
+            final localPath = await ref
+                .read(tafsirRepositoryProvider)
+                .getLocalTafsirPath(tafsir.id);
 
-            // Create the specific download task
             final tafsirDownloadTask = SingleFileDownloadTask(
               id: tafsir.id,
               displayName: tafsir.title,
@@ -110,14 +113,13 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
               localPath: localPath,
             );
 
-            // Show the unified dialog
             if (!mounted) return;
             showDownloadDialog(context);
 
-            // Start the download and wait for the result
-            final success = await ref.read(downloadManagerProvider).startDownload(tafsirDownloadTask);
+            final success = await ref
+                .read(downloadManagerProvider)
+                .startDownload(tafsirDownloadTask);
 
-            // After download, refresh the provider to reload the data
             if (success) {
               ref.invalidate(tafsirProvider(ayahIdentifier));
             }
@@ -132,23 +134,21 @@ class _TafsirViewState extends ConsumerState<TafsirView> {
 void showTafsirBottomSheet(BuildContext context, String suraName, Ayah ayah) {
   showModalBottomSheet(
     context: context,
-
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
     ),
     builder: (BuildContext bc) {
       return DraggableScrollableSheet(
-        initialChildSize: 0.6, // Start at 60% of the screen height
-        minChildSize: 0.4,     // Can be dragged down to 40%
-        maxChildSize: 0.9,     // Can be dragged up to 90%
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
         expand: false,
         builder: (_, scrollController) {
           return Container(
-            color: const Color(0xFFF0F5F0), // A light background color
+            color: const Color(0xFFF0F5F0),
             child: Column(
               children: [
-                // Header for the bottom sheet
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: Text(
@@ -162,9 +162,7 @@ void showTafsirBottomSheet(BuildContext context, String suraName, Ayah ayah) {
                   ),
                 ),
                 const Divider(height: 1, thickness: 1),
-                // The expandable list
                 Expanded(
-                  // We pass the scrollController to make the list scrollable within the sheet
                   child: SingleChildScrollView(
                     controller: scrollController,
                     child: TafsirView(

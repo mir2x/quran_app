@@ -13,8 +13,8 @@ void showDetailsBottomSheet(BuildContext context, {required int suraNumber}) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    // Pass the suraNumber down to the DetailsBottomSheet widget
-    builder: (BuildContext context) => DetailsBottomSheet(suraNumber: suraNumber),
+    builder: (BuildContext context) =>
+        DetailsBottomSheet(suraNumber: suraNumber),
   );
 }
 
@@ -35,47 +35,63 @@ class DetailsBottomSheet extends StatelessWidget {
             _DetailsSection(
               title: 'ফিচার',
               items: [
-                GridItemData(icon: Icons.search, label: 'অনুসন্ধান', onTap: () {}),
-                GridItemData(icon: Icons.fullscreen_exit_outlined, label: 'স্ক্রীন বড়-ছোট', onTap: () {}),
+                GridItemData(
+                    icon: Icons.search, label: 'অনুসন্ধান', onTap: () {}),
+                GridItemData(
+                    icon: Icons.fullscreen_exit_outlined,
+                    label: 'স্ক্রীন বড়-ছোট',
+                    onTap: () {}),
               ],
             ),
             _DetailsSection(
               title: 'ভিউ',
               items: [
-                GridItemData(icon: Icons.font_download_outlined, label: 'ফন্ট পরিবর্তন', onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const FontChangeDialog(),
-                  );
-                }),
-                GridItemData(icon: Icons.chrome_reader_mode, label: 'তিলাওয়াত মোড', onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TilawatPage(
-                        initialSuraNumber: suraNumber,
-                        initialAyahNumber: 1,
-                      ),
-                    ),
-                  );
-                }),
+                GridItemData(
+                    icon: Icons.font_download_outlined,
+                    label: 'ফন্ট পরিবর্তন',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const FontChangeDialog(),
+                      );
+                    }),
+                GridItemData(
+                    icon: Icons.chrome_reader_mode,
+                    label: 'তিলাওয়াত মোড',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TilawatPage(
+                            initialSuraNumber: suraNumber,
+                            initialAyahNumber: 1,
+                          ),
+                        ),
+                      );
+                    }),
               ],
             ),
             _DetailsSection(
               title: 'সেটিংস',
               items: [
-                GridItemData(icon: Icons.translate_outlined, label: 'অনুবাদক পরিবর্তন', onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const TranslatorSelectionDialog(),
-                  );
-                }),
-                GridItemData(icon: Icons.person_outline, label: 'কারী পরিবর্তন', onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const ReciterSelectionDialog(),
-                  );
-                }),
+                GridItemData(
+                    icon: Icons.translate_outlined,
+                    label: 'অনুবাদক পরিবর্তন',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const TranslatorSelectionDialog(),
+                      );
+                    }),
+                GridItemData(
+                    icon: Icons.person_outline,
+                    label: 'কারী পরিবর্তন',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const ReciterSelectionDialog(),
+                      );
+                    }),
               ],
             ),
           ],

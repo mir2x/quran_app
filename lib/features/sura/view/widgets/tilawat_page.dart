@@ -15,24 +15,20 @@ class TilawatPage extends ConsumerWidget {
     required this.initialAyahNumber,
   });
 
-  /// Finds the index within the FILTERED list of pages for the surah.
-  /// For example, if Surah Al-Jathiyah has 4 pages, this will return 0, 1, 2, or 3.
   int _findInitialPageIndex(List<QuranPage> surahPages) {
     for (int i = 0; i < surahPages.length; i++) {
       final page = surahPages[i];
       for (var content in page.content) {
-        // We only need to check the ayahs, as the list is already filtered by surah.
         if (content.ayahs.any((ayah) => ayah.ayahNumber == initialAyahNumber)) {
           return i;
         }
       }
     }
-    return 0; // Fallback to the first page of the Surah.
+    return 0;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the provider, passing the sura number to get the filtered list.
     final pagesAsync = ref.watch(quranPagesProvider(initialSuraNumber));
     final ItemScrollController itemScrollController = ItemScrollController();
 
@@ -61,17 +57,15 @@ class TilawatPage extends ConsumerWidget {
 
           final initialIndex = _findInitialPageIndex(surahPages);
 
-          // Scroll to the target index after the UI has been built.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (itemScrollController.isAttached) {
               itemScrollController.jumpTo(
                 index: initialIndex,
-                alignment: 0, // Align to the top of the viewport.
+                alignment: 0,
               );
             }
           });
 
-          // Use ScrollablePositionedList to display the filtered pages.
           return ScrollablePositionedList.builder(
             itemScrollController: itemScrollController,
             itemCount: surahPages.length,

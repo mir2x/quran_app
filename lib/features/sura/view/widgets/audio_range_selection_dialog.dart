@@ -9,7 +9,6 @@ String toBengaliDigit(int number) {
   }).join('');
 }
 
-
 class AudioRangeSelectionDialog extends ConsumerStatefulWidget {
   final int totalAyahs;
   final int suraNumber;
@@ -21,10 +20,12 @@ class AudioRangeSelectionDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AudioRangeSelectionDialog> createState() => _AudioRangeSelectionDialogState();
+  ConsumerState<AudioRangeSelectionDialog> createState() =>
+      _AudioRangeSelectionDialogState();
 }
 
-class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionDialog> {
+class _AudioRangeSelectionDialogState
+    extends ConsumerState<AudioRangeSelectionDialog> {
   late int _selectedStartAyah;
   late int _selectedEndAyah;
   late FixedExtentScrollController _startController;
@@ -37,10 +38,12 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
   void initState() {
     super.initState();
     _selectedStartAyah = 1;
-    _selectedEndAyah = widget.totalAyahs > 1 ? 2 : 1; // Default to a small range
+    _selectedEndAyah = widget.totalAyahs > 1 ? 2 : 1;
 
-    _startController = FixedExtentScrollController(initialItem: _selectedStartAyah - 1);
-    _endController = FixedExtentScrollController(initialItem: _selectedEndAyah - 1);
+    _startController =
+        FixedExtentScrollController(initialItem: _selectedStartAyah - 1);
+    _endController =
+        FixedExtentScrollController(initialItem: _selectedEndAyah - 1);
   }
 
   @override
@@ -119,7 +122,10 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
       ),
       child: const Text(
         'অডিও শুনু`ন',
-        style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 18, fontWeight: FontWeight.bold),
+        style: TextStyle(
+            fontFamily: 'SolaimanLipi',
+            fontSize: 18,
+            fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -133,13 +139,27 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                Text('শুরু', style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('শেষ', style: TextStyle(fontFamily: 'SolaimanLipi', fontSize: 18, fontWeight: FontWeight.bold)),
+              children: [
+                Text(
+                  'শুরু',
+                  style: TextStyle(
+                    fontFamily: 'SolaimanLipi',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'শেষ',
+                  style: TextStyle(
+                    fontFamily: 'SolaimanLipi',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -152,10 +172,12 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
                   onSelectedItemChanged: (index) {
                     setState(() {
                       _selectedStartAyah = index + 1;
-                      if (_isFullSura) _isFullSura = false; // Uncheck if manually changed
+                      if (_isFullSura) _isFullSura = false;
                       if (_selectedStartAyah > _selectedEndAyah) {
                         _selectedEndAyah = _selectedStartAyah;
-                        _endController.animateToItem(_selectedEndAyah - 1, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+                        _endController.animateToItem(_selectedEndAyah - 1,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut);
                       }
                     });
                   },
@@ -166,10 +188,12 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
                   onSelectedItemChanged: (index) {
                     setState(() {
                       _selectedEndAyah = index + 1;
-                      if (_isFullSura) _isFullSura = false; // Uncheck if manually changed
+                      if (_isFullSura) _isFullSura = false;
                       if (_selectedEndAyah < _selectedStartAyah) {
                         _selectedStartAyah = _selectedEndAyah;
-                        _startController.animateToItem(_selectedStartAyah - 1, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+                        _startController.animateToItem(_selectedStartAyah - 1,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut);
                       }
                     });
                   },
@@ -180,8 +204,6 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
         ],
       ),
     );
-
-
   }
 
   Widget _buildPickerColumn({
@@ -192,7 +214,6 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // This container creates the highlight effect for the selected item
           Container(
             height: 40,
             decoration: BoxDecoration(
@@ -208,8 +229,10 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
             childDelegate: ListWheelChildBuilderDelegate(
               builder: (context, index) {
                 final ayahNumber = index + 1;
-                final isSelected = (_selectedStartAyah == ayahNumber && controller == _startController) ||
-                    (_selectedEndAyah == ayahNumber && controller == _endController);
+                final isSelected = (_selectedStartAyah == ayahNumber &&
+                        controller == _startController) ||
+                    (_selectedEndAyah == ayahNumber &&
+                        controller == _endController);
                 return Center(
                   child: Text(
                     toBengaliDigit(ayahNumber),
@@ -217,7 +240,8 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
                       fontSize: 22,
                       fontFamily: 'SolaimanLipi',
                       color: isSelected ? Colors.white : Colors.black,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 );
@@ -275,7 +299,11 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
         ),
         Text(
           toBengaliDigit(_repeatCount),
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green.shade700, fontFamily: 'SolaimanLipi'),
+          style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade700,
+              fontFamily: 'SolaimanLipi'),
         ),
         IconButton(
           icon: const Icon(Icons.add_circle_outline),
@@ -287,6 +315,4 @@ class _AudioRangeSelectionDialogState extends ConsumerState<AudioRangeSelectionD
       ],
     );
   }
-
-
 }

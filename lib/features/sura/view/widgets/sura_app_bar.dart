@@ -1,4 +1,3 @@
-// features/sura/view/widgets/sura_app_bar.dart
 import 'package:flutter/material.dart';
 import 'package:quran_app/features/sura/view/widgets/search_page.dart';
 import 'package:quran_app/features/sura/view/widgets/tilawat_page.dart';

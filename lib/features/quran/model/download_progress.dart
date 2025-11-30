@@ -9,6 +9,5 @@ class DownloadProgress {
     this.error,
   });
 
-  double get percentage =>
-      totalCount == 0 ? 0.0 : downloadedCount / totalCount;
+  double get percentage => totalCount == 0 ? 0.0 : downloadedCount / totalCount;
 }
